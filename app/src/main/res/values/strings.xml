@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+para no escribir datos en duro por buenas practicas
+nos ofrece la ventaja de crear textos y poder traducirlos
+además no debemos modificar en toda la app si no solamente aqui
+-->
+<resources>
+    <string name="app_name">miregistro</string>
+
+    <!-- Pantalla del Formulario -->
+    <string name="titulo_formulario">Crear cuenta</string>
+    <string name="banner_titulo">Únete a la comunidad</string>
+    <string name="banner_subtitulo">Completa tus datos en menos de un minuto</string>
+    <string name="seccion_datos">Datos personales</string>
+    <string name="seccion_preferencias">Preferencias</string>
+    <string name="campo_nombre">Nombre Completo</string>
+    <string name="campo_correo">Correo electrónico</string>
+    <string name="campo_contrasena">Contraseña</string>
+    <string name="etiqueta_nivel">Nivel de experiencia</string>
+    <string name="opcion_noticias">Recibir novedades por correo</string>
+    <string name="opcion_terminos">Acepto los términos y condiciones</string>
+    <string name="btn_registrar">Registrarme</string>
+    <string name="btn_limpiar">Limpiar</string>
+    <!-- s -> Tipo de dato string, d -> Tipo de Dato entero, 1f -> Tipo de dato decimal (1 decimal)-->
+    <string name="registro_exitoso">Registro exitoso. Bienvenido/a %1$s</string>
+
+    <!-- Pantalla del Perfil -->
+    <string name="titulo_perfil">Mi Perfil</string>
+    <string name="seccion_sobre_mi">Sobre Mí</string>
+    <string name="seccion_intereses">Intereses</string>
+    <string name="btn_seguir">Seguir</string>
+    <string name="btn_siguiendo">Siguiendo</string>
+
+    <!-- Descripciones de accesibilidad (TalkBack) -->
+    <string name="cd_banner">Ilustración de un formulario</string>
+    <string name="cd_portada">Paisaje de montañas al atardecer</string>
+    <string name="cd_avatar">Foto de perfil</string>
+    <string name="cd_mostrar_contrasena">Mostrar Contraseña</string>
+    <string name="cd_ocultar_contrasena">Ocultar Contraseña</string>
+</resources>
