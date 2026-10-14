@@ -1,40 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-para no escribir datos en duro por buenas practicas
-nos ofrece la ventaja de crear textos y poder traducirlos
-además no debemos modificar en toda la app si no solamente aqui
+    res/values/strings.xml: TEXTOS de la app.
+    Buena práctica: no escribir textos "en duro" en el código.
+    En Compose se leen con stringResource(R.string.nombre).
+    Ventaja: traducir la app = crear values-en/strings.xml con los mismos nombres.
 -->
 <resources>
-    <string name="app_name">miregistro</string>
+    <string name="app_name">MiRegistro</string>
 
-    <!-- Pantalla del Formulario -->
+    <!-- Pantalla 1: Formulario -->
     <string name="titulo_formulario">Crear cuenta</string>
     <string name="banner_titulo">Únete a la comunidad</string>
     <string name="banner_subtitulo">Completa tus datos en menos de un minuto</string>
     <string name="seccion_datos">Datos personales</string>
     <string name="seccion_preferencias">Preferencias</string>
-    <string name="campo_nombre">Nombre Completo</string>
+    <string name="campo_nombre">Nombre completo</string>
     <string name="campo_correo">Correo electrónico</string>
     <string name="campo_contrasena">Contraseña</string>
+    <string name="campo_ciudad">Ciudad</string>              <!-- NUEVO (Bloque 2) -->
     <string name="etiqueta_nivel">Nivel de experiencia</string>
     <string name="opcion_noticias">Recibir novedades por correo</string>
     <string name="opcion_terminos">Acepto los términos y condiciones</string>
-    <string name="btn_registrar">Registrarme</string>
     <string name="btn_limpiar">Limpiar</string>
-    <!-- s -> Tipo de dato string, d -> Tipo de Dato entero, 1f -> Tipo de dato decimal (1 decimal)-->
-    <string name="registro_exitoso">Registro exitoso. Bienvenido/a %1$s</string>
+    <string name="btn_registrar">Registrarme</string>
+    <string name="registro_exitoso">¡Registro exitoso! Bienvenido/a, %1$s</string>
 
-    <!-- Pantalla del Perfil -->
-    <string name="titulo_perfil">Mi Perfil</string>
-    <string name="seccion_sobre_mi">Sobre Mí</string>
+    <!-- Pantalla 2: Perfil -->
+    <string name="titulo_perfil">Mi perfil</string>
+    <string name="seccion_sobre_mi">Sobre mí</string>
     <string name="seccion_intereses">Intereses</string>
     <string name="btn_seguir">Seguir</string>
     <string name="btn_siguiendo">Siguiendo</string>
 
-    <!-- Descripciones de accesibilidad (TalkBack) -->
+    <!-- NUEVO (Bloque 3): menú lateral (☰) y lista de usuarios -->
+    <string name="saludo">Hola, %1$s</string>
+    <string name="menu_mi_perfil">Mi perfil</string>
+    <string name="menu_ver_usuarios">Ver usuarios</string>
+    <string name="titulo_usuarios">Usuarios registrados</string>
+
+    <!-- NUEVO (Bloque 4): edición, cerrar sesión y Snackbar -->
+    <string name="titulo_editar">Editar usuario</string>
+    <string name="menu_cerrar_sesion">Cerrar sesión</string>
+    <string name="dialogo_titulo">¿Cerrar sesión?</string>
+    <string name="dialogo_mensaje">Tendrás que registrarte de nuevo para ver tu perfil.</string>
+    <string name="dialogo_cancelar">Cancelar</string>
+    <string name="snackbar_sesion_cerrada">Sesión cerrada</string>
+
+    <!-- Descripciones para accesibilidad (TalkBack) -->
     <string name="cd_banner">Ilustración de un formulario</string>
     <string name="cd_portada">Paisaje de montañas al atardecer</string>
     <string name="cd_avatar">Foto de perfil</string>
-    <string name="cd_mostrar_contrasena">Mostrar Contraseña</string>
-    <string name="cd_ocultar_contrasena">Ocultar Contraseña</string>
+    <string name="cd_mostrar_contrasena">Mostrar contraseña</string>
+    <string name="cd_ocultar_contrasena">Ocultar contraseña</string>
+    <string name="cd_volver">Volver</string>                 <!-- NUEVO (Bloque 1) -->
+    <string name="cd_menu">Abrir menú</string>               <!-- NUEVO (Bloque 3) -->
+    <string name="cd_guardar">Guardar cambios</string>       <!-- NUEVO (Bloque 4) -->
 </resources>

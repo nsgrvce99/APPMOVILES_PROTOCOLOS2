@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "miregistro"
+rootProject.name = "MiRegistro"
 include(":app")

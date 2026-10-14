@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+Este es el tema de la ventana. Esto solo afecta al fondo de la ventana al abrir la app. Los
+colores de botones, campos y textos no se definen aqui: van en ui/theme
+-->
 <resources>
 
-    <style name="Theme.Miregistro" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.MiRegistro" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

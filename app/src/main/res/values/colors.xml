@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/values/colors.xml: colores como RECURSO de Android.
+    En Compose hay DOS formas de definir colores:
+      1) Aquí, y leerlos con colorResource(R.color.nombre)   <- estilo "clásico"
+      2) En Kotlin (ui/theme/Color.kt) con Color(0xFF...)    <- lo recomendado en Compose
+    En este proyecto usamos la opción 2 para casi todo y dejamos este
+    ejemplo de la opción 1 para que se conozca (lo usa ImagenEncabezado.kt).
+-->
 <resources>
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
@@ -7,5 +15,5 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="sombra_imagen">#B3000000</color> <!--color negro con un 70% de opacidad -->
+    <color name="sombra_imagen">#B3000000</color> <!-- negro al 70 % de opacidad -->
 </resources>
