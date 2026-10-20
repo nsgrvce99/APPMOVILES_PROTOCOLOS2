@@ -16,6 +16,11 @@ package cl.duocuc.miregistro.navigation
 // =====================================================================
 
 sealed class Ruta(val ruta: String) {
+    //NUEVA RUTA
+    data object Login : Ruta("login")
+    // NUEVA RUTA: Pantalla principal de solo lectura para el Cliente (Rol 4)
+    data object HistorialCliente : Ruta("historial_cliente")
+
     data object Instalaciones : Ruta("instalaciones")       // Selección de planta/faena
     data object ListaEquipos : Ruta("equipos/{instalacionId}") {
         fun crear(id: Int) = "equipos/$id"

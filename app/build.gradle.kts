@@ -59,4 +59,6 @@ dependencies {
     // NUEVO (Bloque 1): navegación entre pantallas (NavHost, NavController)
     implementation("androidx.navigation:navigation-compose:2.10.2")
 
+    implementation("androidx.compose.material:material-icons-extended")
+
 }

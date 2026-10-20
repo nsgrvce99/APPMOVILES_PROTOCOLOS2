@@ -12,6 +12,7 @@ data class Usuario(
     val rut: String,
     val nombre: String,
     val correo: String,
+    val contrasena: String,
     val rolId: Long,             // Llave foránea hacia la tabla rol (1=Técnico, 2=Ingeniero, etc.)
     val rolNombre: String? = null, // Nombre descriptivo del rol (obtenido mediante JOIN en SQLite)
     val activo: Boolean = true,

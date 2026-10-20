@@ -98,6 +98,7 @@ class FormularioViewModel : ViewModel() {
             rut = "12.345.678-9", // RUT sintético para el MVP
             nombre = estado.nombre, // TAG del equipo
             correo = estado.correo, // Serie/Placa
+            contrasena = estado.contrasena, // <-- Variable agregada usando el estado actual del formulario
             rolId = 1L,             // Rol por defecto: Técnico de terreno
             rolNombre = "P-01 Técnico de terreno"
         )
