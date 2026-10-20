@@ -20,7 +20,7 @@ class UsuarioDbHelper(context: Context) :
 
     companion object {
         private const val NOMBRE_BD = "induztekterreno.db"
-        private const val VERSION_BD = 1
+        private const val VERSION_BD = 2
 
         // Tabla de Roles según Anexo 2 y MER Induztek
         private const val TABLA_ROLES = "rol"
@@ -35,6 +35,8 @@ class UsuarioDbHelper(context: Context) :
         private const val USU_RUT = "rut"
         private const val USU_NOMBRE = "nombre"
         private const val USU_CORREO = "correo"
+
+        private const val USU_CONTRA = "contraseña"
         private const val USU_TELEFONO = "telefono"
         private const val USU_ACTIVO = "activo"
         private const val USU_GIRO = "giro"
@@ -54,6 +56,7 @@ class UsuarioDbHelper(context: Context) :
                     "$USU_RUT TEXT NOT NULL UNIQUE, " +
                     "$USU_NOMBRE TEXT NOT NULL, " +
                     "$USU_CORREO TEXT NOT NULL UNIQUE, " +
+                    "$USU_CONTRA TEXT NOT NULL UNIQUE," +
                     "$USU_TELEFONO TEXT, " +
                     "$USU_ACTIVO INTEGER NOT NULL DEFAULT 1, " +
                     "$USU_GIRO TEXT, " +
@@ -71,12 +74,12 @@ class UsuarioDbHelper(context: Context) :
 
         // Datos de ejemplo basados en el Anexo 9 (Personal Induztek y Usuarios cliente)
         private const val SQL_PRECARGAR_USUARIOS =
-            "INSERT INTO $TABLA_USUARIOS ($USU_ROL, $USU_RUT, $USU_NOMBRE, $USU_CORREO, $USU_ACTIVO) VALUES " +
-                    "(1, '17.284.519-3', 'Matías Godoy Herrera', 'mgodoy@induztek.ejemplo', 1), " +
-                    "(1, '19.412.087-7', 'Javiera Tapia Muñoz', 'jtapia@induztek.ejemplo', 1), " +
-                    "(2, '15.906.334-8', 'Andrea Contreras Silva', 'acontreras@induztek.ejemplo', 1), " +
-                    "(3, '13.871.905-7', 'Ricardo Espinoza Lagos', 'respinoza@induztek.ejemplo', 1), " +
-                    "(4, '14.226.791-8', 'Marcela Fuentes Rojas', 'mfuentes@envpacifico.ejemplo', 1)"
+            "INSERT INTO $TABLA_USUARIOS ($USU_ROL, $USU_RUT, $USU_NOMBRE, $USU_CORREO, $USU_CONTRA,$USU_ACTIVO) VALUES " +
+                    "(1, '17.284.519-3', 'Matías Godoy Herrera', 'mgodoy@induztek.ejemplo','1470MAT' ,1), " +
+                    "(1, '19.412.087-7', 'Javiera Tapia Muñoz', 'jtapia@induztek.ejemplo','1470JA' ,1), " +
+                    "(2, '15.906.334-8', 'Andrea Contreras Silva', 'acontreras@induztek.ejemplo','1470AN' ,1), " +
+                    "(3, '13.871.905-7', 'Ricardo Espinoza Lagos', 'respinoza@induztek.ejemplo', '1470RI',1), " +
+                    "(4, '14.226.791-8', 'Marcela Fuentes Rojas', 'mfuentes@envpacifico.ejemplo', '1470MA',1)"
 
         private const val SQL_SELECT_USUARIOS =
             "SELECT u.*, r.$ROL_CODIGO AS rol_codigo, r.$ROL_NOMBRE AS rol_nombre " +
@@ -134,6 +137,11 @@ class UsuarioDbHelper(context: Context) :
     fun buscarPorId(id: Long): Usuario? =
         consultarUsuarios("$SQL_SELECT_USUARIOS WHERE u.$USU_ID = ?", arrayOf(id.toString()))
             .firstOrNull()
+    // ... tus otras funciones (como eliminarUsuario, consultarUsuarios, etc.)
+
+    fun autenticarUsuario(correo: String, contrasena: String): Usuario? {
+        val sql = "$SQL_SELECT_USUARIOS WHERE u.$USU_CORREO = ? AND u.$USU_CONTRA = ? AND u.$USU_ACTIVO = 1"
+        return consultarUsuarios(sql, arrayOf(correo, contrasena)).firstOrNull()}
 
     fun actualizarUsuario(usuario: Usuario): Int =
         writableDatabase.update(
@@ -148,6 +156,7 @@ class UsuarioDbHelper(context: Context) :
     private fun valoresDe(usuario: Usuario) = ContentValues().apply {
         put(USU_NOMBRE, usuario.nombre)
         put(USU_CORREO, usuario.correo)
+        put(USU_CONTRA, usuario.contrasena)
         put(USU_RUT, usuario.rut)
         put(USU_ROL, usuario.rolId)
         put(USU_ACTIVO, if (usuario.activo) 1 else 0)
@@ -167,9 +176,12 @@ class UsuarioDbHelper(context: Context) :
         id = cursor.getLong(cursor.getColumnIndexOrThrow(USU_ID)),
         nombre = cursor.getString(cursor.getColumnIndexOrThrow(USU_NOMBRE)),
         correo = cursor.getString(cursor.getColumnIndexOrThrow(USU_CORREO)),
+        contrasena = cursor.getString(cursor.getColumnIndexOrThrow(USU_CONTRA)),
         rut = cursor.getString(cursor.getColumnIndexOrThrow(USU_RUT)),
         rolId = cursor.getLong(cursor.getColumnIndexOrThrow(USU_ROL)),
         rolNombre = cursor.getString(cursor.getColumnIndexOrThrow("rol_nombre")),
         activo = cursor.getInt(cursor.getColumnIndexOrThrow(USU_ACTIVO)) == 1
     )
+
 }
+

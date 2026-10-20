@@ -1,13 +1,8 @@
 package cl.duocuc.miregistro.navigation
 
-import cl.duocuc.miregistro.ui.screens.FormalizacionScreen
-import cl.duocuc.miregistro.ui.screens.HistorialEquipoScreen
-import cl.duocuc.miregistro.ui.screens.InstalacionesScreen
-import cl.duocuc.miregistro.ui.screens.ListaEquiposScreen
-import cl.duocuc.miregistro.ui.screens.RegistroPruebaScreen
-
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -15,10 +10,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import cl.duocuc.miregistro.ui.screens.EditarScreen
-import cl.duocuc.miregistro.ui.screens.FormularioScreen
-import cl.duocuc.miregistro.ui.screens.PerfilScreen
-import cl.duocuc.miregistro.ui.screens.UsuariosScreen
+import cl.duocuc.miregistro.data.SesionPreferencias
+import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.ui.screens.*
+import cl.duocuc.miregistro.viewmodel.LoginViewModel
+import cl.duocuc.miregistro.viewmodel.LoginViewModelFactory
 import cl.duocuc.miregistro.viewmodel.UsuariosViewModel
 
 // =====================================================================
@@ -28,12 +24,58 @@ import cl.duocuc.miregistro.viewmodel.UsuariosViewModel
 @Composable
 fun AppNavegacion() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+
+    // 1. Inicializar Preferencias y Base de Datos
+    val dbHelper = UsuarioDbHelper(context)
+    val sesionPrefs = SesionPreferencias(context)
 
     val usuariosViewModel: UsuariosViewModel = viewModel()
     val usuarioActual by usuariosViewModel.usuarioActual.collectAsStateWithLifecycle()
 
-    // Usamos Ruta.Instalaciones como punto de partida oficial del caso Induztek
-    NavHost(navController = navController, startDestination = Ruta.Instalaciones.ruta) {
+    // 2. Determinar destino inicial según sesión activa y rol
+    val startDestination = if (sesionPrefs.haySesionActiva()) {
+        if (sesionPrefs.leerRol() == 4L) Ruta.HistorialCliente.ruta else Ruta.Instalaciones.ruta
+    } else {
+        Ruta.Login.ruta
+    }
+
+    NavHost(navController = navController, startDestination = startDestination) {
+
+        // --- RUTAS DE AUTENTICACIÓN Y CLIENTES ---
+
+        composable(Ruta.Login.ruta) {
+            val loginViewModel: LoginViewModel = viewModel(
+                factory = LoginViewModelFactory(dbHelper, sesionPrefs)
+            )
+
+            LoginClienteScreen(
+                viewModel = loginViewModel,
+                onLoginSuccess = { rolId ->
+                    val destino = if (rolId == 4L) Ruta.HistorialCliente.ruta else Ruta.Instalaciones.ruta
+                    navController.navigate(destino) {
+                        // Evita que el usuario vuelva al login presionando el botón de retroceso
+                        popUpTo(Ruta.Login.ruta) { inclusive = true }
+                    }
+                },
+                onRegistroClick = { /* Opcional */ }
+            )
+        }
+
+        composable(Ruta.HistorialCliente.ruta) {
+            HistorialEquipoScreen(
+                equipoId = 1, // Puedes hacerlo dinámico después
+                onVolver = {
+                    // Ejemplo: Usar el botón de volver para cerrar sesión
+                    sesionPrefs.borrar()
+                    navController.navigate(Ruta.Login.ruta) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // --- RUTAS OPERATIVAS (TRABAJADORES INDUZTEK) ---
 
         // 1. Pantalla de Selección de Planta / Faena (Instalaciones)
         composable(Ruta.Instalaciones.ruta) {
