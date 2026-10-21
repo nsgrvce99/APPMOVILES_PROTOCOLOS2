@@ -13,5 +13,7 @@ data class ProtocoloUiState(
     val errorTemperatura: String? = null,
     val errorMedicion: String? = null,
     val resultadoPrueba: String = "Pendiente", // Aprobado / Observado / Rechazado
-    val guardadoExitoso: Boolean = false
+    val guardadoExitoso: Boolean = false,
+    val protocoloGuardadoId: Long? = null
+
 )

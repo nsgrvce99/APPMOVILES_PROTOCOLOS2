@@ -1,33 +1,51 @@
 package cl.duocuc.miregistro.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.theme.Dimens
+import cl.duocuc.miregistro.viewmodel.RegistroPruebaViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegistroPruebaScreen(
-    equipoId: Int,
+    equipoId: Long,
     usuarioActual: Usuario?,
     onVolver: () -> Unit,
-    onPruebaGuardadaExitosamente: () -> Unit
+    onPruebaGuardadaExitosamente: (Long) -> Unit,
+    dbHelper: UsuarioDbHelper = UsuarioDbHelper(LocalContext.current)
 ) {
+    // ViewModel construido manualmente para inyectar dbHelper
+    val viewModel: RegistroPruebaViewModel = viewModel(
+        key = "reg_$equipoId",
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return RegistroPruebaViewModel(dbHelper) as T
+            }
+        }
+    )
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(uiState.protocoloGuardadoId) {
+        uiState.protocoloGuardadoId?.let { id ->
+            onPruebaGuardadaExitosamente(id)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Protocolo Terreno - Equipo ID: $equipoId") },
+                title = { Text("Protocolo Equipo ID: $equipoId") },
                 navigationIcon = {
                     IconButton(onClick = onVolver) { Text("←") }
                 }
@@ -38,14 +56,72 @@ fun RegistroPruebaScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(Dimens.espacioPantalla),
+                .padding(Dimens.espacioPantalla)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
         ) {
-            Text("Formulario de Pruebas Eléctricas (RF-02 / RN-04)", style = MaterialTheme.typography.titleMedium)
-            Text("Técnico responsable: ${usuarioActual?.nombre ?: "N/A"}")
+            Text("Técnico: ${usuarioActual?.nombre ?: "N/A"}")
 
-            Button(onClick = onPruebaGuardadaExitosamente) {
-                Text("Guardar Protocolo (Modo Offline)")
+            OutlinedTextField(
+                value = uiState.temperaturaAmbiente,
+                onValueChange = viewModel::actualizarTemperatura,
+                label = { Text("Temperatura Ambiente (°C)") },
+                isError = uiState.errorTemperatura != null,
+                supportingText = { uiState.errorTemperatura?.let { Text(it) } },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = uiState.humedadRelativa,
+                onValueChange = viewModel::actualizarHumedad,
+                label = { Text("Humedad Relativa (%)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Text("Prueba de Aislación (RN-06)", style = MaterialTheme.typography.titleMedium)
+
+            OutlinedTextField(
+                value = uiState.lectura1Min,
+                onValueChange = viewModel::actualizarLectura1Min,
+                label = { Text("Lectura 1 min (MΩ)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = uiState.lectura10Min,
+                onValueChange = viewModel::actualizarLectura10Min,
+                label = { Text("Lectura 10 min (MΩ)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (uiState.resultadoPrueba != "Pendiente") {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Text(
+                        "Resultado IP: ${uiState.resultadoPrueba}",
+                        modifier = Modifier.padding(Dimens.espacioMedio),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+
+            Button(
+                onClick = {
+                    viewModel.guardarProtocolo(
+                        equipoId = equipoId,
+                        tecnicoId = usuarioActual?.id ?: 1L
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Guardar Protocolo (Offline)")
             }
         }
     }

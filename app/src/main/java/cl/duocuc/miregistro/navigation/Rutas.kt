@@ -31,5 +31,9 @@ sealed class Ruta(val ruta: String) {
     data object HistorialEquipo : Ruta("historial/{equipoId}") {
         fun crear(id: Int) = "historial/$id"
     }
+
+    data object CierreVisita : Ruta("cierre_visita/{protocoloId}") {
+        fun crear(protocoloId: Long) = "cierre_visita/$protocoloId"
+    }
     data object Formalizacion : Ruta("formalizacion")         // Rol Ingeniero
 }

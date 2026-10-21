@@ -5,37 +5,28 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import cl.duocuc.miregistro.model.Rol
-import cl.duocuc.miregistro.model.Usuario
-
-// =====================================================================
-//  UsuarioDbHelper.kt  —  ADAPTADO PARA INDUZTEK INGENIERÍA SpA
-//  ---------------------------------------------------------------------
-//  Implementa el modelo relacional normalizado con las tablas de roles
-//  y los 4 perfiles obligatorios: Técnico, Ingeniero, Jefe Técnico y Cliente.
-// =====================================================================
+import cl.duocuc.miregistro.model.*
 
 class UsuarioDbHelper(context: Context) :
     SQLiteOpenHelper(context, NOMBRE_BD, null, VERSION_BD) {
 
     companion object {
         private const val NOMBRE_BD = "induztekterreno.db"
-        private const val VERSION_BD = 2
+        private const val VERSION_BD = 4  // Subimos versión por la nueva tabla
 
-        // Tabla de Roles según Anexo 2 y MER Induztek
+        // ---- ROL ----
         private const val TABLA_ROLES = "rol"
         private const val ROL_ID = "id_rol"
         private const val ROL_CODIGO = "codigo"
         private const val ROL_NOMBRE = "nombre"
 
-        // Tabla de Usuarios / Personal e Ingenieros / Clientes
+        // ---- USUARIO ----
         private const val TABLA_USUARIOS = "usuario"
         private const val USU_ID = "id_usuario"
         private const val USU_ROL = "id_rol"
         private const val USU_RUT = "rut"
         private const val USU_NOMBRE = "nombre"
         private const val USU_CORREO = "correo"
-
         private const val USU_CONTRA = "contraseña"
         private const val USU_TELEFONO = "telefono"
         private const val USU_ACTIVO = "activo"
@@ -43,6 +34,45 @@ class UsuarioDbHelper(context: Context) :
         private const val USU_CONTACTO_NOMBRE = "contacto_nombre"
         private const val USU_CONTACTO_CARGO = "contacto_cargo"
 
+        // ---- EQUIPO ----
+        private const val TABLA_EQUIPOS = "equipo"
+        private const val EQ_ID = "id_equipo"
+        private const val EQ_TAG = "tag"
+        private const val EQ_TIPO = "tipo_equipo"
+        private const val EQ_MARCA = "marca"
+        private const val EQ_SERIE = "numero_serie"
+        private const val EQ_INSTALACION = "instalacion"
+
+        // ---- PROTOCOLO ----
+        private const val TABLA_PROTOCOLOS = "protocolo"
+        private const val PRO_ID = "id_protocolo"
+        private const val PRO_EQUIPO_ID = "id_equipo"
+        private const val PRO_TECNICO_ID = "id_usuario_registra"
+        private const val PRO_FECHA = "fecha_hora"
+        private const val PRO_TEMP = "temperatura"
+        private const val PRO_HUM = "humedad"
+        private const val PRO_RESULTADO = "resultado_global"
+        private const val PRO_ESTADO = "estado"
+
+        // ---- MEDICION ----
+        private const val TABLA_MEDICIONES = "medicion"
+        private const val MED_ID = "id_medicion"
+        private const val MED_PROTOCOLO_ID = "id_protocolo"
+        private const val MED_TIPO_PRUEBA = "tipo_prueba"
+        private const val MED_LECTURA_1MIN = "lectura_1min"
+        private const val MED_LECTURA_10MIN = "lectura_10min"
+        private const val MED_IP = "indice_polarizacion"
+
+        // ---- RECEPCION ACTA ----
+        private const val TABLA_RECEPCION = "recepcion_acta"
+        private const val REC_ID = "id_recepcion"
+        private const val REC_PROTOCOLO_ID = "id_protocolo"
+        private const val REC_NOMBRE = "nombre_receptor"
+        private const val REC_RUT = "rut_receptor"
+        private const val REC_CARGO = "cargo_receptor"
+        private const val REC_FECHA = "fecha_hora_recepcion"
+
+        // ---- SQL DE CREACIÓN ----
         private const val SQL_CREAR_ROLES =
             "CREATE TABLE $TABLA_ROLES (" +
                     "$ROL_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -56,7 +86,7 @@ class UsuarioDbHelper(context: Context) :
                     "$USU_RUT TEXT NOT NULL UNIQUE, " +
                     "$USU_NOMBRE TEXT NOT NULL, " +
                     "$USU_CORREO TEXT NOT NULL UNIQUE, " +
-                    "$USU_CONTRA TEXT NOT NULL UNIQUE," +
+                    "$USU_CONTRA TEXT NOT NULL UNIQUE, " +
                     "$USU_TELEFONO TEXT, " +
                     "$USU_ACTIVO INTEGER NOT NULL DEFAULT 1, " +
                     "$USU_GIRO TEXT, " +
@@ -64,7 +94,6 @@ class UsuarioDbHelper(context: Context) :
                     "$USU_CONTACTO_CARGO TEXT, " +
                     "FOREIGN KEY ($USU_ROL) REFERENCES $TABLA_ROLES($ROL_ID))"
 
-        // Precarga de los 4 roles del caso Induztek (Anexo 2 y Anexo 7)
         private const val SQL_PRECARGAR_ROLES =
             "INSERT INTO $TABLA_ROLES ($ROL_ID, $ROL_CODIGO, $ROL_NOMBRE) VALUES " +
                     "(1, 'TECNICO', 'P-01 Técnico de terreno'), " +
@@ -72,14 +101,61 @@ class UsuarioDbHelper(context: Context) :
                     "(3, 'JEFE_TECNICO', 'P-03 Jefe técnico'), " +
                     "(4, 'CLIENTE', 'P-04 Usuario cliente (solo consulta)')"
 
-        // Datos de ejemplo basados en el Anexo 9 (Personal Induztek y Usuarios cliente)
         private const val SQL_PRECARGAR_USUARIOS =
-            "INSERT INTO $TABLA_USUARIOS ($USU_ROL, $USU_RUT, $USU_NOMBRE, $USU_CORREO, $USU_CONTRA,$USU_ACTIVO) VALUES " +
-                    "(1, '17.284.519-3', 'Matías Godoy Herrera', 'mgodoy@induztek.ejemplo','1470MAT' ,1), " +
-                    "(1, '19.412.087-7', 'Javiera Tapia Muñoz', 'jtapia@induztek.ejemplo','1470JA' ,1), " +
-                    "(2, '15.906.334-8', 'Andrea Contreras Silva', 'acontreras@induztek.ejemplo','1470AN' ,1), " +
-                    "(3, '13.871.905-7', 'Ricardo Espinoza Lagos', 'respinoza@induztek.ejemplo', '1470RI',1), " +
-                    "(4, '14.226.791-8', 'Marcela Fuentes Rojas', 'mfuentes@envpacifico.ejemplo', '1470MA',1)"
+            "INSERT INTO $TABLA_USUARIOS ($USU_ROL, $USU_RUT, $USU_NOMBRE, $USU_CORREO, $USU_CONTRA, $USU_ACTIVO) VALUES " +
+                    "(1, '17.284.519-3', 'Matías Godoy Herrera', 'mgodoy@induztek.ejemplo', '1470MAT', 1), " +
+                    "(1, '19.412.087-7', 'Javiera Tapia Muñoz', 'jtapia@induztek.ejemplo', '1470JA', 1), " +
+                    "(2, '15.906.334-8', 'Andrea Contreras Silva', 'acontreras@induztek.ejemplo', '1470AN', 1), " +
+                    "(3, '13.871.905-7', 'Ricardo Espinoza Lagos', 'respinoza@induztek.ejemplo', '1470RI', 1), " +
+                    "(4, '14.226.791-8', 'Marcela Fuentes Rojas', 'mfuentes@envpacifico.ejemplo', '1470MA', 1)"
+
+        private const val SQL_CREAR_EQUIPOS =
+            "CREATE TABLE $TABLA_EQUIPOS (" +
+                    "$EQ_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "$EQ_TAG TEXT NOT NULL, " +
+                    "$EQ_TIPO TEXT NOT NULL, " +
+                    "$EQ_MARCA TEXT, " +
+                    "$EQ_SERIE TEXT, " +
+                    "$EQ_INSTALACION TEXT NOT NULL)"
+
+        private const val SQL_CREAR_PROTOCOLOS =
+            "CREATE TABLE $TABLA_PROTOCOLOS (" +
+                    "$PRO_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "$PRO_EQUIPO_ID INTEGER NOT NULL, " +
+                    "$PRO_TECNICO_ID INTEGER NOT NULL, " +
+                    "$PRO_FECHA TEXT NOT NULL, " +
+                    "$PRO_TEMP TEXT, " +
+                    "$PRO_HUM TEXT, " +
+                    "$PRO_RESULTADO TEXT, " +
+                    "$PRO_ESTADO TEXT NOT NULL, " +
+                    "FOREIGN KEY ($PRO_EQUIPO_ID) REFERENCES $TABLA_EQUIPOS($EQ_ID), " +
+                    "FOREIGN KEY ($PRO_TECNICO_ID) REFERENCES $TABLA_USUARIOS($USU_ID))"
+
+        private const val SQL_CREAR_MEDICIONES =
+            "CREATE TABLE $TABLA_MEDICIONES (" +
+                    "$MED_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "$MED_PROTOCOLO_ID INTEGER NOT NULL, " +
+                    "$MED_TIPO_PRUEBA TEXT NOT NULL, " +
+                    "$MED_LECTURA_1MIN TEXT, " +
+                    "$MED_LECTURA_10MIN TEXT, " +
+                    "$MED_IP TEXT, " +
+                    "FOREIGN KEY ($MED_PROTOCOLO_ID) REFERENCES $TABLA_PROTOCOLOS($PRO_ID))"
+
+        private const val SQL_CREAR_RECEPCION =
+            "CREATE TABLE $TABLA_RECEPCION (" +
+                    "$REC_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "$REC_PROTOCOLO_ID INTEGER NOT NULL, " +
+                    "$REC_NOMBRE TEXT NOT NULL, " +
+                    "$REC_RUT TEXT NOT NULL, " +
+                    "$REC_CARGO TEXT, " +
+                    "$REC_FECHA TEXT NOT NULL, " +
+                    "FOREIGN KEY ($REC_PROTOCOLO_ID) REFERENCES $TABLA_PROTOCOLOS($PRO_ID))"
+
+        private const val SQL_PRECARGAR_EQUIPOS =
+            "INSERT INTO $TABLA_EQUIPOS ($EQ_ID, $EQ_TAG, $EQ_TIPO, $EQ_MARCA, $EQ_SERIE, $EQ_INSTALACION) VALUES " +
+                    "(1, 'TR-01', 'Transformador', 'Rhona', 'RH-18733', 'Planta Lampa'), " +
+                    "(2, 'TR-02', 'Transformador', 'Rhona', 'RH-21904', 'Planta Lampa'), " +
+                    "(3, 'CEL-MT-03', 'Celda MT', 'Ormazabal', 'OR-77812', 'Edificio Clínico')"
 
         private const val SQL_SELECT_USUARIOS =
             "SELECT u.*, r.$ROL_CODIGO AS rol_codigo, r.$ROL_NOMBRE AS rol_nombre " +
@@ -97,19 +173,26 @@ class UsuarioDbHelper(context: Context) :
         db.execSQL(SQL_CREAR_USUARIOS)
         db.execSQL(SQL_PRECARGAR_ROLES)
         db.execSQL(SQL_PRECARGAR_USUARIOS)
+        db.execSQL(SQL_CREAR_EQUIPOS)
+        db.execSQL(SQL_CREAR_PROTOCOLOS)
+        db.execSQL(SQL_CREAR_MEDICIONES)
+        db.execSQL(SQL_CREAR_RECEPCION)
+        db.execSQL(SQL_PRECARGAR_EQUIPOS)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        db.execSQL("DROP TABLE IF EXISTS $TABLA_RECEPCION")
+        db.execSQL("DROP TABLE IF EXISTS $TABLA_MEDICIONES")
+        db.execSQL("DROP TABLE IF EXISTS $TABLA_PROTOCOLOS")
+        db.execSQL("DROP TABLE IF EXISTS $TABLA_EQUIPOS")
         db.execSQL("DROP TABLE IF EXISTS $TABLA_USUARIOS")
         db.execSQL("DROP TABLE IF EXISTS $TABLA_ROLES")
         onCreate(db)
     }
 
-    // ----------------------------- ROLES -----------------------------
-
+    // ---------------- ROLES ----------------
     fun listarRoles(): List<Rol> {
         val roles = mutableListOf<Rol>()
-        // Agregamos $ROL_CODIGO a la consulta SELECT
         readableDatabase.rawQuery(
             "SELECT $ROL_ID, $ROL_CODIGO, $ROL_NOMBRE FROM $TABLA_ROLES ORDER BY $ROL_ID", null
         ).use { cursor ->
@@ -117,7 +200,7 @@ class UsuarioDbHelper(context: Context) :
                 roles.add(
                     Rol(
                         id = cursor.getLong(cursor.getColumnIndexOrThrow(ROL_ID)),
-                        codigo = cursor.getString(cursor.getColumnIndexOrThrow(ROL_CODIGO)), // <-- Agregado
+                        codigo = cursor.getString(cursor.getColumnIndexOrThrow(ROL_CODIGO)),
                         nombre = cursor.getString(cursor.getColumnIndexOrThrow(ROL_NOMBRE))
                     )
                 )
@@ -126,8 +209,7 @@ class UsuarioDbHelper(context: Context) :
         return roles
     }
 
-    // ---------------------------- USUARIOS ---------------------------
-
+    // ---------------- USUARIOS ----------------
     fun insertarUsuario(usuario: Usuario): Long =
         writableDatabase.insert(TABLA_USUARIOS, null, valoresDe(usuario))
 
@@ -135,30 +217,25 @@ class UsuarioDbHelper(context: Context) :
         consultarUsuarios("$SQL_SELECT_USUARIOS ORDER BY u.$USU_NOMBRE", null)
 
     fun buscarPorId(id: Long): Usuario? =
-        consultarUsuarios("$SQL_SELECT_USUARIOS WHERE u.$USU_ID = ?", arrayOf(id.toString()))
-            .firstOrNull()
-    // ... tus otras funciones (como eliminarUsuario, consultarUsuarios, etc.)
+        consultarUsuarios("$SQL_SELECT_USUARIOS WHERE u.$USU_ID = ?", arrayOf(id.toString())).firstOrNull()
 
     fun autenticarUsuario(correo: String, contrasena: String): Usuario? {
         val sql = "$SQL_SELECT_USUARIOS WHERE u.$USU_CORREO = ? AND u.$USU_CONTRA = ? AND u.$USU_ACTIVO = 1"
-        return consultarUsuarios(sql, arrayOf(correo, contrasena)).firstOrNull()}
+        return consultarUsuarios(sql, arrayOf(correo, contrasena)).firstOrNull()
+    }
 
     fun actualizarUsuario(usuario: Usuario): Int =
-        writableDatabase.update(
-            TABLA_USUARIOS, valoresDe(usuario), "$USU_ID = ?", arrayOf(usuario.id.toString())
-        )
+        writableDatabase.update(TABLA_USUARIOS, valoresDe(usuario), "$USU_ID = ?", arrayOf(usuario.id.toString()))
 
     fun eliminarUsuario(id: Long): Int =
         writableDatabase.delete(TABLA_USUARIOS, "$USU_ID = ?", arrayOf(id.toString()))
-
-    // ---------------------------- AYUDANTES --------------------------
 
     private fun valoresDe(usuario: Usuario) = ContentValues().apply {
         put(USU_NOMBRE, usuario.nombre)
         put(USU_CORREO, usuario.correo)
         put(USU_CONTRA, usuario.contrasena)
         put(USU_RUT, usuario.rut)
-        put(USU_ROL, usuario.rolId)
+        put(USU_ROL, usuario.rolId.toInt())   // 👈 Aquí corregimos el mismatch Long → Int
         put(USU_ACTIVO, if (usuario.activo) 1 else 0)
     }
 
@@ -183,5 +260,119 @@ class UsuarioDbHelper(context: Context) :
         activo = cursor.getInt(cursor.getColumnIndexOrThrow(USU_ACTIVO)) == 1
     )
 
-}
+    // ---------------- EQUIPOS ----------------
+    fun listarEquipos(): List<Equipo> {
+        val lista = mutableListOf<Equipo>()
+        readableDatabase.rawQuery("SELECT * FROM $TABLA_EQUIPOS", null).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(
+                    Equipo(
+                        id = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID)).toInt(),
+                        tag = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TAG)),
+                        tipoEquipo = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TIPO)),
+                        clasificacion = "Primario",
+                        instalacion = cursor.getString(cursor.getColumnIndexOrThrow(EQ_INSTALACION)),
+                        marca = cursor.getString(cursor.getColumnIndexOrThrow(EQ_MARCA)) ?: "",
+                        serie = cursor.getString(cursor.getColumnIndexOrThrow(EQ_SERIE)) ?: "",
+                        potenciaTension = ""
+                    )
+                )
+            }
+        }
+        return lista
+    }
 
+    // ---------------- PROTOCOLOS ----------------
+    fun guardarProtocolo(protocolo: Protocolo): Long {
+        val values = ContentValues().apply {
+            put(PRO_EQUIPO_ID, protocolo.equipoId)
+            put(PRO_TECNICO_ID, protocolo.tecnicoId)
+            put(PRO_FECHA, protocolo.fecha)
+            put(PRO_TEMP, protocolo.temperatura)
+            put(PRO_HUM, protocolo.humedad)
+            put(PRO_RESULTADO, protocolo.resultadoGlobal)
+            put(PRO_ESTADO, protocolo.estado)
+        }
+        return writableDatabase.insert(TABLA_PROTOCOLOS, null, values)
+    }
+
+    fun listarProtocolosPorEquipo(equipoId: Long): List<Protocolo> {
+        val lista = mutableListOf<Protocolo>()
+        readableDatabase.rawQuery(
+            "SELECT * FROM $TABLA_PROTOCOLOS WHERE $PRO_EQUIPO_ID = ? ORDER BY $PRO_FECHA DESC",
+            arrayOf(equipoId.toString())
+        ).use { cursor ->
+            while (cursor.moveToNext()) lista.add(leerProtocolo(cursor))
+        }
+        return lista
+    }
+
+    fun listarTodosLosProtocolos(): List<Protocolo> {
+        val lista = mutableListOf<Protocolo>()
+        readableDatabase.rawQuery(
+            "SELECT * FROM $TABLA_PROTOCOLOS ORDER BY $PRO_FECHA DESC", null
+        ).use { cursor ->
+            while (cursor.moveToNext()) lista.add(leerProtocolo(cursor))
+        }
+        return lista
+    }
+
+    private fun leerProtocolo(cursor: Cursor) = Protocolo(
+        id = cursor.getLong(cursor.getColumnIndexOrThrow(PRO_ID)),
+        equipoId = cursor.getLong(cursor.getColumnIndexOrThrow(PRO_EQUIPO_ID)),
+        tecnicoId = cursor.getLong(cursor.getColumnIndexOrThrow(PRO_TECNICO_ID)),
+        fecha = cursor.getString(cursor.getColumnIndexOrThrow(PRO_FECHA)),
+        temperatura = cursor.getString(cursor.getColumnIndexOrThrow(PRO_TEMP)) ?: "",
+        humedad = cursor.getString(cursor.getColumnIndexOrThrow(PRO_HUM)) ?: "",
+        resultadoGlobal = cursor.getString(cursor.getColumnIndexOrThrow(PRO_RESULTADO)) ?: "Pendiente",
+        estado = cursor.getString(cursor.getColumnIndexOrThrow(PRO_ESTADO))
+    )
+
+    fun actualizarEstadoProtocolo(protocoloId: Long, nuevoEstado: String) {
+        val values = ContentValues().apply { put(PRO_ESTADO, nuevoEstado) }
+        writableDatabase.update(TABLA_PROTOCOLOS, values, "$PRO_ID = ?", arrayOf(protocoloId.toString()))
+    }
+
+    // ---------------- MEDICIONES ----------------
+    fun guardarMedicion(protocoloId: Long, tipoPrueba: String, lectura1: String, lectura10: String, ip: String): Long {
+        val values = ContentValues().apply {
+            put(MED_PROTOCOLO_ID, protocoloId)
+            put(MED_TIPO_PRUEBA, tipoPrueba)
+            put(MED_LECTURA_1MIN, lectura1)
+            put(MED_LECTURA_10MIN, lectura10)
+            put(MED_IP, ip)
+        }
+        return writableDatabase.insert(TABLA_MEDICIONES, null, values)
+    }
+
+    fun obtenerMedicionDeProtocolo(protocoloId: Long): Medicion? {
+        readableDatabase.rawQuery(
+            "SELECT * FROM $TABLA_MEDICIONES WHERE $MED_PROTOCOLO_ID = ? LIMIT 1",
+            arrayOf(protocoloId.toString())
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return Medicion(
+                    id = cursor.getLong(cursor.getColumnIndexOrThrow(MED_ID)),
+                    protocoloId = cursor.getLong(cursor.getColumnIndexOrThrow(MED_PROTOCOLO_ID)),
+                    tipoPrueba = cursor.getString(cursor.getColumnIndexOrThrow(MED_TIPO_PRUEBA)),
+                    lectura1Min = cursor.getString(cursor.getColumnIndexOrThrow(MED_LECTURA_1MIN)) ?: "",
+                    lectura10Min = cursor.getString(cursor.getColumnIndexOrThrow(MED_LECTURA_10MIN)) ?: "",
+                    indicePolarizacion = cursor.getString(cursor.getColumnIndexOrThrow(MED_IP)) ?: ""
+                )
+            }
+        }
+        return null
+    }
+
+    // ---------------- RECEPCION ACTA ----------------
+    fun guardarRecepcionActa(protocoloId: Long, nombre: String, rut: String, cargo: String, fechaHora: String): Long {
+        val values = ContentValues().apply {
+            put(REC_PROTOCOLO_ID, protocoloId)
+            put(REC_NOMBRE, nombre)
+            put(REC_RUT, rut)
+            put(REC_CARGO, cargo)
+            put(REC_FECHA, fechaHora)
+        }
+        return writableDatabase.insert(TABLA_RECEPCION, null, values)
+    }
+}

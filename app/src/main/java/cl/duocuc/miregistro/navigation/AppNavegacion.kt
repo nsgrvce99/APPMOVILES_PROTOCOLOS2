@@ -12,28 +12,22 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import cl.duocuc.miregistro.data.SesionPreferencias
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.model.LoginViewModel
+import cl.duocuc.miregistro.model.LoginViewModelFactory
 import cl.duocuc.miregistro.ui.screens.*
-import cl.duocuc.miregistro.viewmodel.LoginViewModel
-import cl.duocuc.miregistro.viewmodel.LoginViewModelFactory
 import cl.duocuc.miregistro.viewmodel.UsuariosViewModel
-
-// =====================================================================
-//  AppNavegacion.kt  —  MAPA DE NAVEGACIÓN COMPLETO (Induztek)
-// =====================================================================
 
 @Composable
 fun AppNavegacion() {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    // 1. Inicializar Preferencias y Base de Datos
     val dbHelper = UsuarioDbHelper(context)
     val sesionPrefs = SesionPreferencias(context)
 
     val usuariosViewModel: UsuariosViewModel = viewModel()
     val usuarioActual by usuariosViewModel.usuarioActual.collectAsStateWithLifecycle()
 
-    // 2. Determinar destino inicial según sesión activa y rol
     val startDestination = if (sesionPrefs.haySesionActiva()) {
         if (sesionPrefs.leerRol() == 4L) Ruta.HistorialCliente.ruta else Ruta.Instalaciones.ruta
     } else {
@@ -42,31 +36,28 @@ fun AppNavegacion() {
 
     NavHost(navController = navController, startDestination = startDestination) {
 
-        // --- RUTAS DE AUTENTICACIÓN Y CLIENTES ---
-
+        // ---- LOGIN ----
         composable(Ruta.Login.ruta) {
             val loginViewModel: LoginViewModel = viewModel(
                 factory = LoginViewModelFactory(dbHelper, sesionPrefs)
             )
-
             LoginClienteScreen(
                 viewModel = loginViewModel,
                 onLoginSuccess = { rolId ->
                     val destino = if (rolId == 4L) Ruta.HistorialCliente.ruta else Ruta.Instalaciones.ruta
                     navController.navigate(destino) {
-                        // Evita que el usuario vuelva al login presionando el botón de retroceso
                         popUpTo(Ruta.Login.ruta) { inclusive = true }
                     }
                 },
-                onRegistroClick = { /* Opcional */ }
+                onRegistroClick = { }
             )
         }
 
+        // ---- HISTORIAL CLIENTE (Rol 4) ----
         composable(Ruta.HistorialCliente.ruta) {
             HistorialEquipoScreen(
-                equipoId = 1, // Puedes hacerlo dinámico después
+                equipoId = 1L, // Equipo de ejemplo para el cliente
                 onVolver = {
-                    // Ejemplo: Usar el botón de volver para cerrar sesión
                     sesionPrefs.borrar()
                     navController.navigate(Ruta.Login.ruta) {
                         popUpTo(0) { inclusive = true }
@@ -75,9 +66,7 @@ fun AppNavegacion() {
             )
         }
 
-        // --- RUTAS OPERATIVAS (TRABAJADORES INDUZTEK) ---
-
-        // 1. Pantalla de Selección de Planta / Faena (Instalaciones)
+        // ---- INSTALACIONES ----
         composable(Ruta.Instalaciones.ruta) {
             InstalacionesScreen(
                 usuarioActual = usuarioActual,
@@ -90,7 +79,7 @@ fun AppNavegacion() {
             )
         }
 
-        // 2. Lista de Equipos o TAGs en la instalación seleccionada
+        // ---- LISTA DE EQUIPOS ----
         composable(
             route = Ruta.ListaEquipos.ruta,
             arguments = listOf(navArgument("instalacionId") { type = NavType.IntType })
@@ -108,39 +97,56 @@ fun AppNavegacion() {
             )
         }
 
-        // 3. Registro de Pruebas en Terreno (RF-02, RN-04)
+        // ---- REGISTRO DE PRUEBA (con navegación al cierre) ----
         composable(
             route = Ruta.RegistroPrueba.ruta,
-            arguments = listOf(navArgument("equipoId") { type = NavType.IntType })
+            arguments = listOf(navArgument("equipoId") { type = NavType.LongType })
         ) { backStackEntry ->
-            val equipoId = backStackEntry.arguments?.getInt("equipoId") ?: 0
+            val equipoId = backStackEntry.arguments?.getLong("equipoId") ?: 0L
             RegistroPruebaScreen(
                 equipoId = equipoId,
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() },
-                onPruebaGuardadaExitosamente = {
-                    navController.popBackStack() // Vuelve a la lista de equipos tras guardar
+                onPruebaGuardadaExitosamente = { protocoloId ->
+                    navController.navigate(Ruta.CierreVisita.crear(protocoloId)) {
+                        popUpTo(Ruta.RegistroPrueba.crear(equipoId.toInt())) { inclusive = true }
+                    }
                 }
             )
         }
 
-        // 4. Historial del Equipo (RF-10)
+        // ---- HISTORIAL EQUIPO ----
         composable(
             route = Ruta.HistorialEquipo.ruta,
-            arguments = listOf(navArgument("equipoId") { type = NavType.IntType })
+            arguments = listOf(navArgument("equipoId") { type = NavType.LongType })
         ) { backStackEntry ->
-            val equipoId = backStackEntry.arguments?.getInt("equipoId") ?: 0
+            val equipoId = backStackEntry.arguments?.getLong("equipoId") ?: 0L
             HistorialEquipoScreen(
                 equipoId = equipoId,
                 onVolver = { navController.navigateUp() }
             )
         }
 
-        // 5. Formalización de Protocolos (Exclusivo Rol Ingeniero / Jefe Técnico)
+        // ---- FORMALIZACIÓN ----
         composable(Ruta.Formalizacion.ruta) {
             FormalizacionScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() }
+            )
+        }
+
+        // ---- CIERRE DE VISITA ----
+        composable(
+            route = Ruta.CierreVisita.ruta,
+            arguments = listOf(navArgument("protocoloId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val protocoloId = backStackEntry.arguments?.getLong("protocoloId") ?: 0L
+            CierreVisitaScreen(
+                protocoloId = protocoloId,
+                onVolver = { navController.navigateUp() },
+                onActaEntregada = {
+                    navController.popBackStack(Ruta.Instalaciones.ruta, inclusive = false)
+                }
             )
         }
     }
