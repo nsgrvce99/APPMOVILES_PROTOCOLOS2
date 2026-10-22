@@ -1,7 +1,9 @@
 package cl.duocuc.miregistro.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshots.toInt
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -28,6 +30,16 @@ fun AppNavegacion() {
     val usuariosViewModel: UsuariosViewModel = viewModel()
     val usuarioActual by usuariosViewModel.usuarioActual.collectAsStateWithLifecycle()
 
+    // 🔑 NUEVO: Si hay sesión activa al abrir la app, recuperamos el usuario
+    LaunchedEffect(Unit) {
+        if (sesionPrefs.haySesionActiva()) {
+            val usuarioGuardado = dbHelper.buscarPorId(sesionPrefs.leer())
+            if (usuarioGuardado != null) {
+                usuariosViewModel.iniciarSesionComo(usuarioGuardado)
+            }
+        }
+    }
+
     val startDestination = if (sesionPrefs.haySesionActiva()) {
         if (sesionPrefs.leerRol() == 4L) Ruta.HistorialCliente.ruta else Ruta.Instalaciones.ruta
     } else {
@@ -44,6 +56,12 @@ fun AppNavegacion() {
             LoginClienteScreen(
                 viewModel = loginViewModel,
                 onLoginSuccess = { rolId ->
+                    // 👇 🔑 ESTO FALTABA: Cargar el usuario en el ViewModel global
+                    val usuarioLogueado = dbHelper.buscarPorId(sesionPrefs.leer())
+                    if (usuarioLogueado != null) {
+                        usuariosViewModel.iniciarSesionComo(usuarioLogueado)
+                    }
+
                     val destino = if (rolId == 4L) Ruta.HistorialCliente.ruta else Ruta.Instalaciones.ruta
                     navController.navigate(destino) {
                         popUpTo(Ruta.Login.ruta) { inclusive = true }
@@ -56,9 +74,10 @@ fun AppNavegacion() {
         // ---- HISTORIAL CLIENTE (Rol 4) ----
         composable(Ruta.HistorialCliente.ruta) {
             HistorialEquipoScreen(
-                equipoId = 1L, // Equipo de ejemplo para el cliente
+                equipoId = 1L,
                 onVolver = {
                     sesionPrefs.borrar()
+                    usuariosViewModel.cerrarSesion() // 🧹 Limpiar el VM también
                     navController.navigate(Ruta.Login.ruta) {
                         popUpTo(0) { inclusive = true }
                     }
@@ -70,11 +89,18 @@ fun AppNavegacion() {
         composable(Ruta.Instalaciones.ruta) {
             InstalacionesScreen(
                 usuarioActual = usuarioActual,
-                onSeleccionarInstalacion = { instalacionId ->
+                onSeleccionarInstalacion = { instalacionId -> // Es Long
                     navController.navigate(Ruta.ListaEquipos.crear(instalacionId))
                 },
                 onIrAFormalizacion = {
                     navController.navigate(Ruta.Formalizacion.ruta)
+                },
+                onCerrarSesion = {
+                    sesionPrefs.borrar()
+                    usuariosViewModel.cerrarSesion()
+                    navController.navigate(Ruta.Login.ruta) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }
@@ -82,22 +108,22 @@ fun AppNavegacion() {
         // ---- LISTA DE EQUIPOS ----
         composable(
             route = Ruta.ListaEquipos.ruta,
-            arguments = listOf(navArgument("instalacionId") { type = NavType.IntType })
+            arguments = listOf(navArgument("instalacionId") { type = NavType.LongType }) // 👈 LongType
         ) { backStackEntry ->
-            val instalacionId = backStackEntry.arguments?.getInt("instalacionId") ?: 0
+            val instalacionId = backStackEntry.arguments?.getLong("instalacionId") ?: 0L // 👈 getLong
             ListaEquiposScreen(
                 instalacionId = instalacionId,
                 onVolver = { navController.navigateUp() },
-                onSeleccionarEquipoParaPrueba = { equipoId ->
+                onSeleccionarEquipoParaPrueba = { equipoId -> // Es Long
                     navController.navigate(Ruta.RegistroPrueba.crear(equipoId))
                 },
-                onVerHistorialEquipo = { equipoId ->
+                onVerHistorialEquipo = { equipoId -> // Es Long
                     navController.navigate(Ruta.HistorialEquipo.crear(equipoId))
                 }
             )
         }
 
-        // ---- REGISTRO DE PRUEBA (con navegación al cierre) ----
+        // ---- REGISTRO DE PRUEBA ----
         composable(
             route = Ruta.RegistroPrueba.ruta,
             arguments = listOf(navArgument("equipoId") { type = NavType.LongType })
@@ -109,7 +135,7 @@ fun AppNavegacion() {
                 onVolver = { navController.navigateUp() },
                 onPruebaGuardadaExitosamente = { protocoloId ->
                     navController.navigate(Ruta.CierreVisita.crear(protocoloId)) {
-                        popUpTo(Ruta.RegistroPrueba.crear(equipoId.toInt())) { inclusive = true }
+                        popUpTo(Ruta.RegistroPrueba.crear(equipoId)) { inclusive = true } // 👈 Sin toInt()
                     }
                 }
             )

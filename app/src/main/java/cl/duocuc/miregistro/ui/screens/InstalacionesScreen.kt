@@ -20,13 +20,14 @@ import cl.duocuc.miregistro.ui.theme.Dimens
 @Composable
 fun InstalacionesScreen(
     usuarioActual: Usuario?,
-    onSeleccionarInstalacion: (Int) -> Unit,
-    onIrAFormalizacion: () -> Unit
+    onSeleccionarInstalacion: (Long) -> Unit,
+    onIrAFormalizacion: () -> Unit,
+    onCerrarSesion: () -> Unit
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Induztek - Selección de Planta / Faena") }
+                title = { Text("Induztek - Selección de Instalación") }
             )
         }
     ) { innerPadding ->
@@ -42,21 +43,34 @@ fun InstalacionesScreen(
                 text = "Bienvenido, ${usuarioActual?.nombre ?: "Operador Terreno"} (${usuarioActual?.rolNombre ?: "Técnico"})",
                 style = MaterialTheme.typography.titleMedium
             )
+            Text("Seleccione la instalación eléctrica a inspeccionar:")
 
-            Text("Seleccione la instalación eléctrica o subestación a inspeccionar:")
-
-            // Botón de ejemplo para planta ID 1
-            Button(onClick = { onSeleccionarInstalacion(1) }) {
-                Text("Planta Industrial Lo Espejo (ID: 1)")
+            // 👇 Instalaciones reales del Anexo 9
+            Button(onClick = { onSeleccionarInstalacion(1L) }) {
+                Text("Planta Lampa (Envasadora del Pacífico)")
             }
-
-            Button(onClick = { onSeleccionarInstalacion(2) }) {
-                Text("Subestación Norte Quilicura (ID: 2)")
+            Button(onClick = { onSeleccionarInstalacion(2L) }) {
+                Text("Planta Elevadora Sur (Sanitaria Valle Central)")
+            }
+            Button(onClick = { onSeleccionarInstalacion(3L) }) {
+                Text("Faena Til Til (Minera Cerro Alto)")
+            }
+            Button(onClick = { onSeleccionarInstalacion(4L) }) {
+                Text("Edificio Clínico (Clínica Los Aromos)")
+            }
+            Button(onClick = { onSeleccionarInstalacion(5L) }) {
+                Text("Planta Molienda (Cementos Lomas Blancas)")
+            }
+            Button(onClick = { onSeleccionarInstalacion(6L) }) {
+                Text("Site Huechuraba (Data Center Andes Norte)")
             }
 
             // Si es Ingeniero o Jefe Técnico, puede ir al módulo de formalización
             if (usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L) {
-                Button(onClick = onIrAFormalizacion) {
+                Button(
+                    onClick = onIrAFormalizacion,
+                    modifier = Modifier.padding(top = Dimens.espacioMedio)
+                ) {
                     Text("Ir a Formalización de Protocolos (Ingeniero)")
                 }
             }

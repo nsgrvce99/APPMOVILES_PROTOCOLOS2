@@ -15,25 +15,35 @@ package cl.duocuc.miregistro.navigation
 //  Así el dato (qué usuario editar) viaja DENTRO de la ruta, como en una URL.
 // =====================================================================
 
+
+
 sealed class Ruta(val ruta: String) {
-    //NUEVA RUTA
+
+    // ---- AUTENTICACIÓN ----
     data object Login : Ruta("login")
-    // NUEVA RUTA: Pantalla principal de solo lectura para el Cliente (Rol 4)
+
+    // ---- CLIENTE (Rol 4) ----
     data object HistorialCliente : Ruta("historial_cliente")
 
-    data object Instalaciones : Ruta("instalaciones")       // Selección de planta/faena
+    // ---- OPERATIVAS ----
+    data object Instalaciones : Ruta("instalaciones")
+
+    // 👇 AQUÍ ESTABA EL ERROR: cambiar Int por Long
     data object ListaEquipos : Ruta("equipos/{instalacionId}") {
-        fun crear(id: Int) = "equipos/$id"
+        fun crear(instalacionId: Long) = "equipos/$instalacionId"
     }
+
     data object RegistroPrueba : Ruta("registro_prueba/{equipoId}") {
-        fun crear(id: Int) = "registro_prueba/$id"
+        fun crear(equipoId: Long) = "registro_prueba/$equipoId"
     }
+
     data object HistorialEquipo : Ruta("historial/{equipoId}") {
-        fun crear(id: Int) = "historial/$id"
+        fun crear(equipoId: Long) = "historial/$equipoId"
     }
+
+    data object Formalizacion : Ruta("formalizacion")
 
     data object CierreVisita : Ruta("cierre_visita/{protocoloId}") {
         fun crear(protocoloId: Long) = "cierre_visita/$protocoloId"
     }
-    data object Formalizacion : Ruta("formalizacion")         // Rol Ingeniero
 }
