@@ -1,7 +1,6 @@
 package cl.duocuc.miregistro.ui.screens
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,54 +27,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.model.Perfil
-import cl.duocuc.miregistro.model.PerfilUiState
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AvatarCircular
-import cl.duocuc.miregistro.ui.components.EtiquetaInteres
-import cl.duocuc.miregistro.ui.components.TarjetaEstadistica
 import cl.duocuc.miregistro.ui.components.TarjetaSeccion
 import cl.duocuc.miregistro.ui.theme.Dimens
-import cl.duocuc.miregistro.ui.theme.MiRegistroTheme
 import cl.duocuc.miregistro.viewmodel.PerfilViewModel
-
-// =====================================================================
-//  PerfilScreen.kt  —  PANTALLA 2: PERFIL DE USUARIO  (la "V")
-//  ---------------------------------------------------------------------
-//  Tiene su propio ViewModel (PerfilViewModel) para el botón "Seguir".
-//
-//  CAMBIO (Bloque 1): flecha VOLVER (←) en la barra superior.
-//  CAMBIO (Bloque 2): recibe "usuario" y muestra sus datos.
-//
-//  Árbol de CONTENEDORES:
-//
-//  Scaffold                          <- topBar + floatingActionButton
-//   └─ Column (scroll, centrada)
-//       ├─ Box                       <- PORTADA + AVATAR superpuestos
-//       │   ├─ Image (portada)          align(TopCenter)
-//       │   └─ AvatarCircular           align(BottomCenter)  -> "sale" de la portada
-//       ├─ Text nombre / profesión
-//       ├─ Row                       <- ícono + ciudad
-//       ├─ Row                       <- 3 TarjetaEstadistica con weight(1f)
-//       ├─ TarjetaSeccion "Sobre mí" <- Card
-//       └─ TarjetaSeccion "Intereses"
-//           └─ Row (scroll horizontal) <- chips
-// =====================================================================
 
 @Composable
 fun PerfilScreen(
-    usuario: Usuario?,                          // Usuario con sesión iniciada
-    onVolver: () -> Unit,                       // Botón de retorno (←)
+    usuario: Usuario?,
+    onVolver: () -> Unit,
     viewModel: PerfilViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Si llega un usuario desde la sesión, adaptamos sus datos al modelo Perfil de Induztek
+    // Convertimos el Usuario de la sesión a Perfil para mostrarlo
     val perfilActual = if (usuario != null) {
         Perfil(
             id = usuario.id,
@@ -94,6 +64,7 @@ fun PerfilScreen(
 
     PerfilContent(
         perfil = perfilActual,
+        rolId = usuario?.rolId, // 👈 Pasamos el rolId para saber si es cliente
         onVolver = onVolver
     )
 }
@@ -102,6 +73,7 @@ fun PerfilScreen(
 @Composable
 fun PerfilContent(
     perfil: Perfil?,
+    rolId: Long?, // 👈 NUEVO PARÁMETRO
     onVolver: () -> Unit = {}
 ) {
     Scaffold(
@@ -130,7 +102,7 @@ fun PerfilContent(
 
             Spacer(Modifier.height(Dimens.espacioChico))
 
-            // Nombre y Rol del Personal / Cliente
+            // Nombre y Rol
             Text(
                 text = perfil?.nombre ?: "Sin nombre",
                 style = MaterialTheme.typography.titleLarge
@@ -158,7 +130,7 @@ fun PerfilContent(
                 )
             }
 
-            // ---------- Secciones de información institucional ----------
+            // ---------- Secciones de información ----------
             Column(
                 modifier = Modifier.padding(Dimens.espacioPantalla),
                 verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
@@ -176,11 +148,14 @@ fun PerfilContent(
                     }
                 }
 
-                TarjetaSeccion(titulo = "Normativa y Seguridad") {
-                    Text(
-                        text = "El personal de terreno debe utilizar obligatoriamente Equipo de Protección Personal (EPP) en salas eléctricas y subestaciones (Anexo 2).",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                // 👇 CONDICIÓN: Mostrar solo si NO es cliente (rolId != 4)
+                if (rolId != 4L) {
+                    TarjetaSeccion(titulo = "Normativa y Seguridad") {
+                        Text(
+                            text = "El personal de terreno debe utilizar obligatoriamente Equipo de Protección Personal (EPP) en salas eléctricas y subestaciones (Anexo 2).",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(72.dp))
@@ -210,33 +185,5 @@ private fun EncabezadoPerfil() {
             descripcion = stringResource(R.string.cd_avatar),
             modifier = Modifier.align(Alignment.BottomCenter)
         )
-    }
-}
-
-// ----------------------------- PREVIEWS -----------------------------
-
-private val perfilPreview = Perfil(
-    id = 1L,
-    rut = "17.284.519-3",
-    nombre = "Matías Godoy Herrera",
-    correo = "mgodoy@induztek.ejemplo",
-    rolNombre = "P-01 Técnico de terreno",
-    activo = true,
-    cargo = "Técnico Especializado"
-)
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun PerfilPreview() {
-    MiRegistroTheme {
-        PerfilContent(perfil = perfilPreview)
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true, name = "Modo oscuro")
-@Composable
-private fun PerfilOscuroPreview() {
-    MiRegistroTheme(darkTheme = true) {
-        PerfilContent(perfil = perfilPreview)
     }
 }

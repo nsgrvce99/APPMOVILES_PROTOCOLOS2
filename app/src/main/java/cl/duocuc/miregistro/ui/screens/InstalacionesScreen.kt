@@ -11,7 +11,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -29,19 +28,21 @@ fun InstalacionesScreen(
     usuarioActual: Usuario?,
     onSeleccionarInstalacion: (Long) -> Unit,
     onIrAFormalizacion: () -> Unit,
-    onCerrarSesion: () -> Unit
+    onCerrarSesion: () -> Unit,
+    onVerMiPerfil: () -> Unit,
+    onVerUsuarios: () -> Unit   // 👈 NUEVO
 ) {
-    // 👇 Envolvemos todo con el MenuLateral
     MenuLateral(
         usuarioActual = usuarioActual,
-        onCerrarSesion = onCerrarSesion
+        onCerrarSesion = onCerrarSesion,
+        onVerMiPerfil = onVerMiPerfil,
+        onVerUsuarios = onVerUsuarios   // 👈 NUEVO
     ) { onAbrirMenu, snackbarHostState ->
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Induztek - Selección de Instalación") },
+                    title = { Text("Induztek - Selección de Planta") },
                     navigationIcon = {
-                        // 👇 El botón ☰ para abrir el menú
                         IconButton(onClick = onAbrirMenu) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_menu),
@@ -51,7 +52,7 @@ fun InstalacionesScreen(
                     }
                 )
             },
-            snackbarHost = { SnackbarHost(snackbarHostState) } // 👈 Para el aviso de sesión cerrada
+            snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { innerPadding ->
             Column(
                 modifier = Modifier
@@ -67,32 +68,28 @@ fun InstalacionesScreen(
                 )
                 Text("Seleccione la instalación eléctrica a inspeccionar:")
 
-                // 👇 Las 6 plantas reales del Anexo 9
+                // --- Plantas del Anexo 9 (todas visibles) ---
                 Button(onClick = { onSeleccionarInstalacion(1L) }) {
-                    Text("Planta Lampa (Envasadora del Pacífico)")
+                    Text("Planta Lampa")
                 }
                 Button(onClick = { onSeleccionarInstalacion(2L) }) {
-                    Text("Planta Elevadora Sur (Sanitaria Valle Central)")
+                    Text("Planta Elevadora Sur")
                 }
                 Button(onClick = { onSeleccionarInstalacion(3L) }) {
-                    Text("Faena Til Til (Minera Cerro Alto)")
+                    Text("Faena Til Til")
                 }
                 Button(onClick = { onSeleccionarInstalacion(4L) }) {
-                    Text("Edificio Clínico (Clínica Los Aromos)")
+                    Text("Edificio Clínico")
                 }
                 Button(onClick = { onSeleccionarInstalacion(5L) }) {
-                    Text("Planta Molienda (Cementos Lomas Blancas)")
+                    Text("Planta Molienda")
                 }
                 Button(onClick = { onSeleccionarInstalacion(6L) }) {
-                    Text("Site Huechuraba (Data Center Andes Norte)")
+                    Text("Site Huechuraba")
                 }
 
-                // Si es Ingeniero o Jefe Técnico, puede ir al módulo de formalización
                 if (usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L) {
-                    Button(
-                        onClick = onIrAFormalizacion,
-                        modifier = Modifier.padding(top = Dimens.espacioMedio)
-                    ) {
+                    Button(onClick = onIrAFormalizacion) {
                         Text("Ir a Formalización de Protocolos (Ingeniero)")
                     }
                 }

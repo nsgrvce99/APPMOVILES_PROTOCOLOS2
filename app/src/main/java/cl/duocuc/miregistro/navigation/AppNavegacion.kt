@@ -39,7 +39,6 @@ fun AppNavegacion() {
         }
     }
 
-    // 👇 CAMBIO: El cliente ahora inicia en "Mis Equipos"
     val startDestination = if (sesionPrefs.haySesionActiva()) {
         if (sesionPrefs.leerRol() == 4L) Ruta.MisEquiposCliente.ruta else Ruta.Instalaciones.ruta
     } else {
@@ -61,7 +60,6 @@ fun AppNavegacion() {
                         usuariosViewModel.iniciarSesionComo(usuarioLogueado)
                     }
 
-                    // 👇 CAMBIO: Si es cliente, va a "Mis Equipos"
                     val destino = if (rolId == 4L) Ruta.MisEquiposCliente.ruta else Ruta.Instalaciones.ruta
                     navController.navigate(destino) {
                         popUpTo(Ruta.Login.ruta) { inclusive = true }
@@ -71,12 +69,20 @@ fun AppNavegacion() {
             )
         }
 
-        // ---- NUEVA PANTALLA: MIS EQUIPOS (Rol 4) ----
+        // ---- PERFIL DE USUARIO ----
+        composable(Ruta.Perfil.ruta) {
+            PerfilScreen(
+                usuario = usuarioActual,
+                onVolver = { navController.navigateUp() }
+            )
+        }
+
+        // ---- MIS EQUIPOS (Rol 4) ----
         composable(Ruta.MisEquiposCliente.ruta) {
             MisEquiposClienteScreen(
                 usuarioActual = usuarioActual,
                 onVolver = {
-                    // Al volver desde aquí, se cierra sesión
+                    // Este onVolver ya no se usa porque ahora hay menú, pero lo dejamos por compatibilidad
                     sesionPrefs.borrar()
                     usuariosViewModel.cerrarSesion()
                     navController.navigate(Ruta.Login.ruta) {
@@ -85,6 +91,16 @@ fun AppNavegacion() {
                 },
                 onVerHistorialEquipo = { equipoId ->
                     navController.navigate(Ruta.HistorialEquipo.crear(equipoId))
+                },
+                onCerrarSesion = {
+                    sesionPrefs.borrar()
+                    usuariosViewModel.cerrarSesion()
+                    navController.navigate(Ruta.Login.ruta) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onVerMiPerfil = {
+                    navController.navigate(Ruta.Perfil.ruta)
                 }
             )
         }
@@ -105,6 +121,12 @@ fun AppNavegacion() {
                     navController.navigate(Ruta.Login.ruta) {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onVerMiPerfil = {
+                    navController.navigate(Ruta.Perfil.ruta)
+                },
+                onVerUsuarios = {   // 👈 NUEVO: "Consultar Equipos e Historial"
+                    navController.navigate(Ruta.ListaEquipos.crear(1L))
                 }
             )
         }
@@ -129,7 +151,8 @@ fun AppNavegacion() {
                 }
             )
         }
-        // ---- REGISTRAR EQUIPO NUEVO (HU-01) ----
+
+        // ---- REGISTRAR EQUIPO (HU-01) ----
         composable(
             route = Ruta.RegistrarEquipo.ruta,
             arguments = listOf(navArgument("instalacionId") { type = NavType.LongType })
@@ -196,6 +219,5 @@ fun AppNavegacion() {
                 }
             )
         }
-
     }
 }
