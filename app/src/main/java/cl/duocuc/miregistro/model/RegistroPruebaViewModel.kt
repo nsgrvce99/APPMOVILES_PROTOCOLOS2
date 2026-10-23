@@ -26,7 +26,10 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
     }
 
     fun actualizarLectura1Min(lectura: String) {
-        _uiState.update { it.copy(lectura1Min = lectura) }
+        _uiState.update {
+            val ip = calcularIP(lectura, it.lectura10Min)
+            it.copy(lectura1Min = lectura, resultadoPrueba = ip)
+        }
     }
 
     fun actualizarLectura10Min(lectura: String) {
@@ -36,18 +39,32 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
         }
     }
 
+    /**
+     * Cálculo del IP y resultado de la prueba según RN-06.
+     * Regla 1: si lectura a 1 min < 100 MΩ → Rechazado (sin importar el IP).
+     * Regla 2: si lectura a 1 min ≥ 100 MΩ → aplicar criterio del IP.
+     */
     private fun calcularIP(min1: String, min10: String): String {
         val v1 = min1.toDoubleOrNull()
         val v10 = min10.toDoubleOrNull()
-        if (v1 != null && v10 != null && v1 > 0) {
-            val ip = v10 / v1
-            return when {
-                ip >= 2.0 -> "Aprobado"
-                ip >= 1.0 -> "Observado"
-                else -> "Rechazado"
-            }
+
+        // Si falta alguna lectura, no se puede calcular
+        if (v1 == null || v10 == null || v1 <= 0) {
+            return "Pendiente"
         }
-        return "Pendiente"
+
+        // ⚠️ REGLA ADICIONAL DE RN-06: lectura 1min < 100 MΩ → Rechazado
+        if (v1 < 100.0) {
+            return "Rechazado (RN-06: lectura 1min < 100 MΩ)"
+        }
+
+        // Cálculo normal del IP
+        val ip = v10 / v1
+        return when {
+            ip >= 2.0 -> "Aprobado (IP: %.2f)".format(ip)
+            ip >= 1.0 -> "Observado (IP: %.2f)".format(ip)
+            else -> "Rechazado (IP: %.2f)".format(ip)
+        }
     }
 
     fun guardarProtocolo(equipoId: Long, tecnicoId: Long) {
@@ -65,7 +82,7 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
             fecha = fechaActual,
             temperatura = state.temperaturaAmbiente,
             humedad = state.humedadRelativa,
-            resultadoGlobal = state.resultadoPrueba,
+            resultadoGlobal = state.resultadoPrueba,  // En el MVP solo hay 1 prueba
             estado = "REGISTRADO_TERRENO"
         )
 

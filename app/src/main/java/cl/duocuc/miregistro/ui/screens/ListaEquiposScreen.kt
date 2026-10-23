@@ -18,7 +18,8 @@ fun ListaEquiposScreen(
     instalacionId: Long, // 👈 1. Debe ser Long
     onVolver: () -> Unit,
     onSeleccionarEquipoParaPrueba: (Long) -> Unit, // 👈 2. Debe recibir Long
-    onVerHistorialEquipo: (Long) -> Unit // 👈 3. Debe recibir Long
+    onVerHistorialEquipo: (Long) -> Unit, // 👈 3. Debe recibir Long
+    onRegistrarEquipoNuevo: () -> Unit
 ) {
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
@@ -47,6 +48,14 @@ fun ListaEquiposScreen(
             ) {
                 item {
                     Text("TAGs de Equipos Disponibles:", style = MaterialTheme.typography.titleMedium)
+                }
+                item {
+                    Button(
+                        onClick = onRegistrarEquipoNuevo,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("➕ Registrar Equipo Nuevo (HU-01)")
+                    }
                 }
                 items(equipos) { equipo ->
                     Card(modifier = Modifier.fillMaxWidth()) {

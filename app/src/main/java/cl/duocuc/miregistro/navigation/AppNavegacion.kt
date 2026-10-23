@@ -3,7 +3,6 @@ package cl.duocuc.miregistro.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.snapshots.toInt
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -30,7 +29,7 @@ fun AppNavegacion() {
     val usuariosViewModel: UsuariosViewModel = viewModel()
     val usuarioActual by usuariosViewModel.usuarioActual.collectAsStateWithLifecycle()
 
-    // 🔑 NUEVO: Si hay sesión activa al abrir la app, recuperamos el usuario
+    // Recuperar usuario si hay sesión activa
     LaunchedEffect(Unit) {
         if (sesionPrefs.haySesionActiva()) {
             val usuarioGuardado = dbHelper.buscarPorId(sesionPrefs.leer())
@@ -40,8 +39,9 @@ fun AppNavegacion() {
         }
     }
 
+    // 👇 CAMBIO: El cliente ahora inicia en "Mis Equipos"
     val startDestination = if (sesionPrefs.haySesionActiva()) {
-        if (sesionPrefs.leerRol() == 4L) Ruta.HistorialCliente.ruta else Ruta.Instalaciones.ruta
+        if (sesionPrefs.leerRol() == 4L) Ruta.MisEquiposCliente.ruta else Ruta.Instalaciones.ruta
     } else {
         Ruta.Login.ruta
     }
@@ -56,13 +56,13 @@ fun AppNavegacion() {
             LoginClienteScreen(
                 viewModel = loginViewModel,
                 onLoginSuccess = { rolId ->
-                    // 👇 🔑 ESTO FALTABA: Cargar el usuario en el ViewModel global
                     val usuarioLogueado = dbHelper.buscarPorId(sesionPrefs.leer())
                     if (usuarioLogueado != null) {
                         usuariosViewModel.iniciarSesionComo(usuarioLogueado)
                     }
 
-                    val destino = if (rolId == 4L) Ruta.HistorialCliente.ruta else Ruta.Instalaciones.ruta
+                    // 👇 CAMBIO: Si es cliente, va a "Mis Equipos"
+                    val destino = if (rolId == 4L) Ruta.MisEquiposCliente.ruta else Ruta.Instalaciones.ruta
                     navController.navigate(destino) {
                         popUpTo(Ruta.Login.ruta) { inclusive = true }
                     }
@@ -71,16 +71,20 @@ fun AppNavegacion() {
             )
         }
 
-        // ---- HISTORIAL CLIENTE (Rol 4) ----
-        composable(Ruta.HistorialCliente.ruta) {
-            HistorialEquipoScreen(
-                equipoId = 1L,
+        // ---- NUEVA PANTALLA: MIS EQUIPOS (Rol 4) ----
+        composable(Ruta.MisEquiposCliente.ruta) {
+            MisEquiposClienteScreen(
+                usuarioActual = usuarioActual,
                 onVolver = {
+                    // Al volver desde aquí, se cierra sesión
                     sesionPrefs.borrar()
-                    usuariosViewModel.cerrarSesion() // 🧹 Limpiar el VM también
+                    usuariosViewModel.cerrarSesion()
                     navController.navigate(Ruta.Login.ruta) {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onVerHistorialEquipo = { equipoId ->
+                    navController.navigate(Ruta.HistorialEquipo.crear(equipoId))
                 }
             )
         }
@@ -89,7 +93,7 @@ fun AppNavegacion() {
         composable(Ruta.Instalaciones.ruta) {
             InstalacionesScreen(
                 usuarioActual = usuarioActual,
-                onSeleccionarInstalacion = { instalacionId -> // Es Long
+                onSeleccionarInstalacion = { instalacionId ->
                     navController.navigate(Ruta.ListaEquipos.crear(instalacionId))
                 },
                 onIrAFormalizacion = {
@@ -108,17 +112,34 @@ fun AppNavegacion() {
         // ---- LISTA DE EQUIPOS ----
         composable(
             route = Ruta.ListaEquipos.ruta,
-            arguments = listOf(navArgument("instalacionId") { type = NavType.LongType }) // 👈 LongType
+            arguments = listOf(navArgument("instalacionId") { type = NavType.LongType })
         ) { backStackEntry ->
-            val instalacionId = backStackEntry.arguments?.getLong("instalacionId") ?: 0L // 👈 getLong
+            val instalacionId = backStackEntry.arguments?.getLong("instalacionId") ?: 0L
             ListaEquiposScreen(
                 instalacionId = instalacionId,
                 onVolver = { navController.navigateUp() },
-                onSeleccionarEquipoParaPrueba = { equipoId -> // Es Long
+                onSeleccionarEquipoParaPrueba = { equipoId ->
                     navController.navigate(Ruta.RegistroPrueba.crear(equipoId))
                 },
-                onVerHistorialEquipo = { equipoId -> // Es Long
+                onVerHistorialEquipo = { equipoId ->
                     navController.navigate(Ruta.HistorialEquipo.crear(equipoId))
+                },
+                onRegistrarEquipoNuevo = {
+                    navController.navigate(Ruta.RegistrarEquipo.crear(instalacionId))
+                }
+            )
+        }
+        // ---- REGISTRAR EQUIPO NUEVO (HU-01) ----
+        composable(
+            route = Ruta.RegistrarEquipo.ruta,
+            arguments = listOf(navArgument("instalacionId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val instalacionId = backStackEntry.arguments?.getLong("instalacionId") ?: 0L
+            RegistrarEquipoScreen(
+                instalacionId = instalacionId,
+                onVolver = { navController.navigateUp() },
+                onEquipoRegistrado = {
+                    navController.popBackStack(Ruta.ListaEquipos.crear(instalacionId), inclusive = false)
                 }
             )
         }
@@ -135,7 +156,7 @@ fun AppNavegacion() {
                 onVolver = { navController.navigateUp() },
                 onPruebaGuardadaExitosamente = { protocoloId ->
                     navController.navigate(Ruta.CierreVisita.crear(protocoloId)) {
-                        popUpTo(Ruta.RegistroPrueba.crear(equipoId)) { inclusive = true } // 👈 Sin toInt()
+                        popUpTo(Ruta.RegistroPrueba.crear(equipoId)) { inclusive = true }
                     }
                 }
             )
@@ -175,5 +196,6 @@ fun AppNavegacion() {
                 }
             )
         }
+
     }
 }

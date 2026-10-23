@@ -66,12 +66,31 @@ fun HistorialEquipoScreen(
                     val protocoloAnterior = protocolos.getOrNull(indiceActual + 1)
                     val medicionAnterior = protocoloAnterior?.let { dbHelper.obtenerMedicionDeProtocolo(it.id) }
 
+                    // ✅ Estado amigable para el cliente (RN-19)
+                    val estadoMostrado = if (protocolo.estado == "REGISTRADO_TERRENO" || protocolo.estado == "OBSERVADO") {
+                        "Pendiente de formalización"
+                    } else {
+                        protocolo.estado
+                    }
+
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(Dimens.espacioMedio)) {
                             Text("Fecha: ${protocolo.fecha}", style = MaterialTheme.typography.titleMedium)
                             Text("Resultado: ${protocolo.resultadoGlobal}")
-                            Text("Estado: ${protocolo.estado}")
+                            Text("Estado: $estadoMostrado")
                             Text("T°: ${protocolo.temperatura}°C | Humedad: ${protocolo.humedad}%")
+
+                            // 👇 👇 👇 AQUÍ VA EL BLOQUE DEL MOTIVO 👇 👇 👇
+                            protocolo.motivoObservacion?.let { motivo ->
+                                if (motivo.isNotBlank()) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        "📝 Motivo observación: $motivo",
+                                        color = Color(0xFFED6C02),  // Naranja de advertencia
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
 
                             if (medicion != null) {
                                 Spacer(Modifier.height(8.dp))

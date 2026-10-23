@@ -7,5 +7,6 @@ data class Protocolo(
     val temperatura: String,
     val humedad: String,
     val resultadoGlobal: String,
-    val estado: String
+    val estado: String,
+    val motivoObservacion: String? = null
 )

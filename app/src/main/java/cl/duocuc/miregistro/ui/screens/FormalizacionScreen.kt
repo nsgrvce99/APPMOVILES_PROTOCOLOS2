@@ -10,14 +10,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,9 +44,50 @@ fun FormalizacionScreen(
 ) {
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
-
-    // Estado reactivo de la lista de protocolos
     var protocolos by remember { mutableStateOf<List<Protocolo>>(dbHelper.listarTodosLosProtocolos()) }
+
+    // 👇 Estados para el diálogo de observación (RN-04)
+    var protocoloAObservar by remember { mutableStateOf<Long?>(null) }
+    var motivoObservacion by remember { mutableStateOf("") }
+
+    // 👇 Diálogo para pedir el motivo de la observación
+    if (protocoloAObservar != null) {
+        AlertDialog(
+            onDismissRequest = { protocoloAObservar = null; motivoObservacion = "" },
+            title = { Text("Observar Protocolo") },
+            text = {
+                Column {
+                    Text("Indique el motivo de la observación (RN-04):")
+                    OutlinedTextField(
+                        value = motivoObservacion,
+                        onValueChange = { motivoObservacion = it },
+                        label = { Text("Motivo (obligatorio)") },
+                        isError = motivoObservacion.isBlank(),
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (motivoObservacion.isNotBlank()) {
+                            // 👇 Usamos el nuevo método que guarda estado + motivo
+                            dbHelper.observarProtocolo(protocoloAObservar!!, motivoObservacion)
+                            protocolos = dbHelper.listarTodosLosProtocolos()
+                            protocoloAObservar = null
+                            motivoObservacion = ""
+                        }
+                    },
+                    enabled = motivoObservacion.isNotBlank()
+                ) { Text("Aceptar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { protocoloAObservar = null; motivoObservacion = "" }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -90,7 +134,6 @@ fun FormalizacionScreen(
                                 Text("Fecha: ${proto.fecha}")
                                 Text("Resultado Terreno: ${proto.resultadoGlobal}")
                                 Text("Condiciones: ${proto.temperatura}°C / ${proto.humedad}%")
-                                Text("Estado actual: ${proto.estado}")
 
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -102,9 +145,11 @@ fun FormalizacionScreen(
                                     }) {
                                         Text("Formalizar")
                                     }
+
+                                    // 👇 Ahora abre el diálogo en lugar de cambiar el estado directo
                                     OutlinedButton(onClick = {
-                                        dbHelper.actualizarEstadoProtocolo(proto.id, "OBSERVADO")
-                                        protocolos = dbHelper.listarTodosLosProtocolos()
+                                        protocoloAObservar = proto.id
+                                        motivoObservacion = ""
                                     }) {
                                         Text("Observar")
                                     }

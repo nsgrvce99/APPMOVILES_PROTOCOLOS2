@@ -12,7 +12,7 @@ class UsuarioDbHelper(context: Context) :
 
     companion object {
         private const val NOMBRE_BD = "induztekterreno.db"
-        private const val VERSION_BD = 4  // Subimos versión por la nueva tabla
+        private const val VERSION_BD = 5  // Subimos versión por la nueva tabla
 
         // ---- ROL ----
         private const val TABLA_ROLES = "rol"
@@ -43,6 +43,8 @@ class UsuarioDbHelper(context: Context) :
         private const val EQ_SERIE = "numero_serie"
         private const val EQ_INSTALACION = "instalacion"
 
+        private const val EQ_ID_CLIENTE = "id_cliente"
+
         // ---- PROTOCOLO ----
         private const val TABLA_PROTOCOLOS = "protocolo"
         private const val PRO_ID = "id_protocolo"
@@ -53,6 +55,8 @@ class UsuarioDbHelper(context: Context) :
         private const val PRO_HUM = "humedad"
         private const val PRO_RESULTADO = "resultado_global"
         private const val PRO_ESTADO = "estado"
+
+        private const val PRO_MOTIVO_OBS = "motivo_observacion"
 
         // ---- MEDICION ----
         private const val TABLA_MEDICIONES = "medicion"
@@ -116,7 +120,8 @@ class UsuarioDbHelper(context: Context) :
                     "$EQ_TIPO TEXT NOT NULL, " +
                     "$EQ_MARCA TEXT, " +
                     "$EQ_SERIE TEXT, " +
-                    "$EQ_INSTALACION TEXT NOT NULL)"
+                    "$EQ_INSTALACION TEXT NOT NULL, " +
+                    "$EQ_ID_CLIENTE INTEGER NOT NULL DEFAULT 0)"
 
         private const val SQL_CREAR_PROTOCOLOS =
             "CREATE TABLE $TABLA_PROTOCOLOS (" +
@@ -128,6 +133,7 @@ class UsuarioDbHelper(context: Context) :
                     "$PRO_HUM TEXT, " +
                     "$PRO_RESULTADO TEXT, " +
                     "$PRO_ESTADO TEXT NOT NULL, " +
+                    "$PRO_MOTIVO_OBS TEXT, " +  // 👈 NUEVA COLUMNA
                     "FOREIGN KEY ($PRO_EQUIPO_ID) REFERENCES $TABLA_EQUIPOS($EQ_ID), " +
                     "FOREIGN KEY ($PRO_TECNICO_ID) REFERENCES $TABLA_USUARIOS($USU_ID))"
 
@@ -152,10 +158,10 @@ class UsuarioDbHelper(context: Context) :
                     "FOREIGN KEY ($REC_PROTOCOLO_ID) REFERENCES $TABLA_PROTOCOLOS($PRO_ID))"
 
         private const val SQL_PRECARGAR_EQUIPOS =
-            "INSERT INTO $TABLA_EQUIPOS ($EQ_ID, $EQ_TAG, $EQ_TIPO, $EQ_MARCA, $EQ_SERIE, $EQ_INSTALACION) VALUES " +
-                    "(1, 'TR-01', 'Transformador', 'Rhona', 'RH-18733', 'Planta Lampa'), " +
-                    "(2, 'TR-02', 'Transformador', 'Rhona', 'RH-21904', 'Planta Lampa'), " +
-                    "(3, 'CEL-MT-03', 'Celda MT', 'Ormazabal', 'OR-77812', 'Edificio Clínico')"
+            "INSERT INTO $TABLA_EQUIPOS ($EQ_ID, $EQ_TAG, $EQ_TIPO, $EQ_MARCA, $EQ_SERIE, $EQ_INSTALACION, $EQ_ID_CLIENTE) VALUES " +
+                    "(1, 'TR-01', 'Transformador', 'Rhona', 'RH-18733', 'Planta Lampa', 5), " + // 👈 Asignado a Marcela (ID 5)
+                    "(2, 'TR-02', 'Transformador', 'Rhona', 'RH-21904', 'Planta Lampa', 5), " +
+                    "(3, 'CEL-MT-03', 'Celda MT', 'Ormazabal', 'OR-77812', 'Edificio Clínico', 5)"
 
         private const val SQL_SELECT_USUARIOS =
             "SELECT u.*, r.$ROL_CODIGO AS rol_codigo, r.$ROL_NOMBRE AS rol_nombre " +
@@ -281,6 +287,29 @@ class UsuarioDbHelper(context: Context) :
         }
         return lista
     }
+    fun insertarEquipo(equipo: Equipo): Long {
+        val values = ContentValues().apply {
+            put(EQ_TAG, equipo.tag)
+            put(EQ_TIPO, equipo.tipoEquipo)
+            put(EQ_MARCA, equipo.marca)
+            put(EQ_SERIE, equipo.serie)
+            put(EQ_INSTALACION, equipo.instalacion)
+            put(EQ_ID_CLIENTE, equipo.idCliente)
+        }
+        return writableDatabase.insert(TABLA_EQUIPOS, null, values)
+    }
+
+    fun existeTagEnInstalacion(tag: String, instalacion: String): Boolean {
+        readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM $TABLA_EQUIPOS WHERE $EQ_TAG = ? AND $EQ_INSTALACION = ?",
+            arrayOf(tag, instalacion)
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return cursor.getInt(0) > 0
+            }
+        }
+        return false
+    }
 
     // ---------------- PROTOCOLOS ----------------
     fun guardarProtocolo(protocolo: Protocolo): Long {
@@ -325,11 +354,19 @@ class UsuarioDbHelper(context: Context) :
         temperatura = cursor.getString(cursor.getColumnIndexOrThrow(PRO_TEMP)) ?: "",
         humedad = cursor.getString(cursor.getColumnIndexOrThrow(PRO_HUM)) ?: "",
         resultadoGlobal = cursor.getString(cursor.getColumnIndexOrThrow(PRO_RESULTADO)) ?: "Pendiente",
-        estado = cursor.getString(cursor.getColumnIndexOrThrow(PRO_ESTADO))
+        estado = cursor.getString(cursor.getColumnIndexOrThrow(PRO_ESTADO)),
+        motivoObservacion = cursor.getString(cursor.getColumnIndexOrThrow(PRO_MOTIVO_OBS)) // 👈 NUEVO
     )
 
     fun actualizarEstadoProtocolo(protocoloId: Long, nuevoEstado: String) {
         val values = ContentValues().apply { put(PRO_ESTADO, nuevoEstado) }
+        writableDatabase.update(TABLA_PROTOCOLOS, values, "$PRO_ID = ?", arrayOf(protocoloId.toString()))
+    }
+    fun observarProtocolo(protocoloId: Long, motivo: String) {
+        val values = ContentValues().apply {
+            put(PRO_ESTADO, "OBSERVADO")
+            put(PRO_MOTIVO_OBS, motivo)
+        }
         writableDatabase.update(TABLA_PROTOCOLOS, values, "$PRO_ID = ?", arrayOf(protocoloId.toString()))
     }
 
@@ -374,5 +411,32 @@ class UsuarioDbHelper(context: Context) :
             put(REC_FECHA, fechaHora)
         }
         return writableDatabase.insert(TABLA_RECEPCION, null, values)
+    }
+
+    fun buscarClientePorCorreo(correo: String): Usuario? {
+        return consultarUsuarios("$SQL_SELECT_USUARIOS WHERE u.$USU_CORREO = ?", arrayOf(correo)).firstOrNull()
+    }
+
+    // NUEVO MÉTODO: Listar equipos asociados a un cliente
+    fun listarEquiposPorCliente(clienteId: Long): List<Equipo> {
+        val lista = mutableListOf<Equipo>()
+        readableDatabase.rawQuery("SELECT * FROM $TABLA_EQUIPOS WHERE $EQ_ID_CLIENTE = ?", arrayOf(clienteId.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(
+                    Equipo(
+                        id = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID)).toInt(),
+                        tag = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TAG)),
+                        tipoEquipo = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TIPO)),
+                        clasificacion = "Primario",
+                        instalacion = cursor.getString(cursor.getColumnIndexOrThrow(EQ_INSTALACION)),
+                        marca = cursor.getString(cursor.getColumnIndexOrThrow(EQ_MARCA)) ?: "",
+                        serie = cursor.getString(cursor.getColumnIndexOrThrow(EQ_SERIE)) ?: "",
+                        potenciaTension = "",
+                        idCliente = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID_CLIENTE))
+                    )
+                )
+            }
+        }
+        return lista
     }
 }
