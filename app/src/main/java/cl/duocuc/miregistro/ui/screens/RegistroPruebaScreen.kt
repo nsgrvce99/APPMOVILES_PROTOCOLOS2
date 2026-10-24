@@ -35,7 +35,7 @@ fun RegistroPruebaScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val instrumentos = remember { dbHelper.listarInstrumentos() } // Cargamos los instrumentos
+    val instrumentos = remember { dbHelper.listarInstrumentos() }
 
     LaunchedEffect(uiState.protocoloGuardadoId) {
         uiState.protocoloGuardadoId?.let { id ->
@@ -79,25 +79,63 @@ fun RegistroPruebaScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Text("Prueba de Aislación (RN-06)", style = MaterialTheme.typography.titleMedium)
+            // SELECTOR DE TIPO DE PRUEBA
+            var expandidoTipo by remember { mutableStateOf(false) }
+            val tiposPrueba = listOf("AISLACION", "TTR", "CONTACTOS")
 
-            OutlinedTextField(
-                value = uiState.lectura1Min,
-                onValueChange = viewModel::actualizarLectura1Min,
-                label = { Text("Lectura 1 min (MΩ)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+            ExposedDropdownMenuBox(expanded = expandidoTipo, onExpandedChange = { expandidoTipo = it }) {
+                OutlinedTextField(
+                    value = uiState.tipoPrueba,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Tipo de Prueba") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandidoTipo) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                )
+                ExposedDropdownMenu(expanded = expandidoTipo, onDismissRequest = { expandidoTipo = false }) {
+                    tiposPrueba.forEach { tipo ->
+                        DropdownMenuItem(
+                            text = { Text(tipo) },
+                            onClick = {
+                                viewModel.actualizarTipoPrueba(tipo)
+                                expandidoTipo = false
+                            }
+                        )
+                    }
+                }
+            }
 
-            OutlinedTextField(
-                value = uiState.lectura10Min,
-                onValueChange = viewModel::actualizarLectura10Min,
-                label = { Text("Lectura 10 min (MΩ)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+            // CAMPOS DINÁMICOS
+            if (uiState.tipoPrueba == "AISLACION") {
+                OutlinedTextField(
+                    value = uiState.lectura1Min, onValueChange = viewModel::actualizarLectura1Min,
+                    label = { Text("Lectura 1 min (MΩ)") }, modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = uiState.lectura10Min, onValueChange = viewModel::actualizarLectura10Min,
+                    label = { Text("Lectura 10 min (MΩ)") }, modifier = Modifier.fillMaxWidth()
+                )
+            } else if (uiState.tipoPrueba == "TTR") {
+                OutlinedTextField(
+                    value = uiState.relacionTeorica, onValueChange = viewModel::actualizarRelacionTeorica,
+                    label = { Text("Relación Teórica") }, modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = uiState.relacionMedida, onValueChange = viewModel::actualizarRelacionMedida,
+                    label = { Text("Relación Medida") }, modifier = Modifier.fillMaxWidth()
+                )
+            } else if (uiState.tipoPrueba == "CONTACTOS") {
+                OutlinedTextField(
+                    value = uiState.valorMedidoContacto, onValueChange = viewModel::actualizarValorMedidoContacto,
+                    label = { Text("Resistencia Medida (μΩ)") }, modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = uiState.valorPlacaContacto, onValueChange = viewModel::actualizarValorPlacaContacto,
+                    label = { Text("Máximo de Placa (μΩ)") }, modifier = Modifier.fillMaxWidth()
+                )
+            }
 
-            // 👇 MENÚ DESPLEGABLE DE INSTRUMENTOS (RF-05)
+            // MENÚ DESPLEGABLE DE INSTRUMENTOS
             var expandido by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = expandido,
@@ -132,13 +170,9 @@ fun RegistroPruebaScreen(
             }
 
             if (uiState.resultadoPrueba != "Pendiente") {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                     Text(
-                        "Resultado IP: ${uiState.resultadoPrueba}",
+                        "Resultado: ${uiState.resultadoPrueba}",
                         modifier = Modifier.padding(Dimens.espacioMedio),
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -147,10 +181,7 @@ fun RegistroPruebaScreen(
 
             Button(
                 onClick = {
-                    viewModel.guardarProtocolo(
-                        equipoId = equipoId,
-                        tecnicoId = usuarioActual?.id ?: 1L
-                    )
+                    viewModel.guardarProtocolo(equipoId = equipoId, tecnicoId = usuarioActual?.id ?: 1L)
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
