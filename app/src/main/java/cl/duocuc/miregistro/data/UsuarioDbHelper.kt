@@ -12,7 +12,7 @@ class UsuarioDbHelper(context: Context) :
 
     companion object {
         private const val NOMBRE_BD = "induztekterreno.db"
-        private const val VERSION_BD = 5  // Subimos versión por la nueva tabla
+        private const val VERSION_BD = 6  // Subimos versión por la nueva tabla
 
         // ---- ROL ----
         private const val TABLA_ROLES = "rol"
@@ -76,6 +76,14 @@ class UsuarioDbHelper(context: Context) :
         private const val REC_CARGO = "cargo_receptor"
         private const val REC_FECHA = "fecha_hora_recepcion"
 
+        // -- INSTRUMENTOS --
+        private const val TABLA_INSTRUMENTOS = "instrumento"
+        private const val INS_ID = "id_instrumento"
+        private const val INS_NOMBRE = "nombre"
+        private const val INS_MARCA = "marca"
+        private const val INS_SERIE = "numero_serie"
+        private const val INS_VENCIMIENTO = "fecha_vencimiento"
+
         // ---- SQL DE CREACIÓN ----
         private const val SQL_CREAR_ROLES =
             "CREATE TABLE $TABLA_ROLES (" +
@@ -98,6 +106,13 @@ class UsuarioDbHelper(context: Context) :
                     "$USU_CONTACTO_CARGO TEXT, " +
                     "FOREIGN KEY ($USU_ROL) REFERENCES $TABLA_ROLES($ROL_ID))"
 
+        private const val SQL_CREAR_INSTRUMENTOS =
+            "CREATE TABLE $TABLA_INSTRUMENTOS (" +
+                    "$INS_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "$INS_NOMBRE TEXT NOT NULL, " +
+                    "$INS_MARCA TEXT, " +
+                    "$INS_SERIE TEXT, " +
+                    "$INS_VENCIMIENTO TEXT NOT NULL)"
         private const val SQL_PRECARGAR_ROLES =
             "INSERT INTO $TABLA_ROLES ($ROL_ID, $ROL_CODIGO, $ROL_NOMBRE) VALUES " +
                     "(1, 'TECNICO', 'P-01 Técnico de terreno'), " +
@@ -184,6 +199,7 @@ class UsuarioDbHelper(context: Context) :
         db.execSQL(SQL_CREAR_MEDICIONES)
         db.execSQL(SQL_CREAR_RECEPCION)
         db.execSQL(SQL_PRECARGAR_EQUIPOS)
+        db.execSQL(SQL_CREAR_INSTRUMENTOS)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -193,6 +209,7 @@ class UsuarioDbHelper(context: Context) :
         db.execSQL("DROP TABLE IF EXISTS $TABLA_EQUIPOS")
         db.execSQL("DROP TABLE IF EXISTS $TABLA_USUARIOS")
         db.execSQL("DROP TABLE IF EXISTS $TABLA_ROLES")
+        db.execSQL("DROP TABLE IF EXISTS $TABLA_INSTRUMENTOS")
         onCreate(db)
     }
 
@@ -433,6 +450,33 @@ class UsuarioDbHelper(context: Context) :
                         serie = cursor.getString(cursor.getColumnIndexOrThrow(EQ_SERIE)) ?: "",
                         potenciaTension = "",
                         idCliente = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID_CLIENTE))
+                    )
+                )
+            }
+        }
+        return lista
+    }
+    fun insertarInstrumento(nombre: String, marca: String, serie: String, vencimiento: String): Long {
+        val values = ContentValues().apply {
+            put(INS_NOMBRE, nombre)
+            put(INS_MARCA, marca)
+            put(INS_SERIE, serie)
+            put(INS_VENCIMIENTO, vencimiento)
+        }
+        return writableDatabase.insert(TABLA_INSTRUMENTOS, null, values)
+    }
+
+    fun listarInstrumentos(): List<Instrumento> {
+        val lista = mutableListOf<Instrumento>()
+        readableDatabase.rawQuery("SELECT * FROM $TABLA_INSTRUMENTOS", null).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(
+                    Instrumento(
+                        id = cursor.getLong(cursor.getColumnIndexOrThrow(INS_ID)),
+                        nombre = cursor.getString(cursor.getColumnIndexOrThrow(INS_NOMBRE)),
+                        marca = cursor.getString(cursor.getColumnIndexOrThrow(INS_MARCA)) ?: "",
+                        serie = cursor.getString(cursor.getColumnIndexOrThrow(INS_SERIE)) ?: "",
+                        fechaVencimiento = cursor.getString(cursor.getColumnIndexOrThrow(INS_VENCIMIENTO))
                     )
                 )
             }

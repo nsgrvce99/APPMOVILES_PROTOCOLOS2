@@ -125,11 +125,18 @@ fun AppNavegacion() {
                 onVerMiPerfil = {
                     navController.navigate(Ruta.Perfil.ruta)
                 },
-                onVerUsuarios = {   // 👈 NUEVO: "Consultar Equipos e Historial"
+                onVerUsuarios = {
                     navController.navigate(Ruta.ListaEquipos.crear(1L))
+                },
+                onIrAInstrumentos = {   // 👈 NUEVO
+                    navController.navigate(Ruta.GestionInstrumentos.ruta)
+                },
+                onIrACrearCliente = {   // 👈 NUEVO
+                    navController.navigate(Ruta.CrearCliente.ruta)
                 }
             )
         }
+
 
         // ---- LISTA DE EQUIPOS ----
         composable(
@@ -217,6 +224,18 @@ fun AppNavegacion() {
                 onActaEntregada = {
                     navController.popBackStack(Ruta.Instalaciones.ruta, inclusive = false)
                 }
+            )
+        }
+        composable(Ruta.GestionInstrumentos.ruta) {
+            GestionInstrumentosScreen(
+                usuarioActual = usuarioActual,
+                onVolver = { navController.navigateUp() }
+            )
+        }
+        composable(Ruta.CrearCliente.ruta) {
+            CrearUsuarioClienteScreen(
+                usuarioActual = usuarioActual,
+                onVolver = { navController.navigateUp() }
             )
         }
     }

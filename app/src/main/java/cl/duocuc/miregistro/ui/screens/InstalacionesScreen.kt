@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.MenuLateral
@@ -30,13 +31,15 @@ fun InstalacionesScreen(
     onIrAFormalizacion: () -> Unit,
     onCerrarSesion: () -> Unit,
     onVerMiPerfil: () -> Unit,
-    onVerUsuarios: () -> Unit   // 👈 NUEVO
+    onVerUsuarios: () -> Unit,
+    onIrAInstrumentos: () -> Unit,
+    onIrACrearCliente: () -> Unit
 ) {
     MenuLateral(
         usuarioActual = usuarioActual,
         onCerrarSesion = onCerrarSesion,
         onVerMiPerfil = onVerMiPerfil,
-        onVerUsuarios = onVerUsuarios   // 👈 NUEVO
+        onVerUsuarios = onVerUsuarios
     ) { onAbrirMenu, snackbarHostState ->
         Scaffold(
             topBar = {
@@ -68,29 +71,32 @@ fun InstalacionesScreen(
                 )
                 Text("Seleccione la instalación eléctrica a inspeccionar:")
 
-                // --- Plantas del Anexo 9 (todas visibles) ---
-                Button(onClick = { onSeleccionarInstalacion(1L) }) {
-                    Text("Planta Lampa")
-                }
-                Button(onClick = { onSeleccionarInstalacion(2L) }) {
-                    Text("Planta Elevadora Sur")
-                }
-                Button(onClick = { onSeleccionarInstalacion(3L) }) {
-                    Text("Faena Til Til")
-                }
-                Button(onClick = { onSeleccionarInstalacion(4L) }) {
-                    Text("Edificio Clínico")
-                }
-                Button(onClick = { onSeleccionarInstalacion(5L) }) {
-                    Text("Planta Molienda")
-                }
-                Button(onClick = { onSeleccionarInstalacion(6L) }) {
-                    Text("Site Huechuraba")
+                // Plantas
+                Button(onClick = { onSeleccionarInstalacion(1L) }) { Text("Planta Lampa") }
+                Button(onClick = { onSeleccionarInstalacion(2L) }) { Text("Planta Elevadora Sur") }
+                Button(onClick = { onSeleccionarInstalacion(3L) }) { Text("Faena Til Til") }
+                Button(onClick = { onSeleccionarInstalacion(4L) }) { Text("Edificio Clínico") }
+                Button(onClick = { onSeleccionarInstalacion(5L) }) { Text("Planta Molienda") }
+                Button(onClick = { onSeleccionarInstalacion(6L) }) { Text("Site Huechuraba") }
+
+                // Botón de Formalización (Ingeniero y Jefe Técnico)
+                if (usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L) {
+                    Button(
+                        onClick = onIrAFormalizacion,
+                        modifier = Modifier.padding(top = 16.dp)
+                    ) {
+                        Text("Ir a Formalización de Protocolos")
+                    }
                 }
 
-                if (usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L) {
-                    Button(onClick = onIrAFormalizacion) {
-                        Text("Ir a Formalización de Protocolos (Ingeniero)")
+                // 👇 BOTONES EXCLUSIVOS DEL JEFE TÉCNICO (Rol 3)
+                if (usuarioActual?.rolId == 3L) {
+                    Button(onClick = onIrAInstrumentos, modifier = Modifier.padding(top = 8.dp)) {
+                        Text("Gestionar Instrumentos (RN-12)")
+                    }
+
+                    Button(onClick = onIrACrearCliente, modifier = Modifier.padding(top = 8.dp)) {
+                        Text("Crear Cuenta Cliente (RN-20)")
                     }
                 }
             }

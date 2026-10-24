@@ -36,4 +36,9 @@ sealed class Ruta(val ruta: String) {
     data object RegistrarEquipo : Ruta("registrar_equipo/{instalacionId}") {
         fun crear(instalacionId: Long) = "registrar_equipo/$instalacionId"
     }
+    data object GestionInstrumentos : Ruta("gestion_instrumentos")
+
+    data object CrearCliente : Ruta("crear_cliente")
+
+
 }
