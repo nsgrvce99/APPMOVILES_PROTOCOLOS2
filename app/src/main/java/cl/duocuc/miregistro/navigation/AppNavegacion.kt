@@ -133,6 +133,9 @@ fun AppNavegacion() {
                 },
                 onIrACrearCliente = {   // 👈 NUEVO
                     navController.navigate(Ruta.CrearCliente.ruta)
+                },
+                onIrACrearInstalacion = {  // 👈 NUEVO
+                    navController.navigate(Ruta.CrearInstalacion.ruta)
                 }
             )
         }
@@ -234,6 +237,12 @@ fun AppNavegacion() {
         }
         composable(Ruta.CrearCliente.ruta) {
             CrearUsuarioClienteScreen(
+                usuarioActual = usuarioActual,
+                onVolver = { navController.navigateUp() }
+            )
+        }
+        composable(Ruta.CrearInstalacion.ruta) {
+            CrearInstalacionScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() }
             )

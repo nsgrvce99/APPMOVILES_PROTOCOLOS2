@@ -39,6 +39,7 @@ sealed class Ruta(val ruta: String) {
     data object GestionInstrumentos : Ruta("gestion_instrumentos")
 
     data object CrearCliente : Ruta("crear_cliente")
+    data object CrearInstalacion : Ruta("crear_instalacion")
 
 
 }

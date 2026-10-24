@@ -12,7 +12,7 @@ class UsuarioDbHelper(context: Context) :
 
     companion object {
         private const val NOMBRE_BD = "induztekterreno.db"
-        private const val VERSION_BD = 6  // Subimos versión por la nueva tabla
+        private const val VERSION_BD = 8  // Subimos versión por la nueva tabla
 
         // ---- ROL ----
         private const val TABLA_ROLES = "rol"
@@ -84,6 +84,12 @@ class UsuarioDbHelper(context: Context) :
         private const val INS_SERIE = "numero_serie"
         private const val INS_VENCIMIENTO = "fecha_vencimiento"
 
+        // INSTALACIONES
+        private const val TABLA_INSTALACIONES = "instalacion"
+        private const val INST_ID = "id_instalacion"
+        private const val INST_NOMBRE = "nombre"
+        private const val INST_CLIENTE_ID = "id_cliente"
+
         // ---- SQL DE CREACIÓN ----
         private const val SQL_CREAR_ROLES =
             "CREATE TABLE $TABLA_ROLES (" +
@@ -113,6 +119,21 @@ class UsuarioDbHelper(context: Context) :
                     "$INS_MARCA TEXT, " +
                     "$INS_SERIE TEXT, " +
                     "$INS_VENCIMIENTO TEXT NOT NULL)"
+
+        private const val SQL_CREAR_INSTALACIONES =
+            "CREATE TABLE $TABLA_INSTALACIONES (" +
+                    "$INST_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "$INST_NOMBRE TEXT NOT NULL, " +
+                    "$INST_CLIENTE_ID INTEGER NOT NULL)"
+
+        private const val SQL_PRECARGAR_INSTALACIONES =
+            "INSERT INTO $TABLA_INSTALACIONES ($INST_ID, $INST_NOMBRE, $INST_CLIENTE_ID) VALUES " +
+                    "(1, 'Planta Lampa', 5), " +
+                    "(2, 'Planta Elevadora Sur', 5), " +
+                    "(3, 'Faena Til Til', 5), " +
+                    "(4, 'Edificio Clínico', 5), " +
+                    "(5, 'Planta Molienda', 5), " +
+                    "(6, 'Site Huechuraba', 5)"
         private const val SQL_PRECARGAR_ROLES =
             "INSERT INTO $TABLA_ROLES ($ROL_ID, $ROL_CODIGO, $ROL_NOMBRE) VALUES " +
                     "(1, 'TECNICO', 'P-01 Técnico de terreno'), " +
@@ -127,6 +148,14 @@ class UsuarioDbHelper(context: Context) :
                     "(2, '15.906.334-8', 'Andrea Contreras Silva', 'acontreras@induztek.ejemplo', '1470AN', 1), " +
                     "(3, '13.871.905-7', 'Ricardo Espinoza Lagos', 'respinoza@induztek.ejemplo', '1470RI', 1), " +
                     "(4, '14.226.791-8', 'Marcela Fuentes Rojas', 'mfuentes@envpacifico.ejemplo', '1470MA', 1)"
+
+        private const val SQL_PRECARGAR_INSTRUMENTOS =
+            "INSERT INTO $TABLA_INSTRUMENTOS ($INS_NOMBRE, $INS_MARCA, $INS_SERIE, $INS_VENCIMIENTO) VALUES " +
+                    "('Megóhmetro 5 kV', 'Megger MIT525', 'MIT-0045821', '15-03-2027'), " +
+                    "('Megóhmetro 10 kV', 'Megger MIT1025', 'MIT-0071233', '10-10-2026'), " +
+                    "('Medidor de relación (TTR)', 'Megger TTR300', 'TTR-300440', '02-06-2027'), " +
+                    "('Micro-ohmímetro', 'Megger DLRO10X', 'DLR-10882', '20-08-2026'), " +
+                    "('Equipo de inyección secundaria', 'Omicron CMC 356', 'CMC-HB411', '05-01-2027')"
 
         private const val SQL_CREAR_EQUIPOS =
             "CREATE TABLE $TABLA_EQUIPOS (" +
@@ -200,6 +229,9 @@ class UsuarioDbHelper(context: Context) :
         db.execSQL(SQL_CREAR_RECEPCION)
         db.execSQL(SQL_PRECARGAR_EQUIPOS)
         db.execSQL(SQL_CREAR_INSTRUMENTOS)
+        db.execSQL(SQL_CREAR_INSTALACIONES)
+        db.execSQL(SQL_PRECARGAR_INSTALACIONES)
+        db.execSQL(SQL_PRECARGAR_INSTRUMENTOS)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -210,6 +242,7 @@ class UsuarioDbHelper(context: Context) :
         db.execSQL("DROP TABLE IF EXISTS $TABLA_USUARIOS")
         db.execSQL("DROP TABLE IF EXISTS $TABLA_ROLES")
         db.execSQL("DROP TABLE IF EXISTS $TABLA_INSTRUMENTOS")
+        db.execSQL("DROP TABLE IF EXISTS $TABLA_INSTALACIONES")
         onCreate(db)
     }
 
@@ -477,6 +510,28 @@ class UsuarioDbHelper(context: Context) :
                         marca = cursor.getString(cursor.getColumnIndexOrThrow(INS_MARCA)) ?: "",
                         serie = cursor.getString(cursor.getColumnIndexOrThrow(INS_SERIE)) ?: "",
                         fechaVencimiento = cursor.getString(cursor.getColumnIndexOrThrow(INS_VENCIMIENTO))
+                    )
+                )
+            }
+        }
+        return lista
+    }
+    fun insertarInstalacion(nombre: String, clienteId: Long): Long {
+        val values = ContentValues().apply {
+            put(INST_NOMBRE, nombre)
+            put(INST_CLIENTE_ID, clienteId)
+        }
+        return writableDatabase.insert(TABLA_INSTALACIONES, null, values)
+    }
+
+    fun listarInstalaciones(): List<Pair<Long, String>> {
+        val lista = mutableListOf<Pair<Long, String>>()
+        readableDatabase.rawQuery("SELECT * FROM $TABLA_INSTALACIONES", null).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(
+                    Pair(
+                        cursor.getLong(cursor.getColumnIndexOrThrow(INST_ID)),
+                        cursor.getString(cursor.getColumnIndexOrThrow(INST_NOMBRE))
                     )
                 )
             }

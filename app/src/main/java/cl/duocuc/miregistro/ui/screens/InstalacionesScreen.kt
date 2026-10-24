@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -14,11 +16,17 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.R
+import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.MenuLateral
 import cl.duocuc.miregistro.ui.theme.Dimens
@@ -33,8 +41,14 @@ fun InstalacionesScreen(
     onVerMiPerfil: () -> Unit,
     onVerUsuarios: () -> Unit,
     onIrAInstrumentos: () -> Unit,
-    onIrACrearCliente: () -> Unit
+    onIrACrearCliente: () -> Unit,
+    onIrACrearInstalacion: () -> Unit
 ) {
+    val context = LocalContext.current
+    val dbHelper = remember { UsuarioDbHelper(context) }
+
+    var instalaciones by remember { mutableStateOf(dbHelper.listarInstalaciones()) }
+
     MenuLateral(
         usuarioActual = usuarioActual,
         onCerrarSesion = onCerrarSesion,
@@ -61,6 +75,8 @@ fun InstalacionesScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    // 👇 MAGIA: Agregamos el scroll aquí
+                    .verticalScroll(rememberScrollState())
                     .padding(Dimens.espacioPantalla),
                 verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -71,15 +87,12 @@ fun InstalacionesScreen(
                 )
                 Text("Seleccione la instalación eléctrica a inspeccionar:")
 
-                // Plantas
-                Button(onClick = { onSeleccionarInstalacion(1L) }) { Text("Planta Lampa") }
-                Button(onClick = { onSeleccionarInstalacion(2L) }) { Text("Planta Elevadora Sur") }
-                Button(onClick = { onSeleccionarInstalacion(3L) }) { Text("Faena Til Til") }
-                Button(onClick = { onSeleccionarInstalacion(4L) }) { Text("Edificio Clínico") }
-                Button(onClick = { onSeleccionarInstalacion(5L) }) { Text("Planta Molienda") }
-                Button(onClick = { onSeleccionarInstalacion(6L) }) { Text("Site Huechuraba") }
+                instalaciones.forEach { (id, nombre) ->
+                    Button(onClick = { onSeleccionarInstalacion(id) }) {
+                        Text(nombre)
+                    }
+                }
 
-                // Botón de Formalización (Ingeniero y Jefe Técnico)
                 if (usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L) {
                     Button(
                         onClick = onIrAFormalizacion,
@@ -89,16 +102,20 @@ fun InstalacionesScreen(
                     }
                 }
 
-                // 👇 BOTONES EXCLUSIVOS DEL JEFE TÉCNICO (Rol 3)
                 if (usuarioActual?.rolId == 3L) {
                     Button(onClick = onIrAInstrumentos, modifier = Modifier.padding(top = 8.dp)) {
                         Text("Gestionar Instrumentos (RN-12)")
                     }
-
                     Button(onClick = onIrACrearCliente, modifier = Modifier.padding(top = 8.dp)) {
                         Text("Crear Cuenta Cliente (RN-20)")
                     }
+                    Button(onClick = onIrACrearInstalacion, modifier = Modifier.padding(top = 8.dp)) {
+                        Text("Crear Instalación (RF-01)")
+                    }
                 }
+
+                // Un pequeño espacio al final para que el último botón no quede pegado al borde
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(bottom = 16.dp))
             }
         }
     }

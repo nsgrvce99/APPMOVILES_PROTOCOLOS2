@@ -23,7 +23,6 @@ fun RegistroPruebaScreen(
     onPruebaGuardadaExitosamente: (Long) -> Unit,
     dbHelper: UsuarioDbHelper = UsuarioDbHelper(LocalContext.current)
 ) {
-    // ViewModel construido manualmente para inyectar dbHelper
     val viewModel: RegistroPruebaViewModel = viewModel(
         key = "reg_$equipoId",
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -35,6 +34,8 @@ fun RegistroPruebaScreen(
     )
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val instrumentos = remember { dbHelper.listarInstrumentos() } // Cargamos los instrumentos
 
     LaunchedEffect(uiState.protocoloGuardadoId) {
         uiState.protocoloGuardadoId?.let { id ->
@@ -46,9 +47,7 @@ fun RegistroPruebaScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Protocolo Equipo ID: $equipoId") },
-                navigationIcon = {
-                    IconButton(onClick = onVolver) { Text("←") }
-                }
+                navigationIcon = { IconButton(onClick = onVolver) { Text("←") } }
             )
         }
     ) { innerPadding ->
@@ -97,6 +96,40 @@ fun RegistroPruebaScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // 👇 MENÚ DESPLEGABLE DE INSTRUMENTOS (RF-05)
+            var expandido by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expandido,
+                onExpandedChange = { expandido = it }
+            ) {
+                OutlinedTextField(
+                    value = uiState.instrumentoSeleccionado,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Instrumento utilizado (RF-05)") },
+                    isError = uiState.errorMedicion != null,
+                    supportingText = { uiState.errorMedicion?.let { Text(it) } },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandido) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                )
+                ExposedDropdownMenu(
+                    expanded = expandido,
+                    onDismissRequest = { expandido = false }
+                ) {
+                    instrumentos.forEach { inst ->
+                        DropdownMenuItem(
+                            text = { Text("${inst.nombre} - ${inst.marca}") },
+                            onClick = {
+                                viewModel.actualizarInstrumento("${inst.nombre} - ${inst.marca}")
+                                expandido = false
+                            }
+                        )
+                    }
+                }
+            }
 
             if (uiState.resultadoPrueba != "Pendiente") {
                 Card(
