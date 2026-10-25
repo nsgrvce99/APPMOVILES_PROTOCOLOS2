@@ -7,43 +7,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
-import cl.duocuc.miregistro.ui.components.BotonPrincipal
-import cl.duocuc.miregistro.ui.components.CampoTexto
+import cl.duocuc.miregistro.ui.components.*
 import cl.duocuc.miregistro.ui.theme.Dimens
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// Función de validación de RUT (RN-03)
-fun validarRut(rutCompleto: String): Boolean {
-    val rutLimpio = rutCompleto.replace(".", "").replace("-", "").trim()
-    if (rutLimpio.length < 8 || rutLimpio.length > 9) return false
-
-    val cuerpo = rutLimpio.substring(0, rutLimpio.length - 1)
-    val dvIngresado = rutLimpio.last().toString().uppercase()
-
-    if (!cuerpo.all { it.isDigit() }) return false
-
-    var suma = 0
-    var multiplicador = 2
-    for (i in cuerpo.reversed()) {
-        suma += i.toString().toInt() * multiplicador
-        multiplicador = if (multiplicador == 7) 2 else multiplicador + 1
-    }
-
-    val dvCalculado = 11 - (suma % 11)
-    val dvEsperado = when (dvCalculado) {
-        11 -> "0"
-        10 -> "K"
-        else -> dvCalculado.toString()
-    }
-
-    return dvIngresado == dvEsperado
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CierreVisitaScreen(
     protocoloId: Long,
@@ -59,11 +31,37 @@ fun CierreVisitaScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var exito by remember { mutableStateOf(false) }
 
+    // Validación de RUT (RN-03: módulo 11)
+    fun validarRut(rutCompleto: String): Boolean {
+        val rutLimpio = rutCompleto.replace(".", "").replace("-", "").trim().uppercase()
+        if (rutLimpio.length < 2) return false
+
+        val dvIngresado = rutLimpio.last()
+        val cuerpo = rutLimpio.dropLast(1)
+        if (!cuerpo.all { it.isDigit() }) return false
+
+        var suma = 0
+        var multiplicador = 2
+        for (i in cuerpo.length - 1 downTo 0) {
+            suma += cuerpo[i].digitToInt() * multiplicador
+            multiplicador = if (multiplicador == 7) 2 else multiplicador + 1
+        }
+
+        val resto = suma % 11
+        val dvEsperado = 11 - resto
+        val dvString = when (dvEsperado) {
+            11 -> "0"
+            10 -> "K"
+            else -> dvEsperado.toString()
+        }
+        return dvString == dvIngresado.toString()
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Cierre de Visita y Acta") },
-                navigationIcon = { IconButton(onClick = onVolver) { Text("←") } }
+            AppTopBar(
+                titulo = "Cierre de Visita y Acta",
+                onVolver = onVolver
             )
         }
     ) { innerPadding ->
@@ -76,7 +74,7 @@ fun CierreVisitaScreen(
             verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
         ) {
             Text(
-                "Registre los datos de la persona que recibe el Acta de Terreno (RF-08)",
+                "Registre los datos de quien recibe el Acta de Terreno (RF-08)",
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -98,35 +96,26 @@ fun CierreVisitaScreen(
                 etiqueta = "RUT (ej. 14.226.791-8)",
                 icono = R.drawable.ic_persona
             )
-            CampoTexto(
+
+            // 👇 Usamos CampoMultilinea para el cargo
+            CampoMultilinea(
                 valor = cargo,
                 onValorCambia = { cargo = it },
                 etiqueta = "Cargo",
-                icono = R.drawable.ic_persona
+                minLines = 2
             )
 
-            if (error != null) {
-                Text(error!!, color = MaterialTheme.colorScheme.error)
-            }
+            MensajeError(texto = error)
 
             if (exito) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                MensajeExito(
+                    titulo = "Acta entregada exitosamente",
+                    detalles = listOf(
+                        "Receptor: $nombre",
+                        "RUT: $rut",
+                        "Estado: Pendiente de formalización (RN-14)"
                     )
-                ) {
-                    Column(Modifier.padding(Dimens.espacioMedio)) {
-                        Text("✓ Acta entregada exitosamente", style = MaterialTheme.typography.titleMedium)
-                        Text("Receptor: $nombre")
-                        Text("RUT: $rut")
-                        Text("Cargo: $cargo")
-                        Spacer(Modifier.height(Dimens.espacioMedio))
-                        Text(
-                            "Estado: Pendiente de formalización (RN-14)",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
+                )
             }
 
             BotonPrincipal(
@@ -135,11 +124,11 @@ fun CierreVisitaScreen(
                     if (exito) {
                         onActaEntregada()
                     } else {
-                        // Validaciones al presionar el botón
+                        // Validaciones
                         if (nombre.isBlank() || rut.isBlank()) {
                             error = "Nombre y RUT son obligatorios (HU-08)"
                         } else if (!validarRut(rut)) {
-                            error = "RUT inválido. Verifique el dígito verificador (RN-03)"
+                            error = "RUT inválido. Verifique el formato (RN-03)"
                         } else {
                             val fechaHora = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(Date())
                             dbHelper.guardarRecepcionActa(

@@ -15,8 +15,12 @@ sealed class Ruta(val ruta: String) {
     // ---- OPERATIVAS ----
     data object Instalaciones : Ruta("instalaciones")
 
-    data object ListaEquipos : Ruta("equipos/{instalacionId}") {
-        fun crear(instalacionId: Long) = "equipos/$instalacionId"
+    data object ListaEquipos : Ruta("equipos/{instalacionId}/{nombreInstalacion}") {
+        fun crear(instalacionId: Long, nombre: String): String {
+            // Codificamos el nombre para que los espacios no rompan la ruta
+            val nombreCodificado = java.net.URLEncoder.encode(nombre, "UTF-8")
+            return "equipos/$instalacionId/$nombreCodificado"
+        }
     }
 
     data object RegistroPrueba : Ruta("registro_prueba/{equipoId}") {
@@ -33,8 +37,11 @@ sealed class Ruta(val ruta: String) {
         fun crear(protocoloId: Long) = "cierre_visita/$protocoloId"
     }
 
-    data object RegistrarEquipo : Ruta("registrar_equipo/{instalacionId}") {
-        fun crear(instalacionId: Long) = "registrar_equipo/$instalacionId"
+    data object RegistrarEquipo : Ruta("registrar_equipo/{instalacionId}/{nombreInstalacion}") {
+        fun crear(instalacionId: Long, nombre: String): String {
+            val nombreCodificado = java.net.URLEncoder.encode(nombre, "UTF-8")
+            return "registrar_equipo/$instalacionId/$nombreCodificado"
+        }
     }
     data object GestionInstrumentos : Ruta("gestion_instrumentos")
 

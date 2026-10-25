@@ -9,8 +9,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
+import cl.duocuc.miregistro.ui.components.AppTopBar
+import cl.duocuc.miregistro.ui.components.CampoTexto
+import cl.duocuc.miregistro.ui.components.MensajeError
+import cl.duocuc.miregistro.ui.components.SelectorDesplegable
 import cl.duocuc.miregistro.ui.theme.Dimens
 import cl.duocuc.miregistro.viewmodel.RegistroPruebaViewModel
 
@@ -34,8 +39,10 @@ fun RegistroPruebaScreen(
     )
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val instrumentos = remember { dbHelper.listarInstrumentos() }
+    val instrumentos by viewModel.instrumentos.collectAsStateWithLifecycle()
+    val instrumentoSeleccionado by viewModel.instrumentoSeleccionado.collectAsStateWithLifecycle()
+
+    val tiposPrueba = listOf("AISLACION", "TTR", "CONTACTOS")
 
     LaunchedEffect(uiState.protocoloGuardadoId) {
         uiState.protocoloGuardadoId?.let { id ->
@@ -45,9 +52,9 @@ fun RegistroPruebaScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Protocolo Equipo ID: $equipoId") },
-                navigationIcon = { IconButton(onClick = onVolver) { Text("←") } }
+            AppTopBar(
+                titulo = "Protocolo Equipo ID: $equipoId",
+                onVolver = onVolver
             )
         }
     ) { innerPadding ->
@@ -59,118 +66,93 @@ fun RegistroPruebaScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
         ) {
-            Text("Técnico: ${usuarioActual?.nombre ?: "N/A"}")
+            Text("Técnico: ${usuarioActual?.nombre ?: "N/A"}", style = MaterialTheme.typography.titleMedium)
 
-            OutlinedTextField(
-                value = uiState.temperaturaAmbiente,
-                onValueChange = viewModel::actualizarTemperatura,
-                label = { Text("Temperatura Ambiente (°C)") },
-                isError = uiState.errorTemperatura != null,
-                supportingText = { uiState.errorTemperatura?.let { Text(it) } },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+            CampoTexto(
+                valor = uiState.temperaturaAmbiente,
+                onValorCambia = viewModel::actualizarTemperatura,
+                etiqueta = "Temperatura Ambiente (°C)",
+                icono = R.drawable.ic_candado,
+                error = uiState.errorTemperatura
             )
 
-            OutlinedTextField(
-                value = uiState.humedadRelativa,
-                onValueChange = viewModel::actualizarHumedad,
-                label = { Text("Humedad Relativa (%)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+            CampoTexto(
+                valor = uiState.humedadRelativa,
+                onValorCambia = viewModel::actualizarHumedad,
+                etiqueta = "Humedad Relativa (%)",
+                icono = R.drawable.ic_candado
             )
 
-            // SELECTOR DE TIPO DE PRUEBA
-            var expandidoTipo by remember { mutableStateOf(false) }
-            val tiposPrueba = listOf("AISLACION", "TTR", "CONTACTOS")
+            // 👇 SELECTOR DE TIPO DE PRUEBA
+            SelectorDesplegable(
+                etiqueta = "Tipo de Prueba",
+                opciones = tiposPrueba,
+                seleccionada = uiState.tipoPrueba,
+                onSeleccionar = { viewModel.onTipoPruebaCambia(it) },
+                textoDe = { it }
+            )
 
-            ExposedDropdownMenuBox(expanded = expandidoTipo, onExpandedChange = { expandidoTipo = it }) {
-                OutlinedTextField(
-                    value = uiState.tipoPrueba,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Tipo de Prueba") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandidoTipo) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                )
-                ExposedDropdownMenu(expanded = expandidoTipo, onDismissRequest = { expandidoTipo = false }) {
-                    tiposPrueba.forEach { tipo ->
-                        DropdownMenuItem(
-                            text = { Text(tipo) },
-                            onClick = {
-                                viewModel.actualizarTipoPrueba(tipo)
-                                expandidoTipo = false
-                            }
-                        )
-                    }
+            // 👇 CAMPOS DINÁMICOS SEGÚN EL TIPO DE PRUEBA
+            when (uiState.tipoPrueba) {
+                "AISLACION" -> {
+                    CampoTexto(
+                        valor = uiState.lectura1Min,
+                        onValorCambia = viewModel::actualizarLectura1Min,
+                        etiqueta = "Lectura 1 min (MΩ)",
+                        icono = R.drawable.ic_check
+                    )
+                    CampoTexto(
+                        valor = uiState.lectura10Min,
+                        onValorCambia = viewModel::actualizarLectura10Min,
+                        etiqueta = "Lectura 10 min (MΩ)",
+                        icono = R.drawable.ic_check
+                    )
+                }
+                "TTR" -> {
+                    CampoTexto(
+                        valor = uiState.lectura1Min,
+                        onValorCambia = viewModel::actualizarLectura1Min,
+                        etiqueta = "Relación Teórica",
+                        icono = R.drawable.ic_check
+                    )
+                    CampoTexto(
+                        valor = uiState.lectura10Min,
+                        onValorCambia = viewModel::actualizarLectura10Min,
+                        etiqueta = "Relación Medida",
+                        icono = R.drawable.ic_check
+                    )
+                }
+                "CONTACTOS" -> {
+                    CampoTexto(
+                        valor = uiState.lectura1Min,
+                        onValorCambia = viewModel::actualizarLectura1Min,
+                        etiqueta = "Resistencia Medida (μΩ)",
+                        icono = R.drawable.ic_check
+                    )
+                    CampoTexto(
+                        valor = uiState.lectura10Min,
+                        onValorCambia = viewModel::actualizarLectura10Min,
+                        etiqueta = "Máximo de Placa (μΩ)",
+                        icono = R.drawable.ic_check
+                    )
                 }
             }
 
-            // CAMPOS DINÁMICOS
-            if (uiState.tipoPrueba == "AISLACION") {
-                OutlinedTextField(
-                    value = uiState.lectura1Min, onValueChange = viewModel::actualizarLectura1Min,
-                    label = { Text("Lectura 1 min (MΩ)") }, modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = uiState.lectura10Min, onValueChange = viewModel::actualizarLectura10Min,
-                    label = { Text("Lectura 10 min (MΩ)") }, modifier = Modifier.fillMaxWidth()
-                )
-            } else if (uiState.tipoPrueba == "TTR") {
-                OutlinedTextField(
-                    value = uiState.relacionTeorica, onValueChange = viewModel::actualizarRelacionTeorica,
-                    label = { Text("Relación Teórica") }, modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = uiState.relacionMedida, onValueChange = viewModel::actualizarRelacionMedida,
-                    label = { Text("Relación Medida") }, modifier = Modifier.fillMaxWidth()
-                )
-            } else if (uiState.tipoPrueba == "CONTACTOS") {
-                OutlinedTextField(
-                    value = uiState.valorMedidoContacto, onValueChange = viewModel::actualizarValorMedidoContacto,
-                    label = { Text("Resistencia Medida (μΩ)") }, modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = uiState.valorPlacaContacto, onValueChange = viewModel::actualizarValorPlacaContacto,
-                    label = { Text("Máximo de Placa (μΩ)") }, modifier = Modifier.fillMaxWidth()
-                )
-            }
+            // Desplegable de Instrumento
+            SelectorDesplegable(
+                etiqueta = "Instrumento utilizado (RF-05)",
+                opciones = instrumentos,
+                seleccionada = instrumentoSeleccionado,
+                onSeleccionar = { viewModel.onInstrumentoSeleccionado(it) },
+                textoDe = { "${it.nombre} - ${it.marca}" }
+            )
 
-            // MENÚ DESPLEGABLE DE INSTRUMENTOS
-            var expandido by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = expandido,
-                onExpandedChange = { expandido = it }
-            ) {
-                OutlinedTextField(
-                    value = uiState.instrumentoSeleccionado,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Instrumento utilizado (RF-05)") },
-                    isError = uiState.errorMedicion != null,
-                    supportingText = { uiState.errorMedicion?.let { Text(it) } },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandido) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                )
-                ExposedDropdownMenu(
-                    expanded = expandido,
-                    onDismissRequest = { expandido = false }
-                ) {
-                    instrumentos.forEach { inst ->
-                        DropdownMenuItem(
-                            text = { Text("${inst.nombre} - ${inst.marca}") },
-                            onClick = {
-                                viewModel.actualizarInstrumento("${inst.nombre} - ${inst.marca}")
-                                expandido = false
-                            }
-                        )
-                    }
-                }
-            }
-
+            // Resultado
             if (uiState.resultadoPrueba != "Pendiente") {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(
                         "Resultado: ${uiState.resultadoPrueba}",
                         modifier = Modifier.padding(Dimens.espacioMedio),
@@ -179,9 +161,11 @@ fun RegistroPruebaScreen(
                 }
             }
 
+            MensajeError(texto = uiState.errorMedicion)
+
             Button(
                 onClick = {
-                    viewModel.guardarProtocolo(equipoId = equipoId, tecnicoId = usuarioActual?.id ?: 1L)
+                    viewModel.guardarProtocolo(equipoId, usuarioActual?.id ?: 1L)
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {

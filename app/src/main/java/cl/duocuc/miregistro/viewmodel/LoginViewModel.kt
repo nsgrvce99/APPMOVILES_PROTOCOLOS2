@@ -1,5 +1,6 @@
-package cl.duocuc.miregistro.model
+package cl.duocuc.miregistro.viewmodel
 
+import LoginUiState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import cl.duocuc.miregistro.data.SesionPreferencias
@@ -9,12 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-data class LoginUiState(
-    val correo: String = "",
-    val contrasena: String = "",
-    val errorMensaje: String? = null,
-    val cargando: Boolean = false
-)
+
 
 class LoginViewModel(
     private val dbHelper: UsuarioDbHelper,
@@ -48,17 +44,8 @@ class LoginViewModel(
             _uiState.update { it.copy(errorMensaje = "Credenciales inválidas o usuario inactivo") }
         }
     }
-}
-
-class LoginViewModelFactory(
-    private val dbHelper: UsuarioDbHelper,
-    private val sesionPrefs: SesionPreferencias
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return LoginViewModel(dbHelper, sesionPrefs) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
+    fun onAlternarVisibilidadContrasena() {
+        _uiState.update { it.copy(contrasenaVisible = !it.contrasenaVisible) }
     }
 }
+

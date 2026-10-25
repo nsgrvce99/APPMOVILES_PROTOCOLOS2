@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Instrumento
 import cl.duocuc.miregistro.model.Usuario
+import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.BotonPrincipal
 import cl.duocuc.miregistro.ui.components.CampoTexto
 import cl.duocuc.miregistro.ui.theme.Dimens
@@ -38,12 +39,12 @@ fun GestionInstrumentosScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Gestión de Instrumentos (RN-12)") },
-                navigationIcon = { IconButton(onClick = onVolver) { Text("←") } }
+            AppTopBar(
+                titulo = "Gestión de Instrumentos",
+                onVolver = onVolver
             )
         }
-    ) { innerPadding ->
+    )  { innerPadding ->
         // Validación de Rol: Solo Jefe Técnico (ID 3)
         if (usuarioActual?.rolId != 3L) {
             Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {

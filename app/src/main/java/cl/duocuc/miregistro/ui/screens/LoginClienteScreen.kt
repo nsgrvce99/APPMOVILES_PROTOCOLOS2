@@ -8,7 +8,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import cl.duocuc.miregistro.model.LoginViewModel
+import cl.duocuc.miregistro.ui.components.CampoContrasena
+import cl.duocuc.miregistro.ui.components.CampoTexto
+import cl.duocuc.miregistro.viewmodel.LoginViewModel
+import cl.duocuc.miregistro.R
 
 @Composable
 fun LoginClienteScreen(
@@ -48,35 +51,28 @@ fun LoginClienteScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             // Campo de Correo Electrónico
-            OutlinedTextField(
-                value = uiState.correo,
-                onValueChange = { viewModel.onCorreoChanged(it) },
-                label = { Text("Correo electrónico corporativo") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+            CampoTexto(
+                valor = uiState.correo,
+                onValorCambia = { viewModel.onCorreoChanged(it) },
+                etiqueta = "Correo electrónico corporativo",
+                icono = R.drawable.ic_correo
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Campo de Contraseña
-            OutlinedTextField(
-                value = uiState.contrasena,
-                onValueChange = { viewModel.onContrasenaChanged(it) },
-                label = { Text("Contraseña") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth()
+            CampoContrasena(
+                valor = uiState.contrasena,
+                onValorCambia = { viewModel.onContrasenaChanged(it) },
+                etiqueta = "Contraseña",
+                visible = uiState.contrasenaVisible,
+                onAlternarVisible = { viewModel.onAlternarVisibilidadContrasena() },
+                modifier = Modifier.fillMaxWidth(),
+                error = uiState.errorMensaje // Opcional, si quieres que el error se muestre aquí
             )
 
             // Mensaje de Error (si existe)
-            if (uiState.errorMensaje != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = uiState.errorMensaje!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
+
 
             Spacer(modifier = Modifier.height(24.dp))
 

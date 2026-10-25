@@ -12,7 +12,7 @@ class UsuarioDbHelper(context: Context) :
 
     companion object {
         private const val NOMBRE_BD = "induztekterreno.db"
-        private const val VERSION_BD = 9  // Subimos versión por la nueva tabla
+        private const val VERSION_BD = 9
 
         // ---- ROL ----
         private const val TABLA_ROLES = "rol"
@@ -177,7 +177,7 @@ class UsuarioDbHelper(context: Context) :
                     "$PRO_HUM TEXT, " +
                     "$PRO_RESULTADO TEXT, " +
                     "$PRO_ESTADO TEXT NOT NULL, " +
-                    "$PRO_MOTIVO_OBS TEXT, " +  // 👈 NUEVA COLUMNA
+                    "$PRO_MOTIVO_OBS TEXT, " +
                     "FOREIGN KEY ($PRO_EQUIPO_ID) REFERENCES $TABLA_EQUIPOS($EQ_ID), " +
                     "FOREIGN KEY ($PRO_TECNICO_ID) REFERENCES $TABLA_USUARIOS($USU_ID))"
 
@@ -302,7 +302,7 @@ class UsuarioDbHelper(context: Context) :
         put(USU_CORREO, usuario.correo)
         put(USU_CONTRA, usuario.contrasena)
         put(USU_RUT, usuario.rut)
-        put(USU_ROL, usuario.rolId.toInt())   // 👈 Aquí corregimos el mismatch Long → Int
+        put(USU_ROL, usuario.rolId.toInt())
         put(USU_ACTIVO, if (usuario.activo) 1 else 0)
     }
 
@@ -416,7 +416,7 @@ class UsuarioDbHelper(context: Context) :
         humedad = cursor.getString(cursor.getColumnIndexOrThrow(PRO_HUM)) ?: "",
         resultadoGlobal = cursor.getString(cursor.getColumnIndexOrThrow(PRO_RESULTADO)) ?: "Pendiente",
         estado = cursor.getString(cursor.getColumnIndexOrThrow(PRO_ESTADO)),
-        motivoObservacion = cursor.getString(cursor.getColumnIndexOrThrow(PRO_MOTIVO_OBS)) // 👈 NUEVO
+        motivoObservacion = cursor.getString(cursor.getColumnIndexOrThrow(PRO_MOTIVO_OBS))
     )
 
     fun actualizarEstadoProtocolo(protocoloId: Long, nuevoEstado: String) {
@@ -543,6 +543,30 @@ class UsuarioDbHelper(context: Context) :
                     Pair(
                         cursor.getLong(cursor.getColumnIndexOrThrow(INST_ID)),
                         cursor.getString(cursor.getColumnIndexOrThrow(INST_NOMBRE))
+                    )
+                )
+            }
+        }
+        return lista
+    }
+    fun listarEquiposPorInstalacion(nombreInstalacion: String): List<Equipo> {
+        val lista = mutableListOf<Equipo>()
+        readableDatabase.rawQuery(
+            "SELECT * FROM $TABLA_EQUIPOS WHERE $EQ_INSTALACION = ?",
+            arrayOf(nombreInstalacion)
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(
+                    Equipo(
+                        id = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID)).toInt(),
+                        tag = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TAG)),
+                        tipoEquipo = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TIPO)),
+                        clasificacion = "Primario",
+                        instalacion = cursor.getString(cursor.getColumnIndexOrThrow(EQ_INSTALACION)),
+                        marca = cursor.getString(cursor.getColumnIndexOrThrow(EQ_MARCA)) ?: "",
+                        serie = cursor.getString(cursor.getColumnIndexOrThrow(EQ_SERIE)) ?: "",
+                        potenciaTension = "",
+                        idCliente = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID_CLIENTE))
                     )
                 )
             }

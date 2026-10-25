@@ -1,4 +1,4 @@
-package cl.duocuc.miregistro.model
+package cl.duocuc.miregistro.viewmodel
 
 import androidx.lifecycle.ViewModel
 import cl.duocuc.miregistro.data.UsuarioDbHelper

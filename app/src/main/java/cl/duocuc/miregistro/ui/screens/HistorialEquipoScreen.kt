@@ -12,6 +12,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.ui.components.AppTopBar
+import cl.duocuc.miregistro.ui.components.FilaInfo
 import cl.duocuc.miregistro.ui.theme.Dimens
 import kotlin.math.abs
 
@@ -27,9 +29,9 @@ fun HistorialEquipoScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Historial Equipo ID: $equipoId") },
-                navigationIcon = { IconButton(onClick = onVolver) { Text("←") } }
+            AppTopBar(
+                titulo = "Historial Equipo ID: $equipoId",
+                onVolver = onVolver
             )
         }
     ) { innerPadding ->
@@ -57,10 +59,11 @@ fun HistorialEquipoScreen(
 
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(Dimens.espacioMedio)) {
-                            Text("Fecha: ${protocolo.fecha}", style = MaterialTheme.typography.titleMedium)
-                            Text("Resultado: ${protocolo.resultadoGlobal}")
-                            Text("Estado: $estadoMostrado")
-                            Text("T°: ${protocolo.temperatura}°C | Humedad: ${protocolo.humedad}%")
+                            // 👇 FILA INFO REUTILIZABLE
+                            FilaInfo("Fecha", protocolo.fecha)
+                            FilaInfo("Resultado", protocolo.resultadoGlobal)
+                            FilaInfo("Estado", estadoMostrado)
+                            FilaInfo("T° / Humedad", "${protocolo.temperatura}°C / ${protocolo.humedad}%")
 
                             protocolo.motivoObservacion?.let { motivo ->
                                 if (motivo.isNotBlank()) {
@@ -73,26 +76,24 @@ fun HistorialEquipoScreen(
                                 Spacer(Modifier.height(8.dp))
                                 Text("Tipo Prueba: ${medicion.tipoPrueba}", style = MaterialTheme.typography.labelLarge)
 
-                                // Mostramos las etiquetas correctas según el tipo
                                 when (medicion.tipoPrueba) {
                                     "AISLACION" -> {
-                                        Text("Lectura 1min: ${medicion.lectura1Min} MΩ")
-                                        Text("Lectura 10min: ${medicion.lectura10Min} MΩ")
+                                        FilaInfo("Lectura 1min", "${medicion.lectura1Min} MΩ")
+                                        FilaInfo("Lectura 10min", "${medicion.lectura10Min} MΩ")
                                     }
                                     "TTR" -> {
-                                        Text("Relación Teórica: ${medicion.lectura1Min}")
-                                        Text("Relación Medida: ${medicion.lectura10Min}")
+                                        FilaInfo("Relación Teórica", medicion.lectura1Min)
+                                        FilaInfo("Relación Medida", medicion.lectura10Min)
                                     }
                                     "CONTACTOS" -> {
-                                        Text("Resistencia Medida: ${medicion.lectura1Min} μΩ")
-                                        Text("Máx de Placa: ${medicion.lectura10Min} μΩ")
+                                        FilaInfo("Resistencia Medida", "${medicion.lectura1Min} μΩ")
+                                        FilaInfo("Máx de Placa", "${medicion.lectura10Min} μΩ")
                                     }
                                 }
 
                                 val lecturaActual = medicion.lectura1Min.toDoubleOrNull()
                                 val lecturaAnterior = medicionAnterior?.lectura1Min?.toDoubleOrNull()
 
-                                // Solo calculamos variación si es el mismo tipo de prueba
                                 if (medicionAnterior != null && medicionAnterior.tipoPrueba == medicion.tipoPrueba && lecturaActual != null && lecturaAnterior != null && lecturaAnterior > 0) {
                                     val variacion = ((lecturaActual - lecturaAnterior) / lecturaAnterior) * 100
                                     Spacer(Modifier.height(4.dp))

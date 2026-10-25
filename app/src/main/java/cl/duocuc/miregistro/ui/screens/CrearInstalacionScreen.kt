@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
+import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.BotonPrincipal
 import cl.duocuc.miregistro.ui.components.CampoTexto
 import cl.duocuc.miregistro.ui.theme.Dimens
@@ -30,9 +31,9 @@ fun CrearInstalacionScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Crear Instalación (RF-01)") },
-                navigationIcon = { IconButton(onClick = onVolver) { Text("←") } }
+            AppTopBar(
+                titulo = "Crear Instalación",
+                onVolver = onVolver
             )
         }
     ) { innerPadding ->

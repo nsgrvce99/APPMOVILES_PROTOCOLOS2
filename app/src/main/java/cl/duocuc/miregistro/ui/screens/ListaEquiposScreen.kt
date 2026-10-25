@@ -8,81 +8,68 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.ui.components.AppTopBar
+import cl.duocuc.miregistro.ui.components.TarjetaEquipo
 import cl.duocuc.miregistro.ui.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListaEquiposScreen(
-    instalacionId: Long, // 👈 1. Debe ser Long
+    instalacionId: Long,
+    nombreInstalacion: String,
     onVolver: () -> Unit,
-    onSeleccionarEquipoParaPrueba: (Long) -> Unit, // 👈 2. Debe recibir Long
-    onVerHistorialEquipo: (Long) -> Unit, // 👈 3. Debe recibir Long
+    onSeleccionarEquipoParaPrueba: (Long) -> Unit,
+    onVerHistorialEquipo: (Long) -> Unit,
     onRegistrarEquipoNuevo: () -> Unit
 ) {
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
-    val equipos = remember { dbHelper.listarEquipos() }
+
+    // Filtramos los equipos por el nombre de la planta
+    val equipos = remember(nombreInstalacion) {
+        dbHelper.listarEquiposPorInstalacion(nombreInstalacion)
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Equipos - Instalación ID: $instalacionId") },
-                navigationIcon = { IconButton(onClick = onVolver) { Text("←") } }
+            AppTopBar(
+                titulo = "Equipos - $nombreInstalacion",
+                onVolver = onVolver
             )
         }
     ) { innerPadding ->
-        if (equipos.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(Dimens.espacioPantalla)
+        ) {
+            Button(
+                onClick = onRegistrarEquipoNuevo,
+                modifier = Modifier.fillMaxWidth().padding(bottom = Dimens.espacioMedio)
             ) {
-                Text("No hay equipos registrados en la base de datos.")
+                Text("➕ Registrar Equipo Nuevo")
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = PaddingValues(Dimens.espacioMedio),
-                verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
-            ) {
-                item {
-                    Text("TAGs de Equipos Disponibles:", style = MaterialTheme.typography.titleMedium)
+
+            if (equipos.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No hay equipos registrados en esta instalación.")
                 }
-                item {
-                    Button(
-                        onClick = onRegistrarEquipoNuevo,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("➕ Registrar Equipo Nuevo (HU-01)")
-                    }
-                }
-                items(equipos) { equipo ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(Dimens.espacioMedio)) {
-                            Text("${equipo.tipoEquipo} ${equipo.tag}", style = MaterialTheme.typography.titleMedium)
-                            Text("Marca: ${equipo.marca} | Serie: ${equipo.serie}")
-                            Text("Instalación: ${equipo.instalacion}")
-
-                            Spacer(Modifier.height(Dimens.espacioChico))
-
-                            // Aquí está la magia: equipo.id es Int, lo pasamos a Long
-                            Button(
-                                onClick = { onSeleccionarEquipoParaPrueba(equipo.id.toLong()) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Registrar Prueba")
-                            }
-
-                            Spacer(Modifier.height(4.dp))
-
-                            OutlinedButton(
-                                onClick = { onVerHistorialEquipo(equipo.id.toLong()) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Ver Historial (RF-10)")
-                            }
-                        }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(Dimens.espacioMedio),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+                ) {
+                    items(equipos) { equipo ->
+                        TarjetaEquipo(
+                            equipo = equipo,
+                            onVerHistorial = { onVerHistorialEquipo(equipo.id.toLong()) },
+                            onRegistrarPrueba = { onSeleccionarEquipoParaPrueba(equipo.id.toLong()) }
+                        )
                     }
                 }
             }

@@ -13,8 +13,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import cl.duocuc.miregistro.data.SesionPreferencias
 import cl.duocuc.miregistro.data.UsuarioDbHelper
-import cl.duocuc.miregistro.model.LoginViewModel
-import cl.duocuc.miregistro.model.LoginViewModelFactory
+import cl.duocuc.miregistro.viewmodel.LoginViewModel
+import cl.duocuc.miregistro.viewmodel.LoginViewModelFactory
 import cl.duocuc.miregistro.ui.screens.*
 import cl.duocuc.miregistro.viewmodel.UsuariosViewModel
 
@@ -109,8 +109,8 @@ fun AppNavegacion() {
         composable(Ruta.Instalaciones.ruta) {
             InstalacionesScreen(
                 usuarioActual = usuarioActual,
-                onSeleccionarInstalacion = { instalacionId ->
-                    navController.navigate(Ruta.ListaEquipos.crear(instalacionId))
+                onSeleccionarInstalacion = { instalacionId, nombre -> // 👈 ahora recibe ambos
+                    navController.navigate(Ruta.ListaEquipos.crear(instalacionId, nombre))
                 },
                 onIrAFormalizacion = {
                     navController.navigate(Ruta.Formalizacion.ruta)
@@ -126,7 +126,7 @@ fun AppNavegacion() {
                     navController.navigate(Ruta.Perfil.ruta)
                 },
                 onVerUsuarios = {
-                    navController.navigate(Ruta.ListaEquipos.crear(1L))
+                    navController.navigate(Ruta.ListaEquipos.crear(1L, "Planta Lampa"))
                 },
                 onIrAInstrumentos = {   // 👈 NUEVO
                     navController.navigate(Ruta.GestionInstrumentos.ruta)
@@ -144,11 +144,20 @@ fun AppNavegacion() {
         // ---- LISTA DE EQUIPOS ----
         composable(
             route = Ruta.ListaEquipos.ruta,
-            arguments = listOf(navArgument("instalacionId") { type = NavType.LongType })
+            arguments = listOf(
+                navArgument("instalacionId") { type = NavType.LongType },
+                navArgument("nombreInstalacion") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
             val instalacionId = backStackEntry.arguments?.getLong("instalacionId") ?: 0L
+            val nombreInstalacion = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("nombreInstalacion") ?: "",
+                "UTF-8"
+            )
+
             ListaEquiposScreen(
                 instalacionId = instalacionId,
+                nombreInstalacion = nombreInstalacion,
                 onVolver = { navController.navigateUp() },
                 onSeleccionarEquipoParaPrueba = { equipoId ->
                     navController.navigate(Ruta.RegistroPrueba.crear(equipoId))
@@ -157,7 +166,7 @@ fun AppNavegacion() {
                     navController.navigate(Ruta.HistorialEquipo.crear(equipoId))
                 },
                 onRegistrarEquipoNuevo = {
-                    navController.navigate(Ruta.RegistrarEquipo.crear(instalacionId))
+                    navController.navigate(Ruta.RegistrarEquipo.crear(instalacionId, nombreInstalacion))
                 }
             )
         }
@@ -165,14 +174,25 @@ fun AppNavegacion() {
         // ---- REGISTRAR EQUIPO (HU-01) ----
         composable(
             route = Ruta.RegistrarEquipo.ruta,
-            arguments = listOf(navArgument("instalacionId") { type = NavType.LongType })
+            arguments = listOf(
+                navArgument("instalacionId") { type = NavType.LongType },
+                navArgument("nombreInstalacion") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
             val instalacionId = backStackEntry.arguments?.getLong("instalacionId") ?: 0L
+            val nombreInstalacion = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("nombreInstalacion") ?: "",
+                "UTF-8"
+            )
             RegistrarEquipoScreen(
                 instalacionId = instalacionId,
+                nombreInstalacion = nombreInstalacion, // 👈 pásalo también a la pantalla
                 onVolver = { navController.navigateUp() },
                 onEquipoRegistrado = {
-                    navController.popBackStack(Ruta.ListaEquipos.crear(instalacionId), inclusive = false)
+                    navController.popBackStack(
+                        Ruta.ListaEquipos.crear(instalacionId, nombreInstalacion),
+                        inclusive = false
+                    )
                 }
             )
         }
@@ -247,5 +267,6 @@ fun AppNavegacion() {
                 onVolver = { navController.navigateUp() }
             )
         }
+
     }
 }
