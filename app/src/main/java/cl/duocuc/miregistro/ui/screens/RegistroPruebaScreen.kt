@@ -83,7 +83,7 @@ fun RegistroPruebaScreen(
                 icono = R.drawable.ic_candado
             )
 
-            // 👇 SELECTOR DE TIPO DE PRUEBA
+
             SelectorDesplegable(
                 etiqueta = "Tipo de Prueba",
                 opciones = tiposPrueba,
@@ -92,7 +92,7 @@ fun RegistroPruebaScreen(
                 textoDe = { it }
             )
 
-            // 👇 CAMPOS DINÁMICOS SEGÚN EL TIPO DE PRUEBA
+
             when (uiState.tipoPrueba) {
                 "AISLACION" -> {
                     CampoTexto(
@@ -138,16 +138,16 @@ fun RegistroPruebaScreen(
                 }
             }
 
-            // Desplegable de Instrumento
+
             SelectorDesplegable(
-                etiqueta = "Instrumento utilizado (RF-05)",
+                etiqueta = "Instrumento utilizado",
                 opciones = instrumentos,
                 seleccionada = instrumentoSeleccionado,
                 onSeleccionar = { viewModel.onInstrumentoSeleccionado(it) },
                 textoDe = { "${it.nombre} - ${it.marca}" }
             )
 
-            // Resultado
+
             if (uiState.resultadoPrueba != "Pendiente") {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
@@ -169,7 +169,7 @@ fun RegistroPruebaScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Guardar Protocolo (Offline)")
+                Text("Guardar Protocolo")
             }
         }
     }

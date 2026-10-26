@@ -33,6 +33,7 @@ class LoginViewModel(
         if (currentState.correo.isBlank() || currentState.contrasena.isBlank()) {
             _uiState.update { it.copy(errorMensaje = "Debe ingresar correo y contraseña") }
             return
+
         }
 
         val usuario = dbHelper.autenticarUsuario(currentState.correo.trim(), currentState.contrasena.trim())

@@ -1,7 +1,7 @@
 package cl.duocuc.miregistro.model
 
 data class ProtocoloUiState(
-    val codigoEquipo: String = "",
+    val codigoEquipo: String ="",
     val tipoPrueba: String = "AISLACION",
     val tipoEquipo: String = "Transformador",
     val temperaturaAmbiente: String = "",
@@ -9,7 +9,7 @@ data class ProtocoloUiState(
     val lectura1Min: String = "",
     val lectura10Min: String = "",
     val tensionPrueba: String = "5 kV",
-    val instrumentoSeleccionado: String = "", // 👈 NUEVO CAMPO (RF-05)
+    val instrumentoSeleccionado: String = "",
     val errorTemperatura: String? = null,
     val errorMedicion: String? = null,
     val resultadoPrueba: String = "Pendiente",

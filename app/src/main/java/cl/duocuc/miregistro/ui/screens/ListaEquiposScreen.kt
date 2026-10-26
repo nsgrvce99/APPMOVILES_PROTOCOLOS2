@@ -26,7 +26,7 @@ fun ListaEquiposScreen(
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-    // Filtramos los equipos por el nombre de la planta
+
     val equipos = remember(nombreInstalacion) {
         dbHelper.listarEquiposPorInstalacion(nombreInstalacion)
     }
@@ -49,7 +49,7 @@ fun ListaEquiposScreen(
                 onClick = onRegistrarEquipoNuevo,
                 modifier = Modifier.fillMaxWidth().padding(bottom = Dimens.espacioMedio)
             ) {
-                Text("➕ Registrar Equipo Nuevo")
+                Text(" Registrar Equipo Nuevo")
             }
 
             if (equipos.isEmpty()) {

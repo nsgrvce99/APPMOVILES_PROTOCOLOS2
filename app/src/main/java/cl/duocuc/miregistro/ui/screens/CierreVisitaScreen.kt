@@ -31,7 +31,7 @@ fun CierreVisitaScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var exito by remember { mutableStateOf(false) }
 
-    // Validación de RUT (RN-03: módulo 11)
+    // Validación de RUT
     fun validarRut(rutCompleto: String): Boolean {
         val rutLimpio = rutCompleto.replace(".", "").replace("-", "").trim().uppercase()
         if (rutLimpio.length < 2) return false
@@ -74,12 +74,12 @@ fun CierreVisitaScreen(
             verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
         ) {
             Text(
-                "Registre los datos de quien recibe el Acta de Terreno (RF-08)",
+                "Registre los datos de quien recibe el Acta de Terreno",
                 style = MaterialTheme.typography.titleMedium
             )
 
             Text(
-                "El Acta se entregará marcada como 'Pendiente de formalización' (RN-14)",
+                "El Acta se entregará marcada como 'Pendiente de formalización'",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.secondary
             )
@@ -97,7 +97,7 @@ fun CierreVisitaScreen(
                 icono = R.drawable.ic_persona
             )
 
-            // 👇 Usamos CampoMultilinea para el cargo
+
             CampoMultilinea(
                 valor = cargo,
                 onValorCambia = { cargo = it },
@@ -113,7 +113,7 @@ fun CierreVisitaScreen(
                     detalles = listOf(
                         "Receptor: $nombre",
                         "RUT: $rut",
-                        "Estado: Pendiente de formalización (RN-14)"
+                        "Estado: Pendiente de formalización"
                     )
                 )
             }
@@ -124,11 +124,11 @@ fun CierreVisitaScreen(
                     if (exito) {
                         onActaEntregada()
                     } else {
-                        // Validaciones
+
                         if (nombre.isBlank() || rut.isBlank()) {
-                            error = "Nombre y RUT son obligatorios (HU-08)"
+                            error = "Nombre y RUT son obligatorios"
                         } else if (!validarRut(rut)) {
-                            error = "RUT inválido. Verifique el formato (RN-03)"
+                            error = "RUT inválido. Verifique el formato"
                         } else {
                             val fechaHora = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(Date())
                             dbHelper.guardarRecepcionActa(

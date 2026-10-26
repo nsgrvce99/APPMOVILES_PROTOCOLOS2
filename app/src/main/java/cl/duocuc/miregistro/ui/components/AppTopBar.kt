@@ -10,15 +10,15 @@ import cl.duocuc.miregistro.R
 @Composable
 fun AppTopBar(
     titulo: String,
-    onVolver: (() -> Unit)? = null,           // Para las pantallas con flecha ←
-    onAbrirMenu: (() -> Unit)? = null,        // 👈 Para las pantallas con menú ☰
+    onVolver: (() -> Unit)? = null,
+    onAbrirMenu: (() -> Unit)? = null,
     acciones: @Composable () -> Unit = {}
 ) {
     TopAppBar(
         title = { Text(titulo) },
         navigationIcon = {
             if (onAbrirMenu != null) {
-                // Botón de menú (☰)
+
                 IconButton(onClick = onAbrirMenu) {
                     Icon(
                         painter = painterResource(R.drawable.ic_menu),
@@ -26,7 +26,7 @@ fun AppTopBar(
                     )
                 }
             } else if (onVolver != null) {
-                // Botón de volver (←)
+
                 IconButton(onClick = onVolver) {
                     Icon(
                         painter = painterResource(R.drawable.ic_volver),

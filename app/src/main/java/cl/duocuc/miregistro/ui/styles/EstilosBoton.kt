@@ -17,48 +17,34 @@ import cl.duocuc.miregistro.ui.theme.Dimens
 import cl.duocuc.miregistro.ui.theme.GrisDeshabilitado
 import cl.duocuc.miregistro.ui.theme.Primario
 
-// =====================================================================
-//  EstilosBoton.kt  —  "HOJA DE ESTILOS" DE LOS BOTONES
-//  ---------------------------------------------------------------------
-//  Compose NO usa CSS, pero se logra lo mismo agrupando estilos:
-//
-//     CSS                              Compose
-//     -------------------------------  ---------------------------------
-//     .btn-principal { ... }           object EstilosBoton { ... }
-//     background-color / color         ButtonColors
-//     border-radius                    Shape (RoundedCornerShape)
-//     border: 2px solid                BorderStroke(2.dp, color)
-//     padding                          PaddingValues
-//     box-shadow                       ButtonElevation
-//     height: 52px                     Modifier.height(52.dp)
-// =====================================================================
+
 
 object EstilosBoton {
 
-    val forma: Shape = RoundedCornerShape(Dimens.radioBoton)              // border-radius
-    val relleno = PaddingValues(horizontal = 20.dp, vertical = 12.dp)      // padding
+    val forma: Shape = RoundedCornerShape(Dimens.radioBoton)
+    val relleno = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
 
-    /** Botón principal: relleno morado, texto blanco. */
+
     @Composable
     fun coloresPrincipal(): ButtonColors = ButtonDefaults.buttonColors(
-        containerColor = Primario,             // background-color
-        contentColor = Blanco,                 // color
+        containerColor = Primario,
+        contentColor = Blanco,
         disabledContainerColor = GrisDeshabilitado,
         disabledContentColor = Blanco
     )
 
-    /** Botón secundario: transparente, texto del color primario del tema. */
+
     @Composable
     fun coloresSecundario(): ButtonColors = ButtonDefaults.outlinedButtonColors(
         contentColor = MaterialTheme.colorScheme.primary
     )
 
-    /** Borde del botón secundario. */
+
     @Composable
     fun bordeSecundario(): BorderStroke =
         BorderStroke(Dimens.bordeBoton, MaterialTheme.colorScheme.primary)
 
-    /** Sombra del botón principal (al presionar "se hunde"). */
+
     @Composable
     fun elevacion(): ButtonElevation = ButtonDefaults.buttonElevation(
         defaultElevation = Dimens.elevacionBoton,
@@ -66,6 +52,5 @@ object EstilosBoton {
     )
 }
 
-// "Clase CSS" como extensión de Modifier: .alto-boton { height: 52px; }
-// Se encadena con otros modificadores: Modifier.weight(1f).estiloAltoBoton()
+
 fun Modifier.estiloAltoBoton(): Modifier = this.height(Dimens.alturaBoton)

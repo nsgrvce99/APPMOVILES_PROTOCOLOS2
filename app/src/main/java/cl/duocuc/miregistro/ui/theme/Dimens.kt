@@ -2,16 +2,7 @@ package cl.duocuc.miregistro.ui.theme
 
 import androidx.compose.ui.unit.dp
 
-// =====================================================================
-//  Dimens.kt  —  MEDIDAS REUTILIZABLES (márgenes, radios, alturas)
-//  ---------------------------------------------------------------------
-//  En CSS:      --espacio-m: 16px;   border-radius: 12px;
-//  En Compose:  Dimens.espacioMedio  (en "dp": píxeles independientes
-//               de la densidad; se ven del mismo tamaño en todo celular)
-//
-//  "object" en Kotlin = una única instancia (singleton): sirve como
-//  contenedor de constantes que usamos desde cualquier archivo.
-// =====================================================================
+
 
 object Dimens {
     // Espaciados (margin / padding / gap)

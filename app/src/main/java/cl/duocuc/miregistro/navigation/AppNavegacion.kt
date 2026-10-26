@@ -29,7 +29,7 @@ fun AppNavegacion() {
     val usuariosViewModel: UsuariosViewModel = viewModel()
     val usuarioActual by usuariosViewModel.usuarioActual.collectAsStateWithLifecycle()
 
-    // Recuperar usuario si hay sesión activa
+
     LaunchedEffect(Unit) {
         if (sesionPrefs.haySesionActiva()) {
             val usuarioGuardado = dbHelper.buscarPorId(sesionPrefs.leer())
@@ -47,7 +47,7 @@ fun AppNavegacion() {
 
     NavHost(navController = navController, startDestination = startDestination) {
 
-        // ---- LOGIN ----
+
         composable(Ruta.Login.ruta) {
             val loginViewModel: LoginViewModel = viewModel(
                 factory = LoginViewModelFactory(dbHelper, sesionPrefs)
@@ -69,7 +69,7 @@ fun AppNavegacion() {
             )
         }
 
-        // ---- PERFIL DE USUARIO ----
+
         composable(Ruta.Perfil.ruta) {
             PerfilScreen(
                 usuario = usuarioActual,
@@ -77,12 +77,12 @@ fun AppNavegacion() {
             )
         }
 
-        // ---- MIS EQUIPOS (Rol 4) ----
+
         composable(Ruta.MisEquiposCliente.ruta) {
             MisEquiposClienteScreen(
                 usuarioActual = usuarioActual,
                 onVolver = {
-                    // Este onVolver ya no se usa porque ahora hay menú, pero lo dejamos por compatibilidad
+
                     sesionPrefs.borrar()
                     usuariosViewModel.cerrarSesion()
                     navController.navigate(Ruta.Login.ruta) {
@@ -105,11 +105,11 @@ fun AppNavegacion() {
             )
         }
 
-        // ---- INSTALACIONES ----
+
         composable(Ruta.Instalaciones.ruta) {
             InstalacionesScreen(
                 usuarioActual = usuarioActual,
-                onSeleccionarInstalacion = { instalacionId, nombre -> // 👈 ahora recibe ambos
+                onSeleccionarInstalacion = { instalacionId, nombre ->
                     navController.navigate(Ruta.ListaEquipos.crear(instalacionId, nombre))
                 },
                 onIrAFormalizacion = {
@@ -128,20 +128,20 @@ fun AppNavegacion() {
                 onVerUsuarios = {
                     navController.navigate(Ruta.ListaEquipos.crear(1L, "Planta Lampa"))
                 },
-                onIrAInstrumentos = {   // 👈 NUEVO
+                onIrAInstrumentos = {
                     navController.navigate(Ruta.GestionInstrumentos.ruta)
                 },
-                onIrACrearCliente = {   // 👈 NUEVO
+                onIrACrearCliente = {
                     navController.navigate(Ruta.CrearCliente.ruta)
                 },
-                onIrACrearInstalacion = {  // 👈 NUEVO
+                onIrACrearInstalacion = {
                     navController.navigate(Ruta.CrearInstalacion.ruta)
                 }
             )
         }
 
 
-        // ---- LISTA DE EQUIPOS ----
+
         composable(
             route = Ruta.ListaEquipos.ruta,
             arguments = listOf(
@@ -171,7 +171,7 @@ fun AppNavegacion() {
             )
         }
 
-        // ---- REGISTRAR EQUIPO (HU-01) ----
+
         composable(
             route = Ruta.RegistrarEquipo.ruta,
             arguments = listOf(
@@ -186,7 +186,7 @@ fun AppNavegacion() {
             )
             RegistrarEquipoScreen(
                 instalacionId = instalacionId,
-                nombreInstalacion = nombreInstalacion, // 👈 pásalo también a la pantalla
+                nombreInstalacion = nombreInstalacion,
                 onVolver = { navController.navigateUp() },
                 onEquipoRegistrado = {
                     navController.popBackStack(
@@ -197,7 +197,6 @@ fun AppNavegacion() {
             )
         }
 
-        // ---- REGISTRO DE PRUEBA ----
         composable(
             route = Ruta.RegistroPrueba.ruta,
             arguments = listOf(navArgument("equipoId") { type = NavType.LongType })
@@ -215,7 +214,7 @@ fun AppNavegacion() {
             )
         }
 
-        // ---- HISTORIAL EQUIPO ----
+
         composable(
             route = Ruta.HistorialEquipo.ruta,
             arguments = listOf(navArgument("equipoId") { type = NavType.LongType })
@@ -227,7 +226,7 @@ fun AppNavegacion() {
             )
         }
 
-        // ---- FORMALIZACIÓN ----
+
         composable(Ruta.Formalizacion.ruta) {
             FormalizacionScreen(
                 usuarioActual = usuarioActual,
@@ -235,7 +234,7 @@ fun AppNavegacion() {
             )
         }
 
-        // ---- CIERRE DE VISITA ----
+
         composable(
             route = Ruta.CierreVisita.ruta,
             arguments = listOf(navArgument("protocoloId") { type = NavType.LongType })

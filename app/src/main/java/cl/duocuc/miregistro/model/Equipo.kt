@@ -1,7 +1,7 @@
 package cl.duocuc.miregistro.model
 
 data class Equipo(
-    val id: Int = 0,                 // 👈 0 por defecto para equipos nuevos
+    val id: Int = 0,
     val tag: String,
     val tipoEquipo: String,
     val clasificacion: String = "Primario",
@@ -9,5 +9,5 @@ data class Equipo(
     val marca: String,
     val serie: String,
     val potenciaTension: String = "",
-    val idCliente: Long = 5L         // 👈 Por defecto asignamos al cliente de prueba
+    val idCliente: Long = 5L
 )

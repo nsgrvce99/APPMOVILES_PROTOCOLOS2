@@ -28,12 +28,12 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
         _instrumentos.value = dbHelper.listarInstrumentos()
     }
 
-    // 👇 NUEVO: Cambiar tipo de prueba
+
     fun onTipoPruebaCambia(tipo: String) {
         _uiState.update {
             it.copy(
                 tipoPrueba = tipo,
-                lectura1Min = "", // Limpiamos los campos al cambiar de prueba
+                lectura1Min = "",
                 lectura10Min = "",
                 resultadoPrueba = "Pendiente",
                 errorMedicion = null
@@ -64,7 +64,7 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
         recalcularIP()
     }
 
-    // 👇 NUEVO: Recalcular resultado según el tipo de prueba
+
     private fun recalcularIP() {
         val state = _uiState.value
         val v1 = state.lectura1Min.toDoubleOrNull()
@@ -93,7 +93,7 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
                 }
             }
             "CONTACTOS" -> {
-                // Aquí v1 es la medida y v10 es el máximo de placa
+
                 when {
                     v1 <= v10 -> "Aprobado"
                     v1 <= v10 * 1.2 -> "Observado"
@@ -110,21 +110,21 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
         val instrumento = _instrumentoSeleccionado.value
 
         if (state.temperaturaAmbiente.isBlank() || state.humedadRelativa.isBlank()) {
-            _uiState.update { it.copy(errorTemperatura = "Temperatura y humedad son obligatorias (RN-04)") }
+            _uiState.update { it.copy(errorTemperatura = "Temperatura y humedad son obligatorias ") }
             return
         }
 
         if (instrumento == null) {
-            _uiState.update { it.copy(errorMedicion = "Debe seleccionar un instrumento (RF-05)") }
+            _uiState.update { it.copy(errorMedicion = "Debe seleccionar un instrumento") }
             return
         }
 
-        // Validar calibración
+
         try {
             val sdf = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
             val fechaVencimiento = sdf.parse(instrumento.fechaVencimiento)
             if (fechaVencimiento != null && fechaVencimiento.before(Date())) {
-                _uiState.update { it.copy(errorMedicion = "El instrumento está vencido (RN-11)") }
+                _uiState.update { it.copy(errorMedicion = "El instrumento está vencido") }
                 return
             }
         } catch (e: Exception) {}
@@ -146,7 +146,7 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
         if (nuevoId > 0) {
             dbHelper.guardarMedicion(
                 protocoloId = nuevoId,
-                tipoPrueba = state.tipoPrueba, // Guardamos el tipo seleccionado
+                tipoPrueba = state.tipoPrueba,
                 lectura1 = state.lectura1Min,
                 lectura10 = state.lectura10Min,
                 ip = state.resultadoPrueba

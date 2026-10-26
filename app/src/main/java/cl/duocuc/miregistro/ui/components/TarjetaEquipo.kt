@@ -37,7 +37,7 @@ fun TarjetaEquipo(
                 onClick = onVerHistorial,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Ver Historial (RF-10)")
+                Text("Ver Historial")
             }
         }
     }

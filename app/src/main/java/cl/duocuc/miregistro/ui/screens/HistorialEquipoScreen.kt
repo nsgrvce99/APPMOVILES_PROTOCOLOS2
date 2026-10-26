@@ -59,7 +59,7 @@ fun HistorialEquipoScreen(
 
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(Dimens.espacioMedio)) {
-                            // 👇 FILA INFO REUTILIZABLE
+
                             FilaInfo("Fecha", protocolo.fecha)
                             FilaInfo("Resultado", protocolo.resultadoGlobal)
                             FilaInfo("Estado", estadoMostrado)
@@ -98,7 +98,7 @@ fun HistorialEquipoScreen(
                                     val variacion = ((lecturaActual - lecturaAnterior) / lecturaAnterior) * 100
                                     Spacer(Modifier.height(4.dp))
                                     if (abs(variacion) > 25.0) {
-                                        Text("⚠ Variación significativa: ${"%.1f".format(variacion)}% vs anterior (RN-09)", color = Color(0xFFD32F2F))
+                                        Text("⚠ Variación significativa: ${"%.1f".format(variacion)}% vs anterior", color = Color(0xFFD32F2F))
                                     } else {
                                         Text("Variación vs anterior: ${"%.1f".format(variacion)}%", color = Color(0xFF388E3C))
                                     }

@@ -12,7 +12,7 @@ class UsuarioDbHelper(context: Context) :
 
     companion object {
         private const val NOMBRE_BD = "induztekterreno.db"
-        private const val VERSION_BD = 9
+        private const val VERSION_BD = 10
 
         // ---- ROL ----
         private const val TABLA_ROLES = "rol"
@@ -203,19 +203,19 @@ class UsuarioDbHelper(context: Context) :
 
         private const val SQL_PRECARGAR_EQUIPOS =
             "INSERT INTO $TABLA_EQUIPOS ($EQ_ID, $EQ_TAG, $EQ_TIPO, $EQ_MARCA, $EQ_SERIE, $EQ_INSTALACION, $EQ_ID_CLIENTE) VALUES " +
-                    // Planta Lampa (Cliente 5)
+                    // Planta Lampa
                     "(1, 'TR-01', 'Transformador', 'Rhona', 'RH-18733', 'Planta Lampa', 5), " +
                     "(2, 'TR-02', 'Transformador', 'Rhona', 'RH-21904', 'Planta Lampa', 5), " +
-                    // Planta Elevadora Sur (Cliente 5)
+                    // Planta Elevadora Sur
                     "(3, 'TR-A', 'Transformador', 'Tusan', 'TS-5521', 'Planta Elevadora Sur', 5), " +
-                    // Faena Til Til (Cliente 5)
+                    // Faena Til Til
                     "(4, 'TR-SS-01', 'Transformador', 'ABB', 'ABB-1180442', 'Faena Til Til', 5), " +
                     "(5, 'INT-52-1', 'Interruptor', 'Schneider', 'SE-449021', 'Faena Til Til', 5), " +
-                    // Edificio Clínico (Cliente 5)
+                    // Edificio Clínico
                     "(6, 'CEL-MT-03', 'Celda MT', 'Ormazabal', 'OR-77812', 'Edificio Clínico', 5), " +
-                    // Planta Molienda (Cliente 5)
+                    // Planta Molienda
                     "(7, 'REL-50/51-A', 'Relé de protección', 'SEL', 'SEL-751-30219', 'Planta Molienda', 5), " +
-                    // Site Huechuraba (Cliente 5)
+                    // Site Huechuraba
                     "(8, 'CAB-MT-02', 'Cable de poder', 'Nexans', 'NX-2201-B', 'Site Huechuraba', 5)"
 
         private const val SQL_SELECT_USUARIOS =
@@ -478,7 +478,7 @@ class UsuarioDbHelper(context: Context) :
         return consultarUsuarios("$SQL_SELECT_USUARIOS WHERE u.$USU_CORREO = ?", arrayOf(correo)).firstOrNull()
     }
 
-    // NUEVO MÉTODO: Listar equipos asociados a un cliente
+
     fun listarEquiposPorCliente(clienteId: Long): List<Equipo> {
         val lista = mutableListOf<Equipo>()
         readableDatabase.rawQuery("SELECT * FROM $TABLA_EQUIPOS WHERE $EQ_ID_CLIENTE = ?", arrayOf(clienteId.toString())).use { cursor ->

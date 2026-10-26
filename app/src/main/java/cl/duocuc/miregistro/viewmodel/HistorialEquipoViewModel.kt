@@ -13,7 +13,7 @@ class HistorialEquipoViewModel(dbHelper: UsuarioDbHelper, equipoId: Long) : View
     val protocolos: StateFlow<List<Protocolo>> = _protocolos.asStateFlow()
 
     init {
-        // Carga inicial de datos
+
         _protocolos.value = dbHelper.listarProtocolosPorEquipo(equipoId)
     }
 }

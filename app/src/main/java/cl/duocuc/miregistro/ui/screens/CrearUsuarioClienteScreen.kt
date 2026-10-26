@@ -41,7 +41,7 @@ fun CrearUsuarioClienteScreen(
             )
         }
     ) { innerPadding ->
-        // Validación de Rol: Solo Jefe Técnico (ID 3)
+
         if (usuarioActual?.rolId != 3L) {
             Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                 Text("Acceso denegado. Solo el Jefe Técnico puede otorgar cuentas.", color = MaterialTheme.colorScheme.error)
@@ -72,7 +72,7 @@ fun CrearUsuarioClienteScreen(
                         if (nombre.isBlank() || correo.isBlank() || contrasena.isBlank()) {
                             error = "Nombre, correo y contraseña son obligatorios"
                         } else {
-                            // Creamos el usuario con Rol 4 (CLIENTE)
+
                             val nuevoCliente = Usuario(
                                 rut = rut,
                                 nombre = nombre,

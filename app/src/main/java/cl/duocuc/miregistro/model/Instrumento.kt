@@ -5,5 +5,5 @@ data class Instrumento(
     val nombre: String,
     val marca: String,
     val serie: String,
-    val fechaVencimiento: String // Formato: "dd-MM-yyyy"
+    val fechaVencimiento: String
 )

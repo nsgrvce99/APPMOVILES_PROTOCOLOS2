@@ -22,14 +22,7 @@ import cl.duocuc.miregistro.ui.styles.EstilosCampo
 import cl.duocuc.miregistro.ui.theme.Dimens
 import cl.duocuc.miregistro.ui.theme.MiRegistroTheme
 
-// =====================================================================
-//  CampoContrasena.kt  —  Campo con puntos (••••) y botón "ojo".
-//  ---------------------------------------------------------------------
-//  visualTransformation cambia CÓMO se muestra el texto, no lo que vale:
-//   - PasswordVisualTransformation() -> ••••••
-//   - VisualTransformation.None      -> texto normal
-//  Si la contraseña se ve o no es ESTADO: lo decide el ViewModel.
-// =====================================================================
+
 
 @Composable
 fun CampoContrasena(
@@ -53,7 +46,7 @@ fun CampoContrasena(
                 modifier = Modifier.size(Dimens.tamanoIcono)
             )
         },
-        trailingIcon = {                                   // ícono a la DERECHA, presionable
+        trailingIcon = {
             IconButton(onClick = onAlternarVisible) {
                 Icon(
                     painter = painterResource(

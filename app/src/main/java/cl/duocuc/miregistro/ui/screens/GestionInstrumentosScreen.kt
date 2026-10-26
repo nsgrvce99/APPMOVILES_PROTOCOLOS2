@@ -30,7 +30,7 @@ fun GestionInstrumentosScreen(
 
     var instrumentos by remember { mutableStateOf(dbHelper.listarInstrumentos()) }
 
-    // Estados del formulario
+
     var nombre by remember { mutableStateOf("") }
     var marca by remember { mutableStateOf("") }
     var serie by remember { mutableStateOf("") }
@@ -45,7 +45,7 @@ fun GestionInstrumentosScreen(
             )
         }
     )  { innerPadding ->
-        // Validación de Rol: Solo Jefe Técnico (ID 3)
+
         if (usuarioActual?.rolId != 3L) {
             Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                 Text("Acceso denegado. Solo el Jefe Técnico puede gestionar instrumentos.", color = MaterialTheme.colorScheme.error)
@@ -72,10 +72,10 @@ fun GestionInstrumentosScreen(
                     texto = "Guardar Instrumento",
                     onClick = {
                         if (nombre.isBlank() || vencimiento.isBlank()) {
-                            error = "Nombre y fecha de vencimiento son obligatorios (RN-12)"
+                            error = "Nombre y fecha de vencimiento son obligatorios"
                         } else {
                             dbHelper.insertarInstrumento(nombre, marca, serie, vencimiento)
-                            instrumentos = dbHelper.listarInstrumentos() // Refrescar lista
+                            instrumentos = dbHelper.listarInstrumentos()
                             nombre = ""; marca = ""; serie = ""; vencimiento = ""; error = null
                         }
                     },

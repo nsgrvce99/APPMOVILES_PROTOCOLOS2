@@ -46,7 +46,7 @@ fun PerfilScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Convertimos el Usuario de la sesión a Perfil para mostrarlo
+
     val perfilActual = if (usuario != null) {
         Perfil(
             id = usuario.id,
@@ -64,7 +64,7 @@ fun PerfilScreen(
 
     PerfilContent(
         perfil = perfilActual,
-        rolId = usuario?.rolId, // 👈 Pasamos el rolId para saber si es cliente
+        rolId = usuario?.rolId,
         onVolver = onVolver
     )
 }
@@ -73,7 +73,7 @@ fun PerfilScreen(
 @Composable
 fun PerfilContent(
     perfil: Perfil?,
-    rolId: Long?, // 👈 NUEVO PARÁMETRO
+    rolId: Long?,
     onVolver: () -> Unit = {}
 ) {
     Scaffold(
@@ -102,7 +102,7 @@ fun PerfilContent(
 
             Spacer(Modifier.height(Dimens.espacioChico))
 
-            // Nombre y Rol
+
             Text(
                 text = perfil?.nombre ?: "Sin nombre",
                 style = MaterialTheme.typography.titleLarge
@@ -130,7 +130,7 @@ fun PerfilContent(
                 )
             }
 
-            // ---------- Secciones de información ----------
+
             Column(
                 modifier = Modifier.padding(Dimens.espacioPantalla),
                 verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
@@ -148,11 +148,11 @@ fun PerfilContent(
                     }
                 }
 
-                // 👇 CONDICIÓN: Mostrar solo si NO es cliente (rolId != 4)
+
                 if (rolId != 4L) {
                     TarjetaSeccion(titulo = "Normativa y Seguridad") {
                         Text(
-                            text = "El personal de terreno debe utilizar obligatoriamente Equipo de Protección Personal (EPP) en salas eléctricas y subestaciones (Anexo 2).",
+                            text = "El personal de terreno debe utilizar obligatoriamente Equipo de Protección Personal (EPP) en salas eléctricas y subestaciones.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }

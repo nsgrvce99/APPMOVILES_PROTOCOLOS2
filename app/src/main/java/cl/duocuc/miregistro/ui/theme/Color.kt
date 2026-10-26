@@ -2,16 +2,7 @@ package cl.duocuc.miregistro.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// =====================================================================
-//  Color.kt  —  "PALETA DE COLORES" (equivale a las variables de CSS)
-//  ---------------------------------------------------------------------
-//  En CSS:        :root { --primario: #5B3FD9; }
-//  En Compose:    val Primario = Color(0xFF059669)
-//
-//  Formato: 0xAARRGGBB  ->  AA = opacidad (FF = 100 %), luego rojo, verde, azul.
-//  Regla de oro: NUNCA escribir colores sueltos en las pantallas;
-//  siempre referenciarlos desde este archivo o desde MaterialTheme.
-// =====================================================================
+
 
 // --- Colores de marca (diseño propio) ---
 val Primario = Color(0xFF059669)

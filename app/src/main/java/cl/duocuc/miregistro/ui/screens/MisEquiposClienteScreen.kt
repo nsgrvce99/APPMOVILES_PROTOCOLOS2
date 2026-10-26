@@ -40,7 +40,7 @@ fun MisEquiposClienteScreen(
             topBar = {
                 AppTopBar(
                     titulo = "Mis Equipos",
-                    onAbrirMenu = onAbrirMenu // 👈 Usamos el menú ☰
+                    onAbrirMenu = onAbrirMenu
                 )
             },
             snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -68,7 +68,7 @@ fun MisEquiposClienteScreen(
                         TarjetaEquipo(
                             equipo = equipo,
                             onVerHistorial = { onVerHistorialEquipo(equipo.id.toLong()) },
-                            onRegistrarPrueba = null // El cliente no puede registrar pruebas
+                            onRegistrarPrueba = null
                         )
                     }
                 }

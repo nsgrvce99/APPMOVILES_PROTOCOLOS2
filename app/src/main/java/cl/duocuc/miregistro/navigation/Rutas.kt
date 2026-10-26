@@ -2,22 +2,22 @@ package cl.duocuc.miregistro.navigation
 
 sealed class Ruta(val ruta: String) {
 
-    // ---- AUTENTICACIÓN ----
+
     data object Login : Ruta("login")
 
-    // ---- PERFIL DE USUARIO ----
-    data object Perfil : Ruta("perfil")   // 👈 NUEVO
 
-    // ---- CLIENTE (Rol 4) ----
+    data object Perfil : Ruta("perfil")
+
+
     data object HistorialCliente : Ruta("historial_cliente")
     data object MisEquiposCliente : Ruta("mis_equipos")
 
-    // ---- OPERATIVAS ----
+
     data object Instalaciones : Ruta("instalaciones")
 
     data object ListaEquipos : Ruta("equipos/{instalacionId}/{nombreInstalacion}") {
         fun crear(instalacionId: Long, nombre: String): String {
-            // Codificamos el nombre para que los espacios no rompan la ruta
+
             val nombreCodificado = java.net.URLEncoder.encode(nombre, "UTF-8")
             return "equipos/$instalacionId/$nombreCodificado"
         }

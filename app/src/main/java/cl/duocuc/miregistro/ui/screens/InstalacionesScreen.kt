@@ -67,14 +67,14 @@ fun InstalacionesScreen(
                 )
                 Text("Seleccione la instalación eléctrica a inspeccionar:")
 
-                // 👇 DESPLEGABLE REUTILIZABLE
+
                 SelectorDesplegable(
                     etiqueta = "Plantas",
                     opciones = instalaciones,
                     seleccionada = instalacionSeleccionada,
                     onSeleccionar = { (id, nombre) ->
                         instalacionSeleccionada = Pair(id, nombre)
-                        onSeleccionarInstalacion(id, nombre) // Navega automáticamente
+                        onSeleccionarInstalacion(id, nombre)
                     },
                     textoDe = { it.second }
                 )
@@ -87,13 +87,13 @@ fun InstalacionesScreen(
 
                 if (usuarioActual?.rolId == 3L) {
                     Button(onClick = onIrAInstrumentos, modifier = Modifier.padding(top = 8.dp)) {
-                        Text("Gestionar Instrumentos (RN-12)")
+                        Text("Gestionar Instrumentos")
                     }
                     Button(onClick = onIrACrearCliente, modifier = Modifier.padding(top = 8.dp)) {
-                        Text("Crear Cuenta Cliente (RN-20)")
+                        Text("Crear Cuenta Cliente")
                     }
                     Button(onClick = onIrACrearInstalacion, modifier = Modifier.padding(top = 8.dp)) {
-                        Text("Crear Instalación (RF-01)")
+                        Text("Crear Instalación")
                     }
                 }
                 Spacer(modifier = Modifier.padding(bottom = 16.dp))

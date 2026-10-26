@@ -14,26 +14,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-// =====================================================================
-//  Theme.kt  —  EL TEMA GLOBAL (equivale a la hoja de estilos principal)
-//  ---------------------------------------------------------------------
-//  MaterialTheme "envuelve" toda la app. Cualquier componente de
-//  Material 3 (Button, Text, Card...) toma sus colores, letras y formas
-//  de aquí AUTOMÁTICAMENTE. Esto es el "estilo por defecto".
-//
-//  NOTA: la plantilla de Android Studio trae "dynamicColor = true", que en
-//  Android 12+ reemplaza la paleta por los colores del fondo de pantalla del
-//  celular. Lo quitamos para que SIEMPRE se vea nuestro diseño propio.
-//
-//  Si cambias "primary" en EsquemaClaro, cambian TODOS los Button de la
-//  app sin tocar las pantallas. Esa es la gracia de centralizar el diseño.
-// =====================================================================
 
-// Colores para modo claro: asignamos NUESTRA paleta a los roles de Material
+
 private val EsquemaClaro = lightColorScheme(
-    primary = Primario,              // Fondo de Button
-    onPrimary = Blanco,              // Texto sobre primary
-    primaryContainer = PrimarioClaro, // Fondo de FilledTonalButton
+    primary = Primario,
+    onPrimary = Blanco,
+    primaryContainer = PrimarioClaro,
     onPrimaryContainer = PrimarioOscuro,
     secondary = Secundario,
     onSecondary = Blanco,
@@ -68,10 +54,7 @@ private val Formas = Shapes(
     large = RoundedCornerShape(20.dp)
 )
 
-/**
- * Tema de la aplicación. Se usa UNA vez en MainActivity envolviendo todo el contenido.
- * @param darkTheme true para modo oscuro. Por defecto sigue la configuración del sistema.
- */
+
 @Composable
 fun MiRegistroTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

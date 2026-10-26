@@ -37,7 +37,7 @@ fun CrearInstalacionScreen(
             )
         }
     ) { innerPadding ->
-        // Solo Jefe Técnico puede crear instalaciones (o puedes dejarlo para Técnicos también)
+
         if (usuarioActual?.rolId != 3L) {
             Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                 Text("Acceso denegado. Solo el Jefe Técnico puede crear instalaciones.", color = MaterialTheme.colorScheme.error)
@@ -69,7 +69,7 @@ fun CrearInstalacionScreen(
                         if (nombre.isBlank()) {
                             error = "El nombre es obligatorio"
                         } else {
-                            // Asignamos la instalación al cliente por defecto (ID 5 - Marcela) para el MVP
+
                             val id = dbHelper.insertarInstalacion(nombre, 5L)
                             if (id > 0) {
                                 exito = true

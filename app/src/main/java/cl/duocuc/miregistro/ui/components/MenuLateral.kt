@@ -27,7 +27,7 @@ fun MenuLateral(
     val snackbarHostState = remember { SnackbarHostState() }
     val textoSesionCerrada = stringResource(R.string.snackbar_sesion_cerrada)
 
-    // Diálogo de confirmación
+
     if (mostrarDialogo) {
         AlertDialog(
             onDismissRequest = { mostrarDialogo = false },
@@ -72,7 +72,7 @@ fun MenuLateral(
                 }
 
                 NavigationDrawerItem(
-                    label = { Text("Consultar Equipos e Historial (RF-10)") },
+                    label = { Text("Consultar Equipos e Historial") },
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
@@ -93,7 +93,7 @@ fun MenuLateral(
             }
         }
     ) {
-        // Aquí le pasamos al contenido la función para abrir el menú y el snackbar
+
         content(
             { scope.launch { drawerState.open() } },
             snackbarHostState

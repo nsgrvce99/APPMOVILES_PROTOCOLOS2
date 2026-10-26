@@ -27,12 +27,12 @@ fun FormalizacionScreen(
 
     var protocolos by remember { mutableStateOf<List<Protocolo>>(emptyList()) }
 
-    // Estados para el diálogo de observación
+
     var mostrarDialogoObservar by remember { mutableStateOf(false) }
     var protocoloAObservar by remember { mutableStateOf<Protocolo?>(null) }
     var motivoObservacion by remember { mutableStateOf("") }
 
-    // Cargamos los protocolos al iniciar
+
     LaunchedEffect(Unit) {
         protocolos = dbHelper.listarTodosLosProtocolos()
     }
@@ -53,7 +53,7 @@ fun FormalizacionScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "Acceso denegado. Solo Ingenieros o Jefes Técnicos (Anexo 7).",
+                    "Acceso denegado. Solo Ingenieros o Jefes Técnicos.",
                     color = MaterialTheme.colorScheme.error
                 )
             }
@@ -78,7 +78,7 @@ fun FormalizacionScreen(
                             protocolo = proto,
                             onFormalizar = {
                                 dbHelper.actualizarEstadoProtocolo(proto.id, "FORMALIZADO")
-                                // Recargamos la lista
+
                                 protocolos = dbHelper.listarTodosLosProtocolos()
                             },
                             onObservar = {
@@ -93,14 +93,14 @@ fun FormalizacionScreen(
         }
     }
 
-    // Diálogo para Observar (RN-04: motivo obligatorio)
+
     if (mostrarDialogoObservar && protocoloAObservar != null) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoObservar = false },
             title = { Text("Observar Protocolo #${protocoloAObservar?.id}") },
             text = {
                 Column {
-                    Text("Indique el motivo de la observación (obligatorio según RN-04):")
+                    Text("Indique el motivo de la observación:")
                     Spacer(Modifier.height(Dimens.espacioMedio))
                     CampoMultilinea(
                         valor = motivoObservacion,
@@ -117,7 +117,7 @@ fun FormalizacionScreen(
                         protocolos = dbHelper.listarTodosLosProtocolos()
                         mostrarDialogoObservar = false
                     },
-                    enabled = motivoObservacion.isNotBlank() // 👈 Bloquea si está vacío
+                    enabled = motivoObservacion.isNotBlank()
                 ) {
                     Text("Aceptar")
                 }

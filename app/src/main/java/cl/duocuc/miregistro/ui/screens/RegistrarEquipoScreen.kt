@@ -50,7 +50,7 @@ fun RegistrarEquipoScreen(
             verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
         ) {
             Text(
-                "Complete los datos del equipo (RF-02 / HU-01)",
+                "Complete los datos del equipo",
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -63,11 +63,11 @@ fun RegistrarEquipoScreen(
             CampoTexto(
                 valor = tag,
                 onValorCambia = { tag = it; error = null },
-                etiqueta = "TAG del equipo (ej. TR-03)",
-                icono = R.drawable.ic_persona
+                etiqueta = "TAG del equipo",
+                icono = R.drawable.ic_candado
             )
 
-            // 👇 Selector reutilizable
+
             SelectorDesplegable(
                 etiqueta = "Tipo de equipo",
                 opciones = tiposEquipo,
@@ -80,14 +80,14 @@ fun RegistrarEquipoScreen(
                 valor = marca,
                 onValorCambia = { marca = it },
                 etiqueta = "Marca",
-                icono = R.drawable.ic_persona
+                icono = R.drawable.ic_candado
             )
 
             CampoTexto(
                 valor = serie,
                 onValorCambia = { serie = it },
                 etiqueta = "Número de serie",
-                icono = R.drawable.ic_persona
+                icono = R.drawable.ic_candado
             )
 
             MensajeError(texto = error)
@@ -106,11 +106,11 @@ fun RegistrarEquipoScreen(
                         onEquipoRegistrado()
                     } else {
                         when {
-                            tag.isBlank() -> error = "El TAG es obligatorio (RN-01)"
+                            tag.isBlank() -> error = "El TAG es obligatorio"
                             marca.isBlank() -> error = "La marca es obligatoria"
                             serie.isBlank() -> error = "El número de serie es obligatorio"
                             dbHelper.existeTagEnInstalacion(tag, nombreInstalacion) ->
-                                error = "El TAG '$tag' ya existe en la instalación '$nombreInstalacion' (RN-01)"
+                                error = "El TAG '$tag' ya existe en la instalación '$nombreInstalacion'"
                             else -> {
                                 val nuevoEquipo = Equipo(
                                     tag = tag.trim(),
