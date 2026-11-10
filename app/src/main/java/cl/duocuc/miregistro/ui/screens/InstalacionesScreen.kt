@@ -29,7 +29,8 @@ fun InstalacionesScreen(
     onVerUsuarios: () -> Unit,
     onIrAInstrumentos: () -> Unit,
     onIrACrearCliente: () -> Unit,
-    onIrACrearInstalacion: () -> Unit
+    onIrACrearInstalacion: () -> Unit,
+    onIrARegistrarCliente: () -> Unit // 👈 Asegúrate de tener este parámetro
 ) {
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
@@ -67,7 +68,6 @@ fun InstalacionesScreen(
                 )
                 Text("Seleccione la instalación eléctrica a inspeccionar:")
 
-
                 SelectorDesplegable(
                     etiqueta = "Plantas",
                     opciones = instalaciones,
@@ -79,23 +79,36 @@ fun InstalacionesScreen(
                     textoDe = { it.second }
                 )
 
+                // 👇 1. PERMISO PARA FORMALIZAR (Ingeniero y Jefe Técnico)
                 if (usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L) {
                     Button(onClick = onIrAFormalizacion, modifier = Modifier.padding(top = 16.dp)) {
                         Text("Ir a Formalización de Protocolos")
                     }
                 }
 
-                if (usuarioActual?.rolId == 3L) {
-                    Button(onClick = onIrAInstrumentos, modifier = Modifier.padding(top = 8.dp)) {
-                        Text("Gestionar Instrumentos")
-                    }
-                    Button(onClick = onIrACrearCliente, modifier = Modifier.padding(top = 8.dp)) {
-                        Text("Crear Cuenta Cliente")
-                    }
+                // 👇 2. PERMISOS PARA CREAR (Técnico, Ingeniero y Jefe - Anexo 7)
+                val puedeCrear = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
+                if (puedeCrear) {
                     Button(onClick = onIrACrearInstalacion, modifier = Modifier.padding(top = 8.dp)) {
-                        Text("Crear Instalación")
+                        Text("Crear Instalación (RF-01)")
+                    }
+                    // 👇 NUEVO BOTÓN PARA REGISTRAR EMPRESA CLIENTE
+                    Button(onClick = onIrARegistrarCliente, modifier = Modifier.padding(top = 8.dp)) {
+                        Text("Registrar Empresa Cliente (RF-01)")
                     }
                 }
+
+                // 👇 3. PERMISOS EXCLUSIVOS DEL JEFE TÉCNICO (Instrumentos y Cuentas)
+                if (usuarioActual?.rolId == 3L) {
+                    Button(onClick = onIrAInstrumentos, modifier = Modifier.padding(top = 8.dp)) {
+                        Text("Gestionar Instrumentos (RN-12)")
+                    }
+                    // Este botón ahora es para ACTIVAR la cuenta, no para crearla desde cero
+                    Button(onClick = onIrACrearCliente, modifier = Modifier.padding(top = 8.dp)) {
+                        Text("Gestionar Cuentas de Cliente (RN-20)")
+                    }
+                }
+
                 Spacer(modifier = Modifier.padding(bottom = 16.dp))
             }
         }

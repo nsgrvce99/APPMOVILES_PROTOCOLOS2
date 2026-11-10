@@ -4,13 +4,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.model.Equipo
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
+import cl.duocuc.miregistro.ui.components.CampoTexto
 import cl.duocuc.miregistro.ui.components.MenuLateral
 import cl.duocuc.miregistro.ui.components.TarjetaEquipo
 import cl.duocuc.miregistro.ui.theme.Dimens
@@ -27,8 +30,16 @@ fun MisEquiposClienteScreen(
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-    val misEquipos = remember(usuarioActual?.id) {
-        if (usuarioActual != null) dbHelper.listarEquiposPorCliente(usuarioActual.id) else emptyList()
+    var textoBusqueda by remember { mutableStateOf("") }
+
+    // 👇 AQUÍ USAMOS EL MÉTODO OPTIMIZADO
+    // Cada vez que 'textoBusqueda' cambie, se volverá a ejecutar la consulta en SQLite
+    val equiposFiltrados = remember(usuarioActual?.id, textoBusqueda) {
+        if (usuarioActual != null) {
+            dbHelper.buscarEquiposPorCliente(usuarioActual.id, textoBusqueda)
+        } else {
+            emptyList()
+        }
     }
 
     MenuLateral(
@@ -45,31 +56,33 @@ fun MisEquiposClienteScreen(
             },
             snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { innerPadding ->
-            if (misEquipos.isEmpty()) {
-                Box(
-                    Modifier.fillMaxSize().padding(innerPadding),
-                    contentAlignment = androidx.compose.ui.Alignment.Center
-                ) {
-                    Text("No tiene equipos registrados en la plataforma.")
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(innerPadding),
-                    contentPadding = PaddingValues(Dimens.espacioMedio),
-                    verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
-                ) {
-                    item {
-                        Text(
-                            "Equipos de ${usuarioActual?.nombre}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
+            Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(Dimens.espacioMedio)) {
+
+                // Barra de búsqueda
+                CampoTexto(
+                    valor = textoBusqueda,
+                    onValorCambia = { textoBusqueda = it },
+                    etiqueta = "Buscar por TAG o Planta...",
+                    icono = R.drawable.ic_persona
+                )
+
+                Spacer(Modifier.height(Dimens.espacioMedio))
+
+                if (equiposFiltrados.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No se encontraron equipos.")
                     }
-                    items(misEquipos) { equipo ->
-                        TarjetaEquipo(
-                            equipo = equipo,
-                            onVerHistorial = { onVerHistorialEquipo(equipo.id.toLong()) },
-                            onRegistrarPrueba = null
-                        )
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+                    ) {
+                        items(equiposFiltrados) { equipo ->
+                            TarjetaEquipo(
+                                equipo = equipo,
+                                onVerHistorial = { onVerHistorialEquipo(equipo.id.toLong()) },
+                                onRegistrarPrueba = null
+                            )
+                        }
                     }
                 }
             }

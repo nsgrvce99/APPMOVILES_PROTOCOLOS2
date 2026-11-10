@@ -47,6 +47,7 @@ sealed class Ruta(val ruta: String) {
 
     data object CrearCliente : Ruta("crear_cliente")
     data object CrearInstalacion : Ruta("crear_instalacion")
+    data object RegistrarCliente : Ruta("registrar_cliente")
 
 
 }

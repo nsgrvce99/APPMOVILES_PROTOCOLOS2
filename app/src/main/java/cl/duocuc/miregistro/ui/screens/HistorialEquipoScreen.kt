@@ -107,6 +107,16 @@ fun HistorialEquipoScreen(
                                 }
                             }
                         }
+                        if (protocolo.estado == "OBSERVADO") {
+                            Spacer(Modifier.height(8.dp))
+                            Button(
+                                onClick = { /* Aquí iría la navegación para editar */ },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Corregir Protocolo Observado (RN-17)")
+                            }
+                        }
                     }
                 }
             }

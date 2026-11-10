@@ -50,7 +50,7 @@ fun RegistrarEquipoScreen(
             verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
         ) {
             Text(
-                "Complete los datos del equipo",
+                "Complete los datos del equipo (RF-02 / HU-01)",
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -63,10 +63,9 @@ fun RegistrarEquipoScreen(
             CampoTexto(
                 valor = tag,
                 onValorCambia = { tag = it; error = null },
-                etiqueta = "TAG del equipo",
+                etiqueta = "TAG del equipo (ej. TR-03)",
                 icono = R.drawable.ic_candado
             )
-
 
             SelectorDesplegable(
                 etiqueta = "Tipo de equipo",
@@ -106,12 +105,15 @@ fun RegistrarEquipoScreen(
                         onEquipoRegistrado()
                     } else {
                         when {
-                            tag.isBlank() -> error = "El TAG es obligatorio"
+                            tag.isBlank() -> error = "El TAG es obligatorio (RN-01)"
                             marca.isBlank() -> error = "La marca es obligatoria"
                             serie.isBlank() -> error = "El número de serie es obligatorio"
                             dbHelper.existeTagEnInstalacion(tag, nombreInstalacion) ->
-                                error = "El TAG '$tag' ya existe en la instalación '$nombreInstalacion'"
+                                error = "El TAG '$tag' ya existe en la instalación '$nombreInstalacion' (RN-01)"
                             else -> {
+                                // 👇 AQUÍ ESTÁ LA MAGIA: BUSCAMOS EL ID DEL CLIENTE REAL DE LA PLANTA
+                                val idClienteReal = dbHelper.obtenerIdClienteDeInstalacion(nombreInstalacion)
+
                                 val nuevoEquipo = Equipo(
                                     tag = tag.trim(),
                                     tipoEquipo = tipoEquipo,
@@ -120,7 +122,7 @@ fun RegistrarEquipoScreen(
                                     marca = marca.trim(),
                                     serie = serie.trim(),
                                     potenciaTension = "",
-                                    idCliente = 5L
+                                    idCliente = idClienteReal // 👈 SE GUARDA EL ID CORRECTO
                                 )
                                 val idInsertado = dbHelper.insertarEquipo(nuevoEquipo)
                                 if (idInsertado > 0) {

@@ -283,6 +283,39 @@ class UsuarioDbHelper(context: Context) :
     fun listarUsuarios(): List<Usuario> =
         consultarUsuarios("$SQL_SELECT_USUARIOS ORDER BY u.$USU_NOMBRE", null)
 
+    fun activarCliente(usuarioId: Long, nuevaContrasena: String) {
+        val values = ContentValues().apply {
+            put(USU_CONTRA, nuevaContrasena)
+            put(USU_ACTIVO, 1) // Lo activamos
+        }
+        writableDatabase.update(TABLA_USUARIOS, values, "$USU_ID = ?", arrayOf(usuarioId.toString()))
+    }
+    fun listarClientes(): List<Usuario> {
+        // Filtramos solo los usuarios que tengan el Rol 4 (Cliente)
+        return consultarUsuarios("$SQL_SELECT_USUARIOS WHERE u.$USU_ROL = 4 ORDER BY u.$USU_NOMBRE", null)
+    }
+    fun obtenerClienteDeEquipo(equipoId: Long): Usuario? {
+        // Hacemos un JOIN desde Equipo -> Instalación -> Usuario
+        // Asumiendo que en tu tabla EQUIPO guardas el 'id_cliente'
+        val sql = "SELECT u.*, r.codigo AS rol_codigo, r.nombre AS rol_nombre " +
+                "FROM usuario u " +
+                "INNER JOIN rol r ON u.id_rol = r.id_rol " +
+                "INNER JOIN equipo e ON e.id_cliente = u.id_usuario " +
+                "WHERE e.id_equipo = ?"
+
+        return consultarUsuarios(sql, arrayOf(equipoId.toString())).firstOrNull()
+    }
+    fun obtenerClienteDeProtocolo(protocoloId: Long): Usuario? {
+        val sql = "SELECT u.*, r.codigo AS rol_codigo, r.nombre AS rol_nombre " +
+                "FROM usuario u " +
+                "INNER JOIN rol r ON u.id_rol = r.id_rol " +
+                "INNER JOIN equipo e ON e.id_cliente = u.id_usuario " +
+                "INNER JOIN protocolo p ON p.id_equipo = e.id_equipo " +
+                "WHERE p.id_protocolo = ?"
+
+        return consultarUsuarios(sql, arrayOf(protocoloId.toString())).firstOrNull()
+    }
+
     fun buscarPorId(id: Long): Usuario? =
         consultarUsuarios("$SQL_SELECT_USUARIOS WHERE u.$USU_ID = ?", arrayOf(id.toString())).firstOrNull()
 
@@ -543,6 +576,41 @@ class UsuarioDbHelper(context: Context) :
                     Pair(
                         cursor.getLong(cursor.getColumnIndexOrThrow(INST_ID)),
                         cursor.getString(cursor.getColumnIndexOrThrow(INST_NOMBRE))
+                    )
+                )
+            }
+        }
+        return lista
+    }
+    fun obtenerIdClienteDeInstalacion(nombreInstalacion: String): Long {
+        readableDatabase.rawQuery(
+            "SELECT id_cliente FROM instalacion WHERE nombre = ?",
+            arrayOf(nombreInstalacion)
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return cursor.getLong(0)
+            }
+        }
+        return 5L // Fallback por si acaso
+    }
+    fun buscarEquiposPorCliente(clienteId: Long, query: String): List<Equipo> {
+        val lista = mutableListOf<Equipo>()
+        val sql = "SELECT * FROM $TABLA_EQUIPOS WHERE $EQ_ID_CLIENTE = ? AND ($EQ_TAG LIKE ? OR $EQ_INSTALACION LIKE ?)"
+        val filtro = "%$query%"
+
+        readableDatabase.rawQuery(sql, arrayOf(clienteId.toString(), filtro, filtro)).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(
+                    Equipo(
+                        id = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID)).toInt(),
+                        tag = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TAG)),
+                        tipoEquipo = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TIPO)),
+                        clasificacion = "Primario",
+                        instalacion = cursor.getString(cursor.getColumnIndexOrThrow(EQ_INSTALACION)),
+                        marca = cursor.getString(cursor.getColumnIndexOrThrow(EQ_MARCA)) ?: "",
+                        serie = cursor.getString(cursor.getColumnIndexOrThrow(EQ_SERIE)) ?: "",
+                        potenciaTension = "",
+                        idCliente = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID_CLIENTE))
                     )
                 )
             }

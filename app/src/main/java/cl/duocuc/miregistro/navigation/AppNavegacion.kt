@@ -136,7 +136,11 @@ fun AppNavegacion() {
                 },
                 onIrACrearInstalacion = {
                     navController.navigate(Ruta.CrearInstalacion.ruta)
+                },
+                onIrARegistrarCliente = {
+                    navController.navigate(Ruta.RegistrarCliente.ruta)
                 }
+
             )
         }
 
@@ -242,6 +246,7 @@ fun AppNavegacion() {
             val protocoloId = backStackEntry.arguments?.getLong("protocoloId") ?: 0L
             CierreVisitaScreen(
                 protocoloId = protocoloId,
+                usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() },
                 onActaEntregada = {
                     navController.popBackStack(Ruta.Instalaciones.ruta, inclusive = false)
@@ -262,6 +267,12 @@ fun AppNavegacion() {
         }
         composable(Ruta.CrearInstalacion.ruta) {
             CrearInstalacionScreen(
+                usuarioActual = usuarioActual,
+                onVolver = { navController.navigateUp() }
+            )
+        }
+        composable(Ruta.RegistrarCliente.ruta) {
+            RegistrarClienteScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() }
             )
