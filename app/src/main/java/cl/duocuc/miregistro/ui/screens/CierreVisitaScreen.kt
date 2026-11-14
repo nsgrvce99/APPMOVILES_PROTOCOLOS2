@@ -8,7 +8,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import cl.duocuc.miregistro.R
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.*
@@ -28,44 +29,18 @@ fun CierreVisitaScreen(
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-    // 1. Validación de permisos (Solo Técnico e Ingeniero)
     val puedeFirmarActa = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L
 
-    // 2. 👇 OBTENEMOS EL CLIENTE DUEÑO DEL EQUIPO USANDO EL PROTOCOLO
-    val clienteDueno = remember(protocoloId) {
-        dbHelper.obtenerClienteDeProtocolo(protocoloId)
-    }
 
-    var nombreReceptor by remember { mutableStateOf("") }
-    var rutReceptor by remember { mutableStateOf("") }
-    var cargoReceptor by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+    val clienteDueno = remember(protocoloId) { dbHelper.obtenerClienteDeProtocolo(protocoloId) }
+    val equipo = remember(protocoloId) { dbHelper.obtenerEquipoDeProtocolo(protocoloId) }
+    val medicion = remember(protocoloId) { dbHelper.obtenerMedicionDeProtocolo(protocoloId) }
+    val protocolo = remember(protocoloId) { dbHelper.obtenerProtocoloPorId(protocoloId) }
+
     var exito by remember { mutableStateOf(false) }
 
-    fun validarRut(rutCompleto: String): Boolean {
-        val rutLimpio = rutCompleto.replace(".", "").replace("-", "").trim().uppercase()
-        if (rutLimpio.length < 2) return false
-        val dvIngresado = rutLimpio.last()
-        val cuerpo = rutLimpio.dropLast(1)
-        if (!cuerpo.all { it.isDigit() }) return false
-        var suma = 0
-        var multiplicador = 2
-        for (i in cuerpo.length - 1 downTo 0) {
-            suma += cuerpo[i].digitToInt() * multiplicador
-            multiplicador = if (multiplicador == 7) 2 else multiplicador + 1
-        }
-        val resto = suma % 11
-        val dvEsperado = 11 - resto
-        val dvString = when (dvEsperado) {
-            11 -> "0"
-            10 -> "K"
-            else -> dvEsperado.toString()
-        }
-        return dvString == dvIngresado.toString()
-    }
-
     Scaffold(
-        topBar = { AppTopBar(titulo = "Cierre de Visita y Acta", onVolver = onVolver) }
+        topBar = { AppTopBar(titulo = "Acta de Terreno", onVolver = onVolver) }
     ) { innerPadding ->
         if (!puedeFirmarActa) {
             Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
@@ -80,77 +55,92 @@ fun CierreVisitaScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
             ) {
-                Text("Acta de Terreno", style = MaterialTheme.typography.titleMedium)
 
-                // 👇 MOSTRAMOS LA EMPRESA CLIENTE (Pre-cargada)
                 if (clienteDueno != null) {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Column(Modifier.padding(Dimens.espacioMedio)) {
-                            Text("Empresa Cliente (Dueña de la Planta):", style = MaterialTheme.typography.labelMedium)
-                            Text(clienteDueno.nombre, style = MaterialTheme.typography.titleMedium)
-                            Text("RUT Empresa: ${clienteDueno.rut}")
+                            Text("Empresa Cliente:", style = MaterialTheme.typography.labelMedium)
+                            Text(clienteDueno.nombre, style = MaterialTheme.typography.titleLarge)
+                            Text("RUT: ${clienteDueno.rut}", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
 
+
+                Text("Resumen del Acta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(Dimens.espacioMedio), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        FilaInfo("N° Protocolo", "#$protocoloId")
+                        if (equipo != null) {
+                            FilaInfo("Equipo", "${equipo.tipoEquipo} ${equipo.tag}")
+                            FilaInfo("Instalación", equipo.instalacion)
+                        }
+                        if (protocolo != null) {
+                            FilaInfo("Fecha de Prueba", protocolo.fecha)
+                            FilaInfo("T° / Humedad", "${protocolo.temperatura}°C / ${protocolo.humedad}%")
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        if (medicion != null) {
+                            FilaInfo("Tipo de Prueba", medicion.tipoPrueba)
+                            when (medicion.tipoPrueba) {
+                                "AISLACION" -> {
+                                    FilaInfo("Lectura 1 min", "${medicion.lectura1Min} MΩ")
+                                    FilaInfo("Lectura 10 min", "${medicion.lectura10Min} MΩ")
+                                }
+                                "TTR" -> {
+                                    FilaInfo("Relación Teórica", medicion.lectura1Min)
+                                    FilaInfo("Relación Medida", medicion.lectura10Min)
+                                }
+                                "CONTACTOS" -> {
+                                    FilaInfo("Resistencia Medida", "${medicion.lectura1Min} μΩ")
+                                    FilaInfo("Máx Placa", "${medicion.lectura10Min} μΩ")
+                                }
+                            }
+                        }
+                        if (protocolo != null) {
+                            FilaInfo("Resultado", protocolo.resultadoGlobal, colorValor = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+
+
+
                 Text(
-                    "Datos de quien recibe el documento en representación de la empresa:",
-                    style = MaterialTheme.typography.bodyMedium
+                    "El Acta se entregará marcada como 'Pendiente de formalización' (RN-14).",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.secondary
                 )
 
-                // Los campos del receptor siguen siendo manuales
-                CampoTexto(
-                    valor = nombreReceptor,
-                    onValorCambia = { nombreReceptor = it; error = null },
-                    etiqueta = "Nombre de quien recibe",
-                    icono = R.drawable.ic_persona
-                )
-                CampoTexto(
-                    valor = rutReceptor,
-                    onValorCambia = { rutReceptor = it; error = null },
-                    etiqueta = "RUT de quien recibe",
-                    icono = R.drawable.ic_persona
-                )
-                CampoMultilinea(
-                    valor = cargoReceptor,
-                    onValorCambia = { cargoReceptor = it },
-                    etiqueta = "Cargo de quien recibe",
-                    minLines = 2
-                )
-
-                MensajeError(texto = error)
                 if (exito) {
                     MensajeExito(
                         titulo = "Acta entregada exitosamente",
                         detalles = listOf(
                             "Empresa: ${clienteDueno?.nombre ?: "N/A"}",
-                            "Receptor: $nombreReceptor",
+                            "Protocolo: #$protocoloId",
                             "Estado: Pendiente de formalización"
                         )
                     )
                 }
 
                 BotonPrincipal(
-                    texto = if (exito) "Volver" else "Entregar Acta al Cliente",
+                    texto = if (exito) "Volver al inicio" else "Confirmar Entrega de Acta",
                     onClick = {
                         if (exito) {
                             onActaEntregada()
                         } else {
-                            if (nombreReceptor.isBlank() || rutReceptor.isBlank()) {
-                                error = "Nombre y RUT de quien recibe son obligatorios"
-                            } else if (!validarRut(rutReceptor)) {
-                                error = "RUT inválido"
-                            } else {
-                                val fechaHora = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(Date())
-                                dbHelper.guardarRecepcionActa(
-                                    protocoloId = protocoloId,
-                                    nombre = nombreReceptor,
-                                    rut = rutReceptor,
-                                    cargo = cargoReceptor,
-                                    fechaHora = fechaHora
-                                )
-                                exito = true
-                            }
+                            val fechaHora = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(Date())
+                            dbHelper.guardarRecepcionActa(
+                                protocoloId = protocoloId,
+                                nombre = clienteDueno?.nombre ?: "Cliente",
+                                rut = clienteDueno?.rut ?: "N/A",
+                                cargo = "Representante Legal / Jefe de Planta",
+                                fechaHora = fechaHora
+                            )
+                            exito = true
                         }
                     },
                     modifier = Modifier.fillMaxWidth()

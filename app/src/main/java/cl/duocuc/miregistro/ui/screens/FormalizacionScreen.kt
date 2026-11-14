@@ -9,11 +9,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import cl.duocuc.miregistro.data.UsuarioDbHelper
-import cl.duocuc.miregistro.model.Protocolo
+import cl.duocuc.miregistro.model.ProtocoloDetallado
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
-import cl.duocuc.miregistro.ui.components.TarjetaProtocolo
 import cl.duocuc.miregistro.ui.components.CampoMultilinea
+import cl.duocuc.miregistro.ui.components.TarjetaProtocoloDetalle
 import cl.duocuc.miregistro.ui.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,46 +25,34 @@ fun FormalizacionScreen(
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-    var protocolos by remember { mutableStateOf<List<Protocolo>>(emptyList()) }
+    var protocolos by remember { mutableStateOf<List<ProtocoloDetallado>>(emptyList()) }
 
 
     var mostrarDialogoObservar by remember { mutableStateOf(false) }
-    var protocoloAObservar by remember { mutableStateOf<Protocolo?>(null) }
+    var protocoloAObservar by remember { mutableStateOf<ProtocoloDetallado?>(null) }
     var motivoObservacion by remember { mutableStateOf("") }
 
 
+    fun recargar() {
+        protocolos = dbHelper.listarProtocolosPendientesDetallados()
+    }
+
     LaunchedEffect(Unit) {
-        protocolos = dbHelper.listarTodosLosProtocolos()
+        recargar()
     }
 
     Scaffold(
-        topBar = {
-            AppTopBar(
-                titulo = "Formalización de Protocolos",
-                onVolver = onVolver
-            )
-        }
+        topBar = { AppTopBar(titulo = "Formalización de Protocolos", onVolver = onVolver) }
     ) { innerPadding ->
         val esIngeniero = usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
 
         if (!esIngeniero) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    "Acceso denegado. Solo Ingenieros o Jefes Técnicos.",
-                    color = MaterialTheme.colorScheme.error
-                )
+            Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                Text("Acceso denegado. Solo Ingenieros o Jefes Técnicos.", color = MaterialTheme.colorScheme.error)
             }
         } else {
-            val pendientes = protocolos.filter { it.estado == "REGISTRADO_TERRENO" }
-
-            if (pendientes.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(innerPadding),
-                    contentAlignment = Alignment.Center
-                ) {
+            if (protocolos.isEmpty()) {
+                Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                     Text("No hay protocolos pendientes de formalización.")
                 }
             } else {
@@ -73,13 +61,12 @@ fun FormalizacionScreen(
                     contentPadding = PaddingValues(Dimens.espacioMedio),
                     verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
                 ) {
-                    items(pendientes) { proto ->
-                        TarjetaProtocolo(
+                    items(protocolos) { proto ->
+                        TarjetaProtocoloDetalle(
                             protocolo = proto,
                             onFormalizar = {
                                 dbHelper.actualizarEstadoProtocolo(proto.id, "FORMALIZADO")
-
-                                protocolos = dbHelper.listarTodosLosProtocolos()
+                                recargar()
                             },
                             onObservar = {
                                 protocoloAObservar = proto
@@ -97,7 +84,7 @@ fun FormalizacionScreen(
     if (mostrarDialogoObservar && protocoloAObservar != null) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoObservar = false },
-            title = { Text("Observar Protocolo #${protocoloAObservar?.id}") },
+            title = { Text("Observar Protocolo de ${protocoloAObservar?.equipoTag}") },
             text = {
                 Column {
                     Text("Indique el motivo de la observación:")
@@ -114,7 +101,7 @@ fun FormalizacionScreen(
                 TextButton(
                     onClick = {
                         dbHelper.observarProtocolo(protocoloAObservar!!.id, motivoObservacion)
-                        protocolos = dbHelper.listarTodosLosProtocolos()
+                        recargar()
                         mostrarDialogoObservar = false
                     },
                     enabled = motivoObservacion.isNotBlank()

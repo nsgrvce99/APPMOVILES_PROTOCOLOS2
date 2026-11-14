@@ -6,6 +6,7 @@ data class Medicion(
     val tipoPrueba: String,
     val lectura1Min: String,
     val lectura10Min: String,
-    val indicePolarizacion: String
+    val indicePolarizacion: String,
+    val instrumentoId: Long = 0L
 )
 

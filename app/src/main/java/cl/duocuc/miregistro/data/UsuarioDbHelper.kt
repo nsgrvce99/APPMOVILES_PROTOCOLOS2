@@ -12,7 +12,7 @@ class UsuarioDbHelper(context: Context) :
 
     companion object {
         private const val NOMBRE_BD = "induztekterreno.db"
-        private const val VERSION_BD = 10
+        private const val VERSION_BD = 12
 
         // ---- ROL ----
         private const val TABLA_ROLES = "rol"
@@ -42,7 +42,6 @@ class UsuarioDbHelper(context: Context) :
         private const val EQ_MARCA = "marca"
         private const val EQ_SERIE = "numero_serie"
         private const val EQ_INSTALACION = "instalacion"
-
         private const val EQ_ID_CLIENTE = "id_cliente"
 
         // ---- PROTOCOLO ----
@@ -55,7 +54,6 @@ class UsuarioDbHelper(context: Context) :
         private const val PRO_HUM = "humedad"
         private const val PRO_RESULTADO = "resultado_global"
         private const val PRO_ESTADO = "estado"
-
         private const val PRO_MOTIVO_OBS = "motivo_observacion"
 
         // ---- MEDICION ----
@@ -66,6 +64,7 @@ class UsuarioDbHelper(context: Context) :
         private const val MED_LECTURA_1MIN = "lectura_1min"
         private const val MED_LECTURA_10MIN = "lectura_10min"
         private const val MED_IP = "indice_polarizacion"
+        private const val MED_INSTRUMENTO_ID = "id_instrumento"
 
         // ---- RECEPCION ACTA ----
         private const val TABLA_RECEPCION = "recepcion_acta"
@@ -104,7 +103,7 @@ class UsuarioDbHelper(context: Context) :
                     "$USU_RUT TEXT NOT NULL UNIQUE, " +
                     "$USU_NOMBRE TEXT NOT NULL, " +
                     "$USU_CORREO TEXT NOT NULL UNIQUE, " +
-                    "$USU_CONTRA TEXT NOT NULL UNIQUE, " +
+                    "$USU_CONTRA TEXT NOT NULL, " +
                     "$USU_TELEFONO TEXT, " +
                     "$USU_ACTIVO INTEGER NOT NULL DEFAULT 1, " +
                     "$USU_GIRO TEXT, " +
@@ -134,6 +133,7 @@ class UsuarioDbHelper(context: Context) :
                     "(4, 'Edificio Clínico', 5), " +
                     "(5, 'Planta Molienda', 5), " +
                     "(6, 'Site Huechuraba', 5)"
+
         private const val SQL_PRECARGAR_ROLES =
             "INSERT INTO $TABLA_ROLES ($ROL_ID, $ROL_CODIGO, $ROL_NOMBRE) VALUES " +
                     "(1, 'TECNICO', 'P-01 Técnico de terreno'), " +
@@ -189,6 +189,7 @@ class UsuarioDbHelper(context: Context) :
                     "$MED_LECTURA_1MIN TEXT, " +
                     "$MED_LECTURA_10MIN TEXT, " +
                     "$MED_IP TEXT, " +
+                    "$MED_INSTRUMENTO_ID INTEGER, " +
                     "FOREIGN KEY ($MED_PROTOCOLO_ID) REFERENCES $TABLA_PROTOCOLOS($PRO_ID))"
 
         private const val SQL_CREAR_RECEPCION =
@@ -203,19 +204,13 @@ class UsuarioDbHelper(context: Context) :
 
         private const val SQL_PRECARGAR_EQUIPOS =
             "INSERT INTO $TABLA_EQUIPOS ($EQ_ID, $EQ_TAG, $EQ_TIPO, $EQ_MARCA, $EQ_SERIE, $EQ_INSTALACION, $EQ_ID_CLIENTE) VALUES " +
-                    // Planta Lampa
                     "(1, 'TR-01', 'Transformador', 'Rhona', 'RH-18733', 'Planta Lampa', 5), " +
                     "(2, 'TR-02', 'Transformador', 'Rhona', 'RH-21904', 'Planta Lampa', 5), " +
-                    // Planta Elevadora Sur
                     "(3, 'TR-A', 'Transformador', 'Tusan', 'TS-5521', 'Planta Elevadora Sur', 5), " +
-                    // Faena Til Til
                     "(4, 'TR-SS-01', 'Transformador', 'ABB', 'ABB-1180442', 'Faena Til Til', 5), " +
                     "(5, 'INT-52-1', 'Interruptor', 'Schneider', 'SE-449021', 'Faena Til Til', 5), " +
-                    // Edificio Clínico
                     "(6, 'CEL-MT-03', 'Celda MT', 'Ormazabal', 'OR-77812', 'Edificio Clínico', 5), " +
-                    // Planta Molienda
                     "(7, 'REL-50/51-A', 'Relé de protección', 'SEL', 'SEL-751-30219', 'Planta Molienda', 5), " +
-                    // Site Huechuraba
                     "(8, 'CAB-MT-02', 'Cable de poder', 'Nexans', 'NX-2201-B', 'Site Huechuraba', 5)"
 
         private const val SQL_SELECT_USUARIOS =
@@ -286,23 +281,19 @@ class UsuarioDbHelper(context: Context) :
     fun activarCliente(usuarioId: Long, nuevaContrasena: String) {
         val values = ContentValues().apply {
             put(USU_CONTRA, nuevaContrasena)
-            put(USU_ACTIVO, 1) // Lo activamos
+            put(USU_ACTIVO, 1)
         }
         writableDatabase.update(TABLA_USUARIOS, values, "$USU_ID = ?", arrayOf(usuarioId.toString()))
     }
     fun listarClientes(): List<Usuario> {
-        // Filtramos solo los usuarios que tengan el Rol 4 (Cliente)
         return consultarUsuarios("$SQL_SELECT_USUARIOS WHERE u.$USU_ROL = 4 ORDER BY u.$USU_NOMBRE", null)
     }
     fun obtenerClienteDeEquipo(equipoId: Long): Usuario? {
-        // Hacemos un JOIN desde Equipo -> Instalación -> Usuario
-        // Asumiendo que en tu tabla EQUIPO guardas el 'id_cliente'
         val sql = "SELECT u.*, r.codigo AS rol_codigo, r.nombre AS rol_nombre " +
                 "FROM usuario u " +
                 "INNER JOIN rol r ON u.id_rol = r.id_rol " +
                 "INNER JOIN equipo e ON e.id_cliente = u.id_usuario " +
                 "WHERE e.id_equipo = ?"
-
         return consultarUsuarios(sql, arrayOf(equipoId.toString())).firstOrNull()
     }
     fun obtenerClienteDeProtocolo(protocoloId: Long): Usuario? {
@@ -312,7 +303,6 @@ class UsuarioDbHelper(context: Context) :
                 "INNER JOIN equipo e ON e.id_cliente = u.id_usuario " +
                 "INNER JOIN protocolo p ON p.id_equipo = e.id_equipo " +
                 "WHERE p.id_protocolo = ?"
-
         return consultarUsuarios(sql, arrayOf(protocoloId.toString())).firstOrNull()
     }
 
@@ -337,6 +327,7 @@ class UsuarioDbHelper(context: Context) :
         put(USU_RUT, usuario.rut)
         put(USU_ROL, usuario.rolId.toInt())
         put(USU_ACTIVO, if (usuario.activo) 1 else 0)
+        put(USU_GIRO, usuario.giro)
     }
 
     private fun consultarUsuarios(sql: String, args: Array<String>?): List<Usuario> {
@@ -357,7 +348,8 @@ class UsuarioDbHelper(context: Context) :
         rut = cursor.getString(cursor.getColumnIndexOrThrow(USU_RUT)),
         rolId = cursor.getLong(cursor.getColumnIndexOrThrow(USU_ROL)),
         rolNombre = cursor.getString(cursor.getColumnIndexOrThrow("rol_nombre")),
-        activo = cursor.getInt(cursor.getColumnIndexOrThrow(USU_ACTIVO)) == 1
+        activo = cursor.getInt(cursor.getColumnIndexOrThrow(USU_ACTIVO)) == 1,
+        giro = cursor.getString(cursor.getColumnIndexOrThrow(USU_GIRO))
     )
 
     // ---------------- EQUIPOS ----------------
@@ -380,6 +372,38 @@ class UsuarioDbHelper(context: Context) :
             }
         }
         return lista
+    }
+    fun obtenerResumenVisita(tecnicoId: Long): ResumenVisita {
+        var total = 0
+        var aprobadas = 0
+        var precaucion = 0
+        var rechazadas = 0
+        var borradores = 0
+        var pendientes = 0
+        var formalizadas = 0
+
+        val sql = "SELECT $PRO_ESTADO, $PRO_RESULTADO FROM $TABLA_PROTOCOLOS WHERE $PRO_TECNICO_ID = ?"
+        readableDatabase.rawQuery(sql, arrayOf(tecnicoId.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                total++
+                val estado = cursor.getString(0)
+                val resultado = cursor.getString(1) ?: "Pendiente"
+
+                when (estado) {
+                    "BORRADOR" -> borradores++
+                    "REGISTRADO_TERRENO", "OBSERVADO", "PRECAUCION" -> pendientes++
+                    "FORMALIZADO" -> formalizadas++
+                }
+
+                when (resultado) {
+                    "Aprobado" -> aprobadas++
+                    "Precaucion" -> precaucion++
+                    "Rechazado" -> rechazadas++
+                }
+            }
+        }
+
+        return ResumenVisita(total, aprobadas, precaucion, rechazadas, borradores, pendientes, formalizadas)
     }
     fun insertarEquipo(equipo: Equipo): Long {
         val values = ContentValues().apply {
@@ -458,20 +482,28 @@ class UsuarioDbHelper(context: Context) :
     }
     fun observarProtocolo(protocoloId: Long, motivo: String) {
         val values = ContentValues().apply {
-            put(PRO_ESTADO, "OBSERVADO")
+            put(PRO_ESTADO, "PRECAUCION")
             put(PRO_MOTIVO_OBS, motivo)
         }
         writableDatabase.update(TABLA_PROTOCOLOS, values, "$PRO_ID = ?", arrayOf(protocoloId.toString()))
     }
 
     // ---------------- MEDICIONES ----------------
-    fun guardarMedicion(protocoloId: Long, tipoPrueba: String, lectura1: String, lectura10: String, ip: String): Long {
+    fun guardarMedicion(
+        protocoloId: Long,
+        tipoPrueba: String,
+        lectura1: String,
+        lectura10: String,
+        ip: String,
+        instrumentoId: Long
+    ): Long {
         val values = ContentValues().apply {
             put(MED_PROTOCOLO_ID, protocoloId)
             put(MED_TIPO_PRUEBA, tipoPrueba)
             put(MED_LECTURA_1MIN, lectura1)
             put(MED_LECTURA_10MIN, lectura10)
             put(MED_IP, ip)
+            put(MED_INSTRUMENTO_ID, instrumentoId)
         }
         return writableDatabase.insert(TABLA_MEDICIONES, null, values)
     }
@@ -488,7 +520,8 @@ class UsuarioDbHelper(context: Context) :
                     tipoPrueba = cursor.getString(cursor.getColumnIndexOrThrow(MED_TIPO_PRUEBA)),
                     lectura1Min = cursor.getString(cursor.getColumnIndexOrThrow(MED_LECTURA_1MIN)) ?: "",
                     lectura10Min = cursor.getString(cursor.getColumnIndexOrThrow(MED_LECTURA_10MIN)) ?: "",
-                    indicePolarizacion = cursor.getString(cursor.getColumnIndexOrThrow(MED_IP)) ?: ""
+                    indicePolarizacion = cursor.getString(cursor.getColumnIndexOrThrow(MED_IP)) ?: "",
+                    instrumentoId = cursor.getLong(cursor.getColumnIndexOrThrow(MED_INSTRUMENTO_ID))
                 )
             }
         }
@@ -510,7 +543,6 @@ class UsuarioDbHelper(context: Context) :
     fun buscarClientePorCorreo(correo: String): Usuario? {
         return consultarUsuarios("$SQL_SELECT_USUARIOS WHERE u.$USU_CORREO = ?", arrayOf(correo)).firstOrNull()
     }
-
 
     fun listarEquiposPorCliente(clienteId: Long): List<Equipo> {
         val lista = mutableListOf<Equipo>()
@@ -542,6 +574,70 @@ class UsuarioDbHelper(context: Context) :
         }
         return writableDatabase.insert(TABLA_INSTRUMENTOS, null, values)
     }
+    fun listarProtocolosPendientesDetallados(): List<ProtocoloDetallado> {
+        val lista = mutableListOf<ProtocoloDetallado>()
+
+        val sql = """
+        SELECT p.id_protocolo, p.fecha_hora, p.resultado_global, p.estado,
+               e.tag AS equipo_tag, e.tipo_equipo, e.instalacion,
+               u.nombre AS tecnico_nombre
+        FROM protocolo p
+        INNER JOIN equipo e ON p.id_equipo = e.id_equipo
+        INNER JOIN usuario u ON p.id_usuario_registra = u.id_usuario
+        WHERE p.estado = 'REGISTRADO_TERRENO'
+        ORDER BY p.fecha_hora DESC
+    """.trimIndent()
+
+        readableDatabase.rawQuery(sql, null).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(
+                    ProtocoloDetallado(
+                        id = cursor.getLong(cursor.getColumnIndexOrThrow("id_protocolo")),
+                        equipoTag = cursor.getString(cursor.getColumnIndexOrThrow("equipo_tag")),
+                        equipoTipo = cursor.getString(cursor.getColumnIndexOrThrow("tipo_equipo")),
+                        instalacion = cursor.getString(cursor.getColumnIndexOrThrow("instalacion")),
+                        tecnicoNombre = cursor.getString(cursor.getColumnIndexOrThrow("tecnico_nombre")),
+                        fecha = cursor.getString(cursor.getColumnIndexOrThrow("fecha_hora")),
+                        resultadoGlobal = cursor.getString(cursor.getColumnIndexOrThrow("resultado_global")),
+                        estado = cursor.getString(cursor.getColumnIndexOrThrow("estado"))
+                    )
+                )
+            }
+        }
+        return lista
+    }
+    fun listarProtocolosPorTecnicoDetallados(tecnicoId: Long): List<ProtocoloDetallado> {
+        val lista = mutableListOf<ProtocoloDetallado>()
+        val sql = """
+        SELECT p.id_protocolo, p.fecha_hora, p.resultado_global, p.estado, p.motivo_observacion,
+               e.tag AS equipo_tag, e.tipo_equipo, e.instalacion,
+               u.nombre AS tecnico_nombre
+        FROM protocolo p
+        INNER JOIN equipo e ON p.id_equipo = e.id_equipo
+        INNER JOIN usuario u ON p.id_usuario_registra = u.id_usuario
+        WHERE p.id_usuario_registra = ?
+        ORDER BY p.fecha_hora DESC
+    """.trimIndent()
+
+        readableDatabase.rawQuery(sql, arrayOf(tecnicoId.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(
+                    ProtocoloDetallado(
+                        id = cursor.getLong(cursor.getColumnIndexOrThrow("id_protocolo")),
+                        equipoTag = cursor.getString(cursor.getColumnIndexOrThrow("equipo_tag")),
+                        equipoTipo = cursor.getString(cursor.getColumnIndexOrThrow("tipo_equipo")),
+                        instalacion = cursor.getString(cursor.getColumnIndexOrThrow("instalacion")),
+                        tecnicoNombre = cursor.getString(cursor.getColumnIndexOrThrow("tecnico_nombre")),
+                        fecha = cursor.getString(cursor.getColumnIndexOrThrow("fecha_hora")),
+                        resultadoGlobal = cursor.getString(cursor.getColumnIndexOrThrow("resultado_global")),
+                        estado = cursor.getString(cursor.getColumnIndexOrThrow("estado")),
+                        motivoObservacion = cursor.getString(cursor.getColumnIndexOrThrow("motivo_observacion"))
+                    )
+                )
+            }
+        }
+        return lista
+    }
 
     fun listarInstrumentos(): List<Instrumento> {
         val lista = mutableListOf<Instrumento>()
@@ -559,6 +655,68 @@ class UsuarioDbHelper(context: Context) :
             }
         }
         return lista
+    }
+    fun actualizarInstrumento(id: Long, nombre: String, marca: String, serie: String, vencimiento: String) {
+        val values = ContentValues().apply {
+            put(INS_NOMBRE, nombre)
+            put(INS_MARCA, marca)
+            put(INS_SERIE, serie)
+            put(INS_VENCIMIENTO, vencimiento)
+        }
+        writableDatabase.update(TABLA_INSTRUMENTOS, values, "$INS_ID = ?", arrayOf(id.toString()))
+    }
+
+    fun eliminarInstrumento(id: Long) {
+        writableDatabase.delete(TABLA_INSTRUMENTOS, "$INS_ID = ?", arrayOf(id.toString()))
+    }
+    fun obtenerProtocoloPorId(protocoloId: Long): Protocolo? {
+        readableDatabase.rawQuery(
+            "SELECT * FROM $TABLA_PROTOCOLOS WHERE $PRO_ID = ?",
+            arrayOf(protocoloId.toString())
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return leerProtocolo(cursor)
+            }
+        }
+        return null
+    }
+    fun instrumentoTieneMediciones(instrumentoId: Long): Boolean {
+        readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM $TABLA_MEDICIONES WHERE $MED_INSTRUMENTO_ID = ?",
+            arrayOf(instrumentoId.toString())
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return cursor.getInt(0) > 0
+            }
+        }
+        return false
+    }
+
+    fun listarProtocolosPorTecnico(tecnicoId: Long): List<Protocolo> {
+        val lista = mutableListOf<Protocolo>()
+        readableDatabase.rawQuery(
+            "SELECT * FROM $TABLA_PROTOCOLOS WHERE $PRO_TECNICO_ID = ? ORDER BY $PRO_FECHA DESC",
+            arrayOf(tecnicoId.toString())
+        ).use { cursor ->
+            while (cursor.moveToNext()) lista.add(leerProtocolo(cursor))
+        }
+        return lista
+    }
+
+    fun eliminarProtocolo(protocoloId: Long) {
+        writableDatabase.delete(TABLA_MEDICIONES, "$MED_PROTOCOLO_ID = ?", arrayOf(protocoloId.toString()))
+        writableDatabase.delete(TABLA_RECEPCION, "$REC_PROTOCOLO_ID = ?", arrayOf(protocoloId.toString()))
+        writableDatabase.delete(TABLA_PROTOCOLOS, "$PRO_ID = ?", arrayOf(protocoloId.toString()))
+    }
+
+    fun actualizarProtocolo(protocoloId: Long, nuevaTemp: String, nuevaHum: String, nuevoResultado: String) {
+        val values = ContentValues().apply {
+            put(PRO_TEMP, nuevaTemp)
+            put(PRO_HUM, nuevaHum)
+            put(PRO_RESULTADO, nuevoResultado)
+            put(PRO_ESTADO, "REGISTRADO_TERRENO")
+        }
+        writableDatabase.update(TABLA_PROTOCOLOS, values, "$PRO_ID = ?", arrayOf(protocoloId.toString()))
     }
     fun insertarInstalacion(nombre: String, clienteId: Long): Long {
         val values = ContentValues().apply {
@@ -582,6 +740,79 @@ class UsuarioDbHelper(context: Context) :
         }
         return lista
     }
+    fun estaPorVencer(fechaVencimiento: String): Boolean {
+        return try {
+            val sdf = java.text.SimpleDateFormat("dd-MM-yyyy", java.util.Locale.getDefault())
+            val fechaVenc = sdf.parse(fechaVencimiento) ?: return false
+            val hoy = java.util.Date()
+
+
+            val diferenciaMs = fechaVenc.time - hoy.time
+            val diasRestantes = diferenciaMs / (1000 * 60 * 60 * 24)
+
+
+            diasRestantes in 0..30
+        } catch (e: Exception) {
+            false
+        }
+    }
+    fun listarProtocolosParaHistorial(equipoId: Long, esCliente: Boolean): List<Protocolo> {
+        val lista = mutableListOf<Protocolo>()
+
+
+        val filtroEstado = if (esCliente) {
+            " AND $PRO_ESTADO NOT IN ('BORRADOR', 'ANULADO')"
+        } else {
+            ""
+        }
+
+        val sql = "SELECT * FROM $TABLA_PROTOCOLOS WHERE $PRO_EQUIPO_ID = ?$filtroEstado ORDER BY $PRO_FECHA DESC"
+
+        readableDatabase.rawQuery(sql, arrayOf(equipoId.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(leerProtocolo(cursor))
+            }
+        }
+        return lista
+    }
+    fun cerrarBorrador(protocoloId: Long) {
+        val values = ContentValues().apply {
+            put(PRO_ESTADO, "REGISTRADO_TERRENO")
+        }
+        writableDatabase.update(TABLA_PROTOCOLOS, values, "$PRO_ID = ?", arrayOf(protocoloId.toString()))
+    }
+    fun obtenerEquipoDeProtocolo(protocoloId: Long): Equipo? {
+        val sql = "SELECT e.* FROM $TABLA_EQUIPOS e " +
+                "INNER JOIN $TABLA_PROTOCOLOS p ON p.$PRO_EQUIPO_ID = e.$EQ_ID " +
+                "WHERE p.$PRO_ID = ?"
+        readableDatabase.rawQuery(sql, arrayOf(protocoloId.toString())).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return Equipo(
+                    id = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID)).toInt(),
+                    tag = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TAG)),
+                    tipoEquipo = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TIPO)),
+                    clasificacion = "Primario",
+                    instalacion = cursor.getString(cursor.getColumnIndexOrThrow(EQ_INSTALACION)),
+                    marca = cursor.getString(cursor.getColumnIndexOrThrow(EQ_MARCA)) ?: "",
+                    serie = cursor.getString(cursor.getColumnIndexOrThrow(EQ_SERIE)) ?: "",
+                    potenciaTension = "",
+                    idCliente = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID_CLIENTE))
+                )
+            }
+        }
+        return null
+    }
+
+
+    fun estaVencido(fechaVencimiento: String): Boolean {
+        return try {
+            val sdf = java.text.SimpleDateFormat("dd-MM-yyyy", java.util.Locale.getDefault())
+            val fechaVenc = sdf.parse(fechaVencimiento) ?: return false
+            fechaVenc.before(java.util.Date())
+        } catch (e: Exception) {
+            false
+        }
+    }
     fun obtenerIdClienteDeInstalacion(nombreInstalacion: String): Long {
         readableDatabase.rawQuery(
             "SELECT id_cliente FROM instalacion WHERE nombre = ?",
@@ -591,7 +822,7 @@ class UsuarioDbHelper(context: Context) :
                 return cursor.getLong(0)
             }
         }
-        return 5L // Fallback por si acaso
+        return 5L
     }
     fun buscarEquiposPorCliente(clienteId: Long, query: String): List<Equipo> {
         val lista = mutableListOf<Equipo>()
@@ -640,5 +871,19 @@ class UsuarioDbHelper(context: Context) :
             }
         }
         return lista
+    }
+    fun actualizarDatosCliente(idCliente: Long, nuevoNombre: String, nuevoRut: String, nuevoGiro: String, nuevoCorreo: String) {
+        val values = ContentValues().apply {
+            put(USU_NOMBRE, nuevoNombre)
+            put(USU_RUT, nuevoRut)
+            put(USU_GIRO, nuevoGiro)
+            put(USU_CORREO, nuevoCorreo)
+        }
+        writableDatabase.update(TABLA_USUARIOS, values, "$USU_ID = ?", arrayOf(idCliente.toString()))
+    }
+    fun eliminarCliente(clienteId: Long) {
+        writableDatabase.delete(TABLA_EQUIPOS, "$EQ_ID_CLIENTE = ?", arrayOf(clienteId.toString()))
+        writableDatabase.delete(TABLA_INSTALACIONES, "$INST_CLIENTE_ID = ?", arrayOf(clienteId.toString()))
+        writableDatabase.delete(TABLA_USUARIOS, "$USU_ID = ?", arrayOf(clienteId.toString()))
     }
 }

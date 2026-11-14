@@ -8,9 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
@@ -30,7 +28,10 @@ fun InstalacionesScreen(
     onIrAInstrumentos: () -> Unit,
     onIrACrearCliente: () -> Unit,
     onIrACrearInstalacion: () -> Unit,
-    onIrARegistrarCliente: () -> Unit // 👈 Asegúrate de tener este parámetro
+    onIrARegistrarCliente: () -> Unit,
+    onVerMisPruebas: () -> Unit,
+    onVerListaClientes: () -> Unit,
+    onVerResumenVisita: () -> Unit
 ) {
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
@@ -79,31 +80,44 @@ fun InstalacionesScreen(
                     textoDe = { it.second }
                 )
 
-                // 👇 1. PERMISO PARA FORMALIZAR (Ingeniero y Jefe Técnico)
+
                 if (usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L) {
                     Button(onClick = onIrAFormalizacion, modifier = Modifier.padding(top = 16.dp)) {
                         Text("Ir a Formalización de Protocolos")
                     }
                 }
 
-                // 👇 2. PERMISOS PARA CREAR (Técnico, Ingeniero y Jefe - Anexo 7)
+
                 val puedeCrear = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
                 if (puedeCrear) {
                     Button(onClick = onIrACrearInstalacion, modifier = Modifier.padding(top = 8.dp)) {
                         Text("Crear Instalación (RF-01)")
                     }
-                    // 👇 NUEVO BOTÓN PARA REGISTRAR EMPRESA CLIENTE
                     Button(onClick = onIrARegistrarCliente, modifier = Modifier.padding(top = 8.dp)) {
                         Text("Registrar Empresa Cliente (RF-01)")
                     }
+                    Button(onClick = onVerListaClientes, modifier = Modifier.padding(top = 8.dp)) {
+                        Text("Editar Empresas Clientes")
+                    }
                 }
 
-                // 👇 3. PERMISOS EXCLUSIVOS DEL JEFE TÉCNICO (Instrumentos y Cuentas)
+
+
+                if (usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L) {
+                    Button(onClick = onVerMisPruebas, modifier = Modifier.padding(top = 8.dp)) {
+                        Text("Ver Mis Pruebas Registradas")
+                    }
+
+                    Button(onClick = onVerResumenVisita, modifier = Modifier.padding(top = 8.dp)) {
+                        Text("Ver Resumen de Visita (RF-18)")
+                    }
+                }
+
+
                 if (usuarioActual?.rolId == 3L) {
                     Button(onClick = onIrAInstrumentos, modifier = Modifier.padding(top = 8.dp)) {
                         Text("Gestionar Instrumentos (RN-12)")
                     }
-                    // Este botón ahora es para ACTIVAR la cuenta, no para crearla desde cero
                     Button(onClick = onIrACrearCliente, modifier = Modifier.padding(top = 8.dp)) {
                         Text("Gestionar Cuentas de Cliente (RN-20)")
                     }

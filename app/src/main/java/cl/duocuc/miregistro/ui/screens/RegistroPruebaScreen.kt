@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duocuc.miregistro.R
@@ -24,6 +25,7 @@ import cl.duocuc.miregistro.viewmodel.RegistroPruebaViewModel
 fun RegistroPruebaScreen(
     equipoId: Long,
     usuarioActual: Usuario?,
+    protocoloId: Long? = null,
     onVolver: () -> Unit,
     onPruebaGuardadaExitosamente: (Long) -> Unit,
     dbHelper: UsuarioDbHelper = UsuarioDbHelper(LocalContext.current)
@@ -42,11 +44,16 @@ fun RegistroPruebaScreen(
     val instrumentos by viewModel.instrumentos.collectAsStateWithLifecycle()
     val instrumentoSeleccionado by viewModel.instrumentoSeleccionado.collectAsStateWithLifecycle()
 
-    val tiposPrueba = listOf("AISLACION", "TTR", "CONTACTOS")
+    val tiposPrueba = listOf("AISLACION", "TTR", "CONTACTOS", "RELE")
 
     LaunchedEffect(uiState.protocoloGuardadoId) {
         uiState.protocoloGuardadoId?.let { id ->
             onPruebaGuardadaExitosamente(id)
+        }
+    }
+    LaunchedEffect(protocoloId) {
+        if (protocoloId != null) {
+            viewModel.cargarProtocoloParaEditar(protocoloId)
         }
     }
 
@@ -68,6 +75,28 @@ fun RegistroPruebaScreen(
         ) {
             Text("Técnico: ${usuarioActual?.nombre ?: "N/A"}", style = MaterialTheme.typography.titleMedium)
 
+
+            if (uiState.motivoObservacion != null && uiState.motivoObservacion!!.isNotBlank()) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(Dimens.espacioMedio)) {
+                        Text(
+                            "⚠️ Observación del Ingeniero / Jefe Técnico:",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = uiState.motivoObservacion!!,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+
             CampoTexto(
                 valor = uiState.temperaturaAmbiente,
                 onValorCambia = viewModel::actualizarTemperatura,
@@ -83,7 +112,6 @@ fun RegistroPruebaScreen(
                 icono = R.drawable.ic_candado
             )
 
-
             SelectorDesplegable(
                 etiqueta = "Tipo de Prueba",
                 opciones = tiposPrueba,
@@ -91,7 +119,6 @@ fun RegistroPruebaScreen(
                 onSeleccionar = { viewModel.onTipoPruebaCambia(it) },
                 textoDe = { it }
             )
-
 
             when (uiState.tipoPrueba) {
                 "AISLACION" -> {
@@ -136,8 +163,34 @@ fun RegistroPruebaScreen(
                         icono = R.drawable.ic_check
                     )
                 }
+                "RELE" -> {
+                    Text("Prueba de Operación de Relé (RN-08b)", style = MaterialTheme.typography.titleMedium)
+                    CampoTexto(
+                        valor = uiState.corrienteAjuste,
+                        onValorCambia = viewModel::actualizarCorrienteAjuste,
+                        etiqueta = "Corriente de Ajuste (A)",
+                        icono = R.drawable.ic_check
+                    )
+                    CampoTexto(
+                        valor = uiState.corrienteOperacion,
+                        onValorCambia = viewModel::actualizarCorrienteOperacion,
+                        etiqueta = "Corriente de Operación (A)",
+                        icono = R.drawable.ic_check
+                    )
+                    CampoTexto(
+                        valor = uiState.tiempoEsperado,
+                        onValorCambia = viewModel::actualizarTiempoEsperado,
+                        etiqueta = "Tiempo Esperado (ms)",
+                        icono = R.drawable.ic_check
+                    )
+                    CampoTexto(
+                        valor = uiState.tiempoMedido,
+                        onValorCambia = viewModel::actualizarTiempoMedido,
+                        etiqueta = "Tiempo Medido (ms)",
+                        icono = R.drawable.ic_check
+                    )
+                }
             }
-
 
             SelectorDesplegable(
                 etiqueta = "Instrumento utilizado",
@@ -146,7 +199,6 @@ fun RegistroPruebaScreen(
                 onSeleccionar = { viewModel.onInstrumentoSeleccionado(it) },
                 textoDe = { "${it.nombre} - ${it.marca}" }
             )
-
 
             if (uiState.resultadoPrueba != "Pendiente") {
                 Card(
@@ -165,11 +217,15 @@ fun RegistroPruebaScreen(
 
             Button(
                 onClick = {
-                    viewModel.guardarProtocolo(equipoId, usuarioActual?.id ?: 1L)
+                    viewModel.guardarProtocolo(
+                        equipoId = equipoId,
+                        tecnicoId = usuarioActual?.id ?: 1L,
+                        esEdicion = protocoloId != null
+                    )
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Guardar Protocolo")
+                Text(if (protocoloId != null) "Actualizar Protocolo" else "Guardar Protocolo")
             }
         }
     }

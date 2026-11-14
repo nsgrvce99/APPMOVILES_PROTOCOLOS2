@@ -8,7 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import cl.duocuc.miregistro.R
+import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.*
@@ -18,42 +18,75 @@ import cl.duocuc.miregistro.ui.theme.Dimens
 @Composable
 fun CrearUsuarioClienteScreen(
     usuarioActual: Usuario?,
-    onVolver: () -> Unit
+    onVolver: () -> Unit,
+    onEditarCliente: (Usuario) -> Unit
 ) {
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
     if (usuarioActual?.rolId != 3L) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Acceso denegado. Solo el Jefe Técnico puede activar cuentas (RN-20).", color = MaterialTheme.colorScheme.error)
+            Text("Acceso denegado. Solo el Jefe Técnico puede gestionar clientes (RN-20).", color = MaterialTheme.colorScheme.error)
         }
         return
     }
 
     var clientes by remember { mutableStateOf(dbHelper.listarUsuarios().filter { it.rolId == 4L }) }
-    var clienteAEditar by remember { mutableStateOf<Usuario?>(null) }
-    var nuevaContrasena by remember { mutableStateOf("") }
+    var clienteAEliminar by remember { mutableStateOf<Usuario?>(null) }
+
+    fun recargar() {
+        clientes = dbHelper.listarUsuarios().filter { it.rolId == 4L }
+    }
 
     Scaffold(
-        topBar = { AppTopBar(titulo = "Gestionar Cuentas de Cliente", onVolver = onVolver) }
+        topBar = { AppTopBar(titulo = "Gestión de Clientes", onVolver = onVolver) }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(Dimens.espacioMedio),
             verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
         ) {
-            item { Text("Clientes registrados por terreno:", style = MaterialTheme.typography.titleMedium) }
+            item { Text("Clientes registrados en el sistema:", style = MaterialTheme.typography.titleMedium) }
             items(clientes) { cliente ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(Dimens.espacioMedio)) {
                         Text(cliente.nombre, style = MaterialTheme.typography.titleMedium)
                         Text("RUT: ${cliente.rut} | Correo: ${cliente.correo}")
+                        Text(
+                            "Estado: " + if (cliente.activo) "ACTIVO" else "INACTIVO",
+                            color = if (cliente.activo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        )
 
-                        if (cliente.activo) {
-                            Text("Estado: ACTIVO", color = MaterialTheme.colorScheme.primary)
-                        } else {
-                            Text("Estado: INACTIVO (Pendiente de clave)", color = MaterialTheme.colorScheme.error)
-                            Button(onClick = { clienteAEditar = cliente; nuevaContrasena = "" }) {
-                                Text("Asignar Clave y Activar")
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
+                        ) {
+                            OutlinedButton(
+                                onClick = { onEditarCliente(cliente) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Editar")
+                            }
+                            Button(
+                                onClick = { clienteAEliminar = cliente },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Eliminar")
+                            }
+                        }
+
+
+                        if (!cliente.activo) {
+                            Button(
+                                onClick = {
+
+                                    dbHelper.activarCliente(cliente.id, "Induztek2026")
+                                    recargar()
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                            ) {
+                                Text("Activar Cuenta (Clave: Induztek2026)")
                             }
                         }
                     }
@@ -62,40 +95,23 @@ fun CrearUsuarioClienteScreen(
         }
     }
 
-    if (clienteAEditar != null) {
+
+    if (clienteAEliminar != null) {
         AlertDialog(
-            onDismissRequest = { clienteAEditar = null },
-            title = { Text("Activar cuenta para ${clienteAEditar?.nombre}") },
-            text = {
-                Column {
-                    Text("El correo ya está registrado: ${clienteAEditar?.correo}")
-                    Spacer(Modifier.height(Dimens.espacioChico))
-                    // 👇 SOLO PEDIMOS LA CLAVE
-                    CampoTexto(
-                        valor = nuevaContrasena,
-                        onValorCambia = { nuevaContrasena = it },
-                        etiqueta = "Contraseña",
-                        icono = R.drawable.ic_candado
-                    )
-                }
-            },
+            onDismissRequest = { clienteAEliminar = null },
+            title = { Text("¿Eliminar cliente?") },
+            text = { Text("Se eliminará la empresa '${clienteAEliminar?.nombre}'. Esta acción no se puede deshacer.") },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (nuevaContrasena.isNotBlank()) {
-                            dbHelper.activarCliente(clienteAEditar!!.id, nuevaContrasena)
-                            // Refrescamos la lista
-                            clientes = dbHelper.listarUsuarios().filter { it.rolId == 4L }
-                            clienteAEditar = null
-                        }
-                    },
-                    enabled = nuevaContrasena.isNotBlank()
-                ) {
-                    Text("Guardar y Activar")
+                TextButton(onClick = {
+                    dbHelper.eliminarCliente(clienteAEliminar!!.id)
+                    recargar()
+                    clienteAEliminar = null
+                }) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { clienteAEditar = null }) { Text("Cancelar") }
+                TextButton(onClick = { clienteAEliminar = null }) { Text("Cancelar") }
             }
         )
     }

@@ -48,6 +48,18 @@ sealed class Ruta(val ruta: String) {
     data object CrearCliente : Ruta("crear_cliente")
     data object CrearInstalacion : Ruta("crear_instalacion")
     data object RegistrarCliente : Ruta("registrar_cliente")
+    data object MisProtocolos : Ruta("mis_protocolos")
+    data object EditarProtocolo : Ruta("editar_protocolo/{protocoloId}") {
+        fun crear(protocoloId: Long) = "editar_protocolo/$protocoloId"
+    }
 
+    data object ListaClientes : Ruta("lista_clientes")
+    data object EditarCliente : Ruta("editar_cliente/{clienteId}") {
+        fun crear(clienteId: Long) = "editar_cliente/$clienteId"
+    }
+    data object DetalleProtocolo : Ruta("detalle_protocolo/{protocoloId}") {
+        fun crear(protocoloId: Long) = "detalle_protocolo/$protocoloId"
+    }
+    data object ResumenVisita : Ruta("resumen_visita")
 
 }

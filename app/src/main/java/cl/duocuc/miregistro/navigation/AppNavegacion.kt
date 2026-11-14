@@ -29,7 +29,6 @@ fun AppNavegacion() {
     val usuariosViewModel: UsuariosViewModel = viewModel()
     val usuarioActual by usuariosViewModel.usuarioActual.collectAsStateWithLifecycle()
 
-
     LaunchedEffect(Unit) {
         if (sesionPrefs.haySesionActiva()) {
             val usuarioGuardado = dbHelper.buscarPorId(sesionPrefs.leer())
@@ -47,7 +46,7 @@ fun AppNavegacion() {
 
     NavHost(navController = navController, startDestination = startDestination) {
 
-
+        // ---- LOGIN ----
         composable(Ruta.Login.ruta) {
             val loginViewModel: LoginViewModel = viewModel(
                 factory = LoginViewModelFactory(dbHelper, sesionPrefs)
@@ -59,7 +58,6 @@ fun AppNavegacion() {
                     if (usuarioLogueado != null) {
                         usuariosViewModel.iniciarSesionComo(usuarioLogueado)
                     }
-
                     val destino = if (rolId == 4L) Ruta.MisEquiposCliente.ruta else Ruta.Instalaciones.ruta
                     navController.navigate(destino) {
                         popUpTo(Ruta.Login.ruta) { inclusive = true }
@@ -69,7 +67,7 @@ fun AppNavegacion() {
             )
         }
 
-
+        // ---- PERFIL ----
         composable(Ruta.Perfil.ruta) {
             PerfilScreen(
                 usuario = usuarioActual,
@@ -77,17 +75,14 @@ fun AppNavegacion() {
             )
         }
 
-
+        // ---- CLIENTE (Rol 4) ----
         composable(Ruta.MisEquiposCliente.ruta) {
             MisEquiposClienteScreen(
                 usuarioActual = usuarioActual,
                 onVolver = {
-
                     sesionPrefs.borrar()
                     usuariosViewModel.cerrarSesion()
-                    navController.navigate(Ruta.Login.ruta) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    navController.navigate(Ruta.Login.ruta) { popUpTo(0) { inclusive = true } }
                 },
                 onVerHistorialEquipo = { equipoId ->
                     navController.navigate(Ruta.HistorialEquipo.crear(equipoId))
@@ -95,57 +90,39 @@ fun AppNavegacion() {
                 onCerrarSesion = {
                     sesionPrefs.borrar()
                     usuariosViewModel.cerrarSesion()
-                    navController.navigate(Ruta.Login.ruta) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    navController.navigate(Ruta.Login.ruta) { popUpTo(0) { inclusive = true } }
                 },
-                onVerMiPerfil = {
-                    navController.navigate(Ruta.Perfil.ruta)
-                }
+                onVerMiPerfil = { navController.navigate(Ruta.Perfil.ruta) }
             )
         }
 
-
+        // ---- INSTALACIONES ----
         composable(Ruta.Instalaciones.ruta) {
             InstalacionesScreen(
                 usuarioActual = usuarioActual,
                 onSeleccionarInstalacion = { instalacionId, nombre ->
                     navController.navigate(Ruta.ListaEquipos.crear(instalacionId, nombre))
                 },
-                onIrAFormalizacion = {
-                    navController.navigate(Ruta.Formalizacion.ruta)
-                },
+                onIrAFormalizacion = { navController.navigate(Ruta.Formalizacion.ruta) },
                 onCerrarSesion = {
                     sesionPrefs.borrar()
                     usuariosViewModel.cerrarSesion()
-                    navController.navigate(Ruta.Login.ruta) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    navController.navigate(Ruta.Login.ruta) { popUpTo(0) { inclusive = true } }
                 },
-                onVerMiPerfil = {
-                    navController.navigate(Ruta.Perfil.ruta)
-                },
-                onVerUsuarios = {
-                    navController.navigate(Ruta.ListaEquipos.crear(1L, "Planta Lampa"))
-                },
-                onIrAInstrumentos = {
-                    navController.navigate(Ruta.GestionInstrumentos.ruta)
-                },
-                onIrACrearCliente = {
-                    navController.navigate(Ruta.CrearCliente.ruta)
-                },
-                onIrACrearInstalacion = {
-                    navController.navigate(Ruta.CrearInstalacion.ruta)
-                },
-                onIrARegistrarCliente = {
-                    navController.navigate(Ruta.RegistrarCliente.ruta)
-                }
+                onVerMiPerfil = { navController.navigate(Ruta.Perfil.ruta) },
+                onVerUsuarios = { navController.navigate(Ruta.ListaEquipos.crear(1L, "Planta Lampa")) },
+                onIrAInstrumentos = { navController.navigate(Ruta.GestionInstrumentos.ruta) },
+                onIrACrearCliente = { navController.navigate(Ruta.CrearCliente.ruta) },
+                onIrACrearInstalacion = { navController.navigate(Ruta.CrearInstalacion.ruta) },
+                onIrARegistrarCliente = { navController.navigate(Ruta.RegistrarCliente.ruta) },
+                onVerMisPruebas = { navController.navigate(Ruta.MisProtocolos.ruta) },
+                onVerListaClientes = { navController.navigate(Ruta.ListaClientes.ruta) },
 
+                onVerResumenVisita = { navController.navigate(Ruta.ResumenVisita.ruta) }
             )
         }
 
-
-
+        // ---- LISTA DE EQUIPOS ----
         composable(
             route = Ruta.ListaEquipos.ruta,
             arguments = listOf(
@@ -155,10 +132,8 @@ fun AppNavegacion() {
         ) { backStackEntry ->
             val instalacionId = backStackEntry.arguments?.getLong("instalacionId") ?: 0L
             val nombreInstalacion = java.net.URLDecoder.decode(
-                backStackEntry.arguments?.getString("nombreInstalacion") ?: "",
-                "UTF-8"
+                backStackEntry.arguments?.getString("nombreInstalacion") ?: "", "UTF-8"
             )
-
             ListaEquiposScreen(
                 instalacionId = instalacionId,
                 nombreInstalacion = nombreInstalacion,
@@ -175,7 +150,7 @@ fun AppNavegacion() {
             )
         }
 
-
+        // ---- REGISTRAR EQUIPO ----
         composable(
             route = Ruta.RegistrarEquipo.ruta,
             arguments = listOf(
@@ -185,8 +160,7 @@ fun AppNavegacion() {
         ) { backStackEntry ->
             val instalacionId = backStackEntry.arguments?.getLong("instalacionId") ?: 0L
             val nombreInstalacion = java.net.URLDecoder.decode(
-                backStackEntry.arguments?.getString("nombreInstalacion") ?: "",
-                "UTF-8"
+                backStackEntry.arguments?.getString("nombreInstalacion") ?: "", "UTF-8"
             )
             RegistrarEquipoScreen(
                 instalacionId = instalacionId,
@@ -201,6 +175,7 @@ fun AppNavegacion() {
             )
         }
 
+        // ---- REGISTRO PRUEBA ----
         composable(
             route = Ruta.RegistroPrueba.ruta,
             arguments = listOf(navArgument("equipoId") { type = NavType.LongType })
@@ -218,7 +193,7 @@ fun AppNavegacion() {
             )
         }
 
-
+        // ---- HISTORIAL EQUIPO ----
         composable(
             route = Ruta.HistorialEquipo.ruta,
             arguments = listOf(navArgument("equipoId") { type = NavType.LongType })
@@ -226,11 +201,12 @@ fun AppNavegacion() {
             val equipoId = backStackEntry.arguments?.getLong("equipoId") ?: 0L
             HistorialEquipoScreen(
                 equipoId = equipoId,
+                usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() }
             )
         }
 
-
+        // ---- FORMALIZACIÓN ----
         composable(Ruta.Formalizacion.ruta) {
             FormalizacionScreen(
                 usuarioActual = usuarioActual,
@@ -238,7 +214,7 @@ fun AppNavegacion() {
             )
         }
 
-
+        // ---- CIERRE VISITA ----
         composable(
             route = Ruta.CierreVisita.ruta,
             arguments = listOf(navArgument("protocoloId") { type = NavType.LongType })
@@ -253,27 +229,121 @@ fun AppNavegacion() {
                 }
             )
         }
+
+        // ---- RESUMEN VISITA ----
+        composable(Ruta.ResumenVisita.ruta) {
+            ResumenVisitaScreen(
+                usuarioActual = usuarioActual,
+                onVolver = { navController.navigateUp() }
+            )
+        }
+
+        // ---- MIS PROTOCOLOS ----
+        composable(Ruta.MisProtocolos.ruta) {
+            MisProtocolosScreen(
+                usuarioActual = usuarioActual,
+                onVolver = { navController.navigateUp() },
+                onEditarProtocolo = { protocoloId ->
+                    navController.navigate(Ruta.EditarProtocolo.crear(protocoloId))
+                },
+                onVerDetalleProtocolo = { protocoloId ->
+                    navController.navigate(Ruta.DetalleProtocolo.crear(protocoloId))
+                }
+            )
+        }
+
+        // ---- EDITAR PROTOCOLO ----
+        composable(
+            route = Ruta.EditarProtocolo.ruta,
+            arguments = listOf(navArgument("protocoloId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val protocoloId = backStackEntry.arguments?.getLong("protocoloId") ?: 0L
+            val protocolo = dbHelper.obtenerProtocoloPorId(protocoloId)
+            val equipoId = protocolo?.equipoId ?: 0L
+
+            RegistroPruebaScreen(
+                equipoId = equipoId,
+                usuarioActual = usuarioActual,
+                protocoloId = protocoloId,
+                onVolver = { navController.navigateUp() },
+                onPruebaGuardadaExitosamente = {
+                    navController.navigate(Ruta.MisProtocolos.ruta) {
+                        popUpTo(Ruta.MisProtocolos.ruta) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // ---- GESTIÓN INSTRUMENTOS ----
         composable(Ruta.GestionInstrumentos.ruta) {
             GestionInstrumentosScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() }
             )
         }
+
+        // ---- CREAR CLIENTE ----
         composable(Ruta.CrearCliente.ruta) {
             CrearUsuarioClienteScreen(
                 usuarioActual = usuarioActual,
-                onVolver = { navController.navigateUp() }
+                onVolver = { navController.navigateUp() },
+                onEditarCliente = { cliente ->
+                    navController.navigate(Ruta.EditarCliente.crear(cliente.id))
+                }
             )
         }
+
+        // ---- EDITAR CLIENTE ----
+        composable(
+            route = Ruta.EditarCliente.ruta,
+            arguments = listOf(navArgument("clienteId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val clienteId = backStackEntry.arguments?.getLong("clienteId") ?: 0L
+            val cliente = dbHelper.buscarPorId(clienteId)
+            if (cliente != null) {
+                EditarClienteScreen(
+                    cliente = cliente,
+                    onVolver = { navController.navigateUp() },
+                    onGuardadoExitoso = { navController.navigateUp() }
+                )
+            }
+        }
+
+        // ---- LISTA CLIENTES ----
+        composable(Ruta.ListaClientes.ruta) {
+            ListaClientesScreen(
+                usuarioActual = usuarioActual,
+                onVolver = { navController.navigateUp() },
+                onEditarCliente = { cliente ->
+                    navController.navigate(Ruta.EditarCliente.crear(cliente.id))
+                }
+            )
+        }
+
+        // ---- CREAR INSTALACION ----
         composable(Ruta.CrearInstalacion.ruta) {
             CrearInstalacionScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() }
             )
         }
+
+        // ---- REGISTRAR EMPRESA CLIENTE ----
         composable(Ruta.RegistrarCliente.ruta) {
             RegistrarClienteScreen(
                 usuarioActual = usuarioActual,
+                onVolver = { navController.navigateUp() }
+            )
+        }
+
+        // ---- DETALLE PROTOCOLO ----
+        composable(
+            route = Ruta.DetalleProtocolo.ruta,
+            arguments = listOf(navArgument("protocoloId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val protocoloId = backStackEntry.arguments?.getLong("protocoloId") ?: 0L
+            DetalleProtocoloScreen(
+                protocoloId = protocoloId,
                 onVolver = { navController.navigateUp() }
             )
         }
