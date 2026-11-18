@@ -23,6 +23,9 @@ data class ProtocoloUiState(
     val relacionTeorica: String = "",
     val relacionMedida: String = "",
     val valorMedidoContacto: String = "",
-    val valorPlacaContacto: String = ""
+    val valorPlacaContacto: String = "",
+    val lecturaDevanadoA: String = "",
+    val lecturaDevanadoB: String = "",
+    val lecturaDevanadoC: String = ""
 
 )

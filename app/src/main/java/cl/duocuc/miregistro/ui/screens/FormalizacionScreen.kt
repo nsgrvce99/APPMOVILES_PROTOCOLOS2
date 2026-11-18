@@ -27,11 +27,14 @@ fun FormalizacionScreen(
 
     var protocolos by remember { mutableStateOf<List<ProtocoloDetallado>>(emptyList()) }
 
-
     var mostrarDialogoObservar by remember { mutableStateOf(false) }
     var protocoloAObservar by remember { mutableStateOf<ProtocoloDetallado?>(null) }
     var motivoObservacion by remember { mutableStateOf("") }
 
+    // 👇 ESTADOS PARA EL DIÁLOGO DE FORMALIZAR CON COMENTARIO (RN-09)
+    var mostrarDialogoFormalizar by remember { mutableStateOf(false) }
+    var protocoloAFormalizar by remember { mutableStateOf<ProtocoloDetallado?>(null) }
+    var comentarioVariacion by remember { mutableStateOf("") }
 
     fun recargar() {
         protocolos = dbHelper.listarProtocolosPendientesDetallados()
@@ -61,12 +64,21 @@ fun FormalizacionScreen(
                     contentPadding = PaddingValues(Dimens.espacioMedio),
                     verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
                 ) {
-                    items(protocolos) { proto ->
+                    items(protocolos) { proto -> val medicion = remember(proto.id) { dbHelper.obtenerMedicionDeProtocolo(proto.id) }
                         TarjetaProtocoloDetalle(
                             protocolo = proto,
+                            medicion = medicion,
                             onFormalizar = {
-                                dbHelper.actualizarEstadoProtocolo(proto.id, "FORMALIZADO")
-                                recargar()
+                                // 👇 LÓGICA RN-09
+                                val hayVariacion = dbHelper.tieneVariacionSignificativa(proto.id)
+                                if (hayVariacion) {
+                                    protocoloAFormalizar = proto
+                                    comentarioVariacion = ""
+                                    mostrarDialogoFormalizar = true
+                                } else {
+                                    dbHelper.actualizarEstadoProtocolo(proto.id, "FORMALIZADO")
+                                    recargar()
+                                }
                             },
                             onObservar = {
                                 protocoloAObservar = proto
@@ -80,7 +92,7 @@ fun FormalizacionScreen(
         }
     }
 
-
+    // Diálogo para Observar
     if (mostrarDialogoObservar && protocoloAObservar != null) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoObservar = false },
@@ -113,6 +125,40 @@ fun FormalizacionScreen(
                 TextButton(onClick = { mostrarDialogoObservar = false }) {
                     Text("Cancelar")
                 }
+            }
+        )
+    }
+
+    // 👇 DIÁLOGO PARA FORMALIZAR CON COMENTARIO (RN-09)
+    if (mostrarDialogoFormalizar && protocoloAFormalizar != null) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoFormalizar = false },
+            title = { Text("Variación Significativa Detectada (RN-09)") },
+            text = {
+                Column {
+                    Text("Este protocolo tiene una variación mayor al 25% respecto al anterior. Debe dejar un comentario justificando la decisión.")
+                    Spacer(Modifier.height(Dimens.espacioMedio))
+                    CampoMultilinea(
+                        valor = comentarioVariacion,
+                        onValorCambia = { comentarioVariacion = it },
+                        etiqueta = "Comentario obligatorio",
+                        minLines = 3
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        // 👇 GUARDAMOS EL COMENTARIO EN LA BASE DE DATOS
+                        dbHelper.formalizarProtocoloConComentario(protocoloAFormalizar!!.id, comentarioVariacion)
+                        recargar()
+                        mostrarDialogoFormalizar = false
+                    },
+                    enabled = comentarioVariacion.isNotBlank()
+                ) { Text("Formalizar con Comentario") }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogoFormalizar = false }) { Text("Cancelar") }
             }
         )
     }

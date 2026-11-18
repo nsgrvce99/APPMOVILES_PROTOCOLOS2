@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.model.Equipo
 import cl.duocuc.miregistro.ui.theme.Dimens
 
@@ -11,7 +12,8 @@ import cl.duocuc.miregistro.ui.theme.Dimens
 fun TarjetaEquipo(
     equipo: Equipo,
     onVerHistorial: () -> Unit,
-    onRegistrarPrueba: (() -> Unit)? = null
+    onRegistrarPrueba: (() -> Unit)? = null,
+    onEliminar: (() -> Unit)? = null // 👈 NUEVO PARÁMETRO
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Dimens.espacioMedio)) {
@@ -37,7 +39,19 @@ fun TarjetaEquipo(
                 onClick = onVerHistorial,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Ver Historial")
+                Text("Ver Historial (RF-10)")
+            }
+
+            // 👇 BOTÓN ELIMINAR (Si se pasa el callback)
+            if (onEliminar != null) {
+                Spacer(Modifier.height(Dimens.espacioMini))
+                Button(
+                    onClick = onEliminar,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Eliminar Equipo")
+                }
             }
         }
     }

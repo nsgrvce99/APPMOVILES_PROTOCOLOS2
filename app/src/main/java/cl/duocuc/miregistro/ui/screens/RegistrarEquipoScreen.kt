@@ -12,6 +12,8 @@ import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Equipo
 import cl.duocuc.miregistro.ui.components.*
 import cl.duocuc.miregistro.ui.theme.Dimens
+import cl.duocuc.miregistro.utils.Validaciones
+import cl.duocuc.miregistro.ui.components.SelectorDesplegablePaginado
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,12 +27,19 @@ fun RegistrarEquipoScreen(
     val dbHelper = remember { UsuarioDbHelper(context) }
 
     var tag by remember { mutableStateOf("") }
-    var tipoEquipo by remember { mutableStateOf("Transformador") }
+    var tipoEquipo by remember { mutableStateOf("") }
     var marca by remember { mutableStateOf("") }
     var serie by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var exito by remember { mutableStateOf(false) }
 
+    var errorTag by remember { mutableStateOf<String?>(null) }
+    var errorMarca by remember { mutableStateOf<String?>(null) }
+    var errorSerie by remember { mutableStateOf<String?>(null) }
+
+    var exito by remember { mutableStateOf(false) }
+    var plantaSeleccionada by remember {
+        // Si viene con datos previos, los pre-cargamos
+        mutableStateOf<Pair<Long, String>?>(instalacionId.takeIf { it > 0 }?.let { Pair(it, nombreInstalacion) })
+    }
     val tiposEquipo = listOf("Transformador", "Interruptor", "Celda MT", "Cable de poder", "Relé de protección")
 
     Scaffold(
@@ -49,47 +58,45 @@ fun RegistrarEquipoScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
         ) {
-            Text(
-                "Complete los datos del equipo (RF-02 / HU-01)",
-                style = MaterialTheme.typography.titleMedium
-            )
+            Text("Complete los datos del equipo (RF-02 / HU-01)", style = MaterialTheme.typography.titleMedium)
+            Text("Instalación: $nombreInstalacion", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
 
-            Text(
-                "Instalación: $nombreInstalacion",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            CampoTexto(
+            CampoValidado(
                 valor = tag,
-                onValorCambia = { tag = it; error = null },
+                onValorCambia = { tag = it.uppercase(); errorTag = null },
                 etiqueta = "TAG del equipo (ej. TR-03)",
-                icono = R.drawable.ic_candado
+                icono = R.drawable.ic_candado,
+                error = errorTag
             )
 
-            SelectorDesplegable(
-                etiqueta = "Tipo de equipo",
-                opciones = tiposEquipo,
-                seleccionada = tipoEquipo,
-                onSeleccionar = { tipoEquipo = it },
-                textoDe = { it }
+            SelectorDesplegablePaginado(
+                etiqueta = "Instalación / Planta",
+                itemSeleccionado = plantaSeleccionada,
+                textoDe = { it.second },
+                onBuscar = { query, limit, offset ->
+
+                    dbHelper.listarInstalacionesPaginado(query, limit, offset)
+                },
+                onItemSeleccionado = { planta ->
+                    plantaSeleccionada = planta
+                }
             )
 
-            CampoTexto(
+            CampoValidado(
                 valor = marca,
-                onValorCambia = { marca = it },
+                onValorCambia = { marca = it; errorMarca = null },
                 etiqueta = "Marca",
-                icono = R.drawable.ic_candado
+                icono = R.drawable.ic_candado,
+                error = errorMarca
             )
 
-            CampoTexto(
+            CampoValidado(
                 valor = serie,
-                onValorCambia = { serie = it },
+                onValorCambia = { serie = it; errorSerie = null },
                 etiqueta = "Número de serie",
-                icono = R.drawable.ic_candado
+                icono = R.drawable.ic_candado,
+                error = errorSerie
             )
-
-            MensajeError(texto = error)
 
             if (exito) {
                 MensajeExito(
@@ -104,16 +111,21 @@ fun RegistrarEquipoScreen(
                     if (exito) {
                         onEquipoRegistrado()
                     } else {
-                        when {
-                            tag.isBlank() -> error = "El TAG es obligatorio (RN-01)"
-                            marca.isBlank() -> error = "La marca es obligatoria"
-                            serie.isBlank() -> error = "El número de serie es obligatorio"
-                            dbHelper.existeTagEnInstalacion(tag, nombreInstalacion) ->
-                                error = "El TAG '$tag' ya existe en la instalación '$nombreInstalacion' (RN-01)"
-                            else -> {
-                                // 👇 AQUÍ ESTÁ LA MAGIA: BUSCAMOS EL ID DEL CLIENTE REAL DE LA PLANTA
-                                val idClienteReal = dbHelper.obtenerIdClienteDeInstalacion(nombreInstalacion)
+                        // 👇 VALIDACIÓN EN CASCADA
+                        errorTag = null
+                        errorMarca = null
+                        errorSerie = null
 
+                        when {
+                            tag.isBlank() -> errorTag = "El TAG es obligatorio"
+                            !Validaciones.esTagValido(tag) -> errorTag = "Solo letras mayúsculas, números y guiones"
+                            dbHelper.existeTagEnInstalacion(tag, nombreInstalacion) -> errorTag = "El TAG '$tag' ya existe en esta instalación (RN-01)"
+                            marca.isBlank() -> errorMarca = "La marca es obligatoria"
+                            !Validaciones.esTextoValido(marca) -> errorMarca = "Caracteres inválidos"
+                            serie.isBlank() -> errorSerie = "El número de serie es obligatorio"
+                            !Validaciones.esTextoValido(serie) -> errorSerie = "Caracteres inválidos"
+                            else -> {
+                                val idClienteReal = dbHelper.obtenerIdClienteDeInstalacion(nombreInstalacion)
                                 val nuevoEquipo = Equipo(
                                     tag = tag.trim(),
                                     tipoEquipo = tipoEquipo,
@@ -122,13 +134,13 @@ fun RegistrarEquipoScreen(
                                     marca = marca.trim(),
                                     serie = serie.trim(),
                                     potenciaTension = "",
-                                    idCliente = idClienteReal // 👈 SE GUARDA EL ID CORRECTO
+                                    idCliente = idClienteReal
                                 )
                                 val idInsertado = dbHelper.insertarEquipo(nuevoEquipo)
                                 if (idInsertado > 0) {
                                     exito = true
                                 } else {
-                                    error = "Error al guardar el equipo. Intente nuevamente."
+                                    errorSerie = "Error al guardar. Intente nuevamente."
                                 }
                             }
                         }

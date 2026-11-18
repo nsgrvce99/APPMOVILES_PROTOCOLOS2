@@ -46,6 +46,13 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
                 tipoPrueba = medicion?.tipoPrueba ?: "AISLACION",
                 lectura1Min = medicion?.lectura1Min ?: "",
                 lectura10Min = medicion?.lectura10Min ?: "",
+                corrienteAjuste = medicion?.corrienteAjuste ?: "",
+                corrienteOperacion = medicion?.corrienteOperacion ?: "",
+                tiempoEsperado = medicion?.tiempoEsperado ?: "",
+                tiempoMedido = medicion?.tiempoMedido ?: "",
+                lecturaDevanadoA = medicion?.devanadoA ?: "",
+                lecturaDevanadoB = medicion?.devanadoB ?: "",
+                lecturaDevanadoC = medicion?.devanadoC ?: "",
                 resultadoPrueba = protocolo.resultadoGlobal,
                 motivoObservacion = protocolo.motivoObservacion,
                 guardadoExitoso = false
@@ -111,10 +118,16 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
         _uiState.update { it.copy(tiempoMedido = valor) }
         recalcularIP()
     }
+    fun actualizarDevanadoA(valor: String) { _uiState.update { it.copy(lecturaDevanadoA = valor) } }
+    fun actualizarDevanadoB(valor: String) { _uiState.update { it.copy(lecturaDevanadoB = valor) } }
+    fun actualizarDevanadoC(valor: String) { _uiState.update { it.copy(lecturaDevanadoC = valor) } }
 
     private fun recalcularIP() {
         val state = _uiState.value
-
+        if (state.tipoPrueba == "DEVANADOS") {
+            _uiState.update { it.copy(resultadoPrueba = "Pendiente de revisión manual") }
+            return
+        }
         if (state.tipoPrueba == "RELE") {
             val tEsperado = state.tiempoEsperado.toDoubleOrNull()
             val tMedido = state.tiempoMedido.toDoubleOrNull()
@@ -220,7 +233,14 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
                     lectura1 = state.lectura1Min,
                     lectura10 = state.lectura10Min,
                     ip = state.resultadoPrueba,
-                    instrumentoId = instrumento.id
+                    instrumentoId = instrumento.id,
+                    corrienteAjuste = state.corrienteAjuste,
+                    corrienteOperacion = state.corrienteOperacion,
+                    tiempoEsperado = state.tiempoEsperado,
+                    tiempoMedido = state.tiempoMedido,
+                    devanadoA = state.lecturaDevanadoA,
+                    devanadoB = state.lecturaDevanadoB,
+                    devanadoC = state.lecturaDevanadoC
                 )
             }
             _uiState.update { it.copy(guardadoExitoso = true, protocoloGuardadoId = nuevoId) }

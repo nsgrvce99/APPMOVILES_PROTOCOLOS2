@@ -13,7 +13,7 @@ import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.MenuLateral
-import cl.duocuc.miregistro.ui.components.SelectorDesplegable
+import cl.duocuc.miregistro.ui.components.SelectorDesplegablePaginado // 👈 Nueva importación
 import cl.duocuc.miregistro.ui.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,19 +31,26 @@ fun InstalacionesScreen(
     onIrARegistrarCliente: () -> Unit,
     onVerMisPruebas: () -> Unit,
     onVerListaClientes: () -> Unit,
-    onVerResumenVisita: () -> Unit
+    onVerResumenVisita: () -> Unit,
+    onCambiarContrasena: () -> Unit
 ) {
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-    var instalaciones by remember { mutableStateOf(dbHelper.listarInstalaciones()) }
     var instalacionSeleccionada by remember { mutableStateOf<Pair<Long, String>?>(null) }
+
+    var mostrarDialogoGestionPlantas by remember { mutableStateOf(false) }
+    var mensajeError by remember { mutableStateOf<String?>(null) }
+
+    // 👇 Mantenemos esta lista SOLO para el diálogo de eliminar plantas (no para el desplegable)
+    var instalacionesParaGestionar by remember { mutableStateOf(dbHelper.listarInstalaciones()) }
 
     MenuLateral(
         usuarioActual = usuarioActual,
         onCerrarSesion = onCerrarSesion,
         onVerMiPerfil = onVerMiPerfil,
-        onVerUsuarios = onVerUsuarios
+        onVerUsuarios = onVerUsuarios,
+        onCambiarContrasena = onCambiarContrasena
     ) { onAbrirMenu, snackbarHostState ->
         Scaffold(
             topBar = {
@@ -69,24 +76,25 @@ fun InstalacionesScreen(
                 )
                 Text("Seleccione la instalación eléctrica a inspeccionar:")
 
-                SelectorDesplegable(
+                // 👇 REEMPLAZAMOS EL SELECTOR VIEJO POR EL PAGINADO
+                SelectorDesplegablePaginado(
                     etiqueta = "Plantas",
-                    opciones = instalaciones,
-                    seleccionada = instalacionSeleccionada,
-                    onSeleccionar = { (id, nombre) ->
-                        instalacionSeleccionada = Pair(id, nombre)
-                        onSeleccionarInstalacion(id, nombre)
+                    itemSeleccionado = instalacionSeleccionada,
+                    textoDe = { it.second },
+                    onBuscar = { query, limit, offset ->
+                        dbHelper.listarInstalacionesPaginado(query, limit, offset)
                     },
-                    textoDe = { it.second }
+                    onItemSeleccionado = { planta ->
+                        instalacionSeleccionada = planta
+                        onSeleccionarInstalacion(planta.first, planta.second)
+                    }
                 )
-
 
                 if (usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L) {
                     Button(onClick = onIrAFormalizacion, modifier = Modifier.padding(top = 16.dp)) {
                         Text("Ir a Formalización de Protocolos")
                     }
                 }
-
 
                 val puedeCrear = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
                 if (puedeCrear) {
@@ -99,20 +107,27 @@ fun InstalacionesScreen(
                     Button(onClick = onVerListaClientes, modifier = Modifier.padding(top = 8.dp)) {
                         Text("Editar Empresas Clientes")
                     }
+                    Button(
+                        onClick = {
+                            // Refrescamos la lista antes de abrir el diálogo
+                            instalacionesParaGestionar = dbHelper.listarInstalaciones()
+                            mostrarDialogoGestionPlantas = true
+                            mensajeError = null
+                        },
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Text("Gestionar Plantas (Eliminar)")
+                    }
                 }
-
-
 
                 if (usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L) {
                     Button(onClick = onVerMisPruebas, modifier = Modifier.padding(top = 8.dp)) {
                         Text("Ver Mis Pruebas Registradas")
                     }
-
                     Button(onClick = onVerResumenVisita, modifier = Modifier.padding(top = 8.dp)) {
                         Text("Ver Resumen de Visita (RF-18)")
                     }
                 }
-
 
                 if (usuarioActual?.rolId == 3L) {
                     Button(onClick = onIrAInstrumentos, modifier = Modifier.padding(top = 8.dp)) {
@@ -126,5 +141,58 @@ fun InstalacionesScreen(
                 Spacer(modifier = Modifier.padding(bottom = 16.dp))
             }
         }
+    }
+
+    if (mostrarDialogoGestionPlantas) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoGestionPlantas = false },
+            title = { Text("Gestionar Plantas") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    if (mensajeError != null) {
+                        Text(mensajeError!!, color = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    if (instalacionesParaGestionar.isEmpty()) {
+                        Text("No hay plantas registradas.")
+                    } else {
+                        // 👇 Usamos la lista separada para el diálogo
+                        instalacionesParaGestionar.forEach { (id, nombre) ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(nombre, modifier = Modifier.weight(1f))
+                                IconButton(onClick = {
+                                    try {
+                                        dbHelper.eliminarInstalacion(nombre)
+                                        // Refrescamos la lista del diálogo
+                                        instalacionesParaGestionar = dbHelper.listarInstalaciones()
+                                        // Limpiamos la selección si se eliminó la planta seleccionada
+                                        if (instalacionSeleccionada?.second == nombre) {
+                                            instalacionSeleccionada = null
+                                        }
+                                        mensajeError = null
+                                    } catch (e: Exception) {
+                                        mensajeError = e.message
+                                    }
+                                }) {
+                                    Icon(
+                                        painter = androidx.compose.ui.res.painterResource(cl.duocuc.miregistro.R.drawable.ic_volver),
+                                        contentDescription = "Eliminar",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                            HorizontalDivider()
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { mostrarDialogoGestionPlantas = false }) { Text("Cerrar") }
+            }
+        )
     }
 }

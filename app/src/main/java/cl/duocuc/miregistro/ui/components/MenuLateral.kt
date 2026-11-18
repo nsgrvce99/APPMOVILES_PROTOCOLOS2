@@ -18,6 +18,7 @@ fun MenuLateral(
     onCerrarSesion: () -> Unit,
     onVerMiPerfil: () -> Unit = {},
     onVerUsuarios: () -> Unit = {},
+    onCambiarContrasena: () -> Unit = {}, // 👈 AGREGADO
     content: @Composable (onAbrirMenu: () -> Unit, snackbarHostState: SnackbarHostState) -> Unit
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -26,7 +27,6 @@ fun MenuLateral(
     var mostrarDialogo by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val textoSesionCerrada = stringResource(R.string.snackbar_sesion_cerrada)
-
 
     if (mostrarDialogo) {
         AlertDialog(
@@ -69,6 +69,15 @@ fun MenuLateral(
                             onVerMiPerfil()
                         }
                     )
+                    // 👇 NUEVO ITEM: CAMBIAR CONTRASEÑA
+                    NavigationDrawerItem(
+                        label = { Text("Cambiar Contraseña") },
+                        selected = false,
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            onCambiarContrasena()
+                        }
+                    )
                 }
 
                 NavigationDrawerItem(
@@ -93,7 +102,6 @@ fun MenuLateral(
             }
         }
     ) {
-
         content(
             { scope.launch { drawerState.open() } },
             snackbarHostState

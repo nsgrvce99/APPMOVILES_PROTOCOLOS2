@@ -10,8 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-
-
 class LoginViewModel(
     private val dbHelper: UsuarioDbHelper,
     private val sesionPrefs: SesionPreferencias
@@ -28,23 +26,30 @@ class LoginViewModel(
         _uiState.update { it.copy(contrasena = contrasena, errorMensaje = null) }
     }
 
-    fun autenticar(onSuccess: (Long) -> Unit) {
+    // 👇 AHORA RECIBE EL CALLBACK onRequiereCambio
+    fun autenticar(onSuccess: (Long) -> Unit, onRequiereCambio: () -> Unit) {
         val currentState = _uiState.value
         if (currentState.correo.isBlank() || currentState.contrasena.isBlank()) {
             _uiState.update { it.copy(errorMensaje = "Debe ingresar correo y contraseña") }
             return
-
         }
 
         val usuario = dbHelper.autenticarUsuario(currentState.correo.trim(), currentState.contrasena.trim())
 
         if (usuario != null) {
             sesionPrefs.guardar(usuario.id, usuario.rolId)
-            onSuccess(usuario.rolId)
+
+            // 👇 VERIFICAMOS SI LA CONTRASEÑA ES AUTOMÁTICA
+            if (usuario.contrasena.startsWith("PENDIENTE_") || usuario.contrasena == "Induztek2026") {
+                onRequiereCambio()
+            } else {
+                onSuccess(usuario.rolId)
+            }
         } else {
             _uiState.update { it.copy(errorMensaje = "Credenciales inválidas o usuario inactivo") }
         }
     }
+
     fun onAlternarVisibilidadContrasena() {
         _uiState.update { it.copy(contrasenaVisible = !it.contrasenaVisible) }
     }

@@ -12,7 +12,7 @@ class UsuarioDbHelper(context: Context) :
 
     companion object {
         private const val NOMBRE_BD = "induztekterreno.db"
-        private const val VERSION_BD = 12
+        private const val VERSION_BD = 14
 
         // ---- ROL ----
         private const val TABLA_ROLES = "rol"
@@ -88,6 +88,17 @@ class UsuarioDbHelper(context: Context) :
         private const val INST_ID = "id_instalacion"
         private const val INST_NOMBRE = "nombre"
         private const val INST_CLIENTE_ID = "id_cliente"
+
+        private const val PRO_COMENTARIO_VAR = "comentario_variacion"
+
+
+        private const val MED_CORRIENTE_AJUSTE = "corriente_ajuste"
+        private const val MED_CORRIENTE_OPERACION = "corriente_operacion"
+        private const val MED_TIEMPO_ESPERADO = "tiempo_esperado"
+        private const val MED_TIEMPO_MEDIDO = "tiempo_medido"
+        private const val MED_DEVANADO_A = "lectura_devanado_a"
+        private const val MED_DEVANADO_B = "lectura_devanado_b"
+        private const val MED_DEVANADO_C = "lectura_devanado_c"
 
         // ---- SQL DE CREACIÓN ----
         private const val SQL_CREAR_ROLES =
@@ -178,6 +189,7 @@ class UsuarioDbHelper(context: Context) :
                     "$PRO_RESULTADO TEXT, " +
                     "$PRO_ESTADO TEXT NOT NULL, " +
                     "$PRO_MOTIVO_OBS TEXT, " +
+                    "$PRO_COMENTARIO_VAR TEXT, " +
                     "FOREIGN KEY ($PRO_EQUIPO_ID) REFERENCES $TABLA_EQUIPOS($EQ_ID), " +
                     "FOREIGN KEY ($PRO_TECNICO_ID) REFERENCES $TABLA_USUARIOS($USU_ID))"
 
@@ -190,6 +202,13 @@ class UsuarioDbHelper(context: Context) :
                     "$MED_LECTURA_10MIN TEXT, " +
                     "$MED_IP TEXT, " +
                     "$MED_INSTRUMENTO_ID INTEGER, " +
+                    "$MED_CORRIENTE_AJUSTE TEXT, " +
+                    "$MED_CORRIENTE_OPERACION TEXT, " +
+                    "$MED_TIEMPO_ESPERADO TEXT, " +
+                    "$MED_TIEMPO_MEDIDO TEXT, " +
+                    "$MED_DEVANADO_A TEXT, " +
+                    "$MED_DEVANADO_B TEXT, " +
+                    "$MED_DEVANADO_C TEXT, " +
                     "FOREIGN KEY ($MED_PROTOCOLO_ID) REFERENCES $TABLA_PROTOCOLOS($PRO_ID))"
 
         private const val SQL_CREAR_RECEPCION =
@@ -339,6 +358,35 @@ class UsuarioDbHelper(context: Context) :
         }
         return lista
     }
+    fun eliminarEquipo(equipoId: Long) {
+        // 1. Verificamos si tiene protocolos asociados
+        val cursor = readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM $TABLA_PROTOCOLOS WHERE $PRO_EQUIPO_ID = ?",
+            arrayOf(equipoId.toString())
+        )
+        cursor.use {
+            if (it.moveToFirst() && it.getInt(0) > 0) {
+                throw Exception("No se puede eliminar: el equipo tiene pruebas registradas.")
+            }
+        }
+
+        // 2. Si no tiene protocolos, lo eliminamos
+        writableDatabase.delete(TABLA_EQUIPOS, "$EQ_ID = ?", arrayOf(equipoId.toString()))
+    }
+    fun eliminarInstalacion(nombreInstalacion: String) {
+        // Verificamos si tiene equipos asociados
+        val cursor = readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM $TABLA_EQUIPOS WHERE $EQ_INSTALACION = ?",
+            arrayOf(nombreInstalacion)
+        )
+        cursor.use {
+            if (it.moveToFirst() && it.getInt(0) > 0) {
+                throw Exception("No se puede eliminar: la planta tiene equipos registrados.")
+            }
+        }
+        // Si no tiene, la eliminamos
+        writableDatabase.delete(TABLA_INSTALACIONES, "$INST_NOMBRE = ?", arrayOf(nombreInstalacion))
+    }
 
     private fun leerUsuario(cursor: Cursor) = Usuario(
         id = cursor.getLong(cursor.getColumnIndexOrThrow(USU_ID)),
@@ -473,7 +521,8 @@ class UsuarioDbHelper(context: Context) :
         humedad = cursor.getString(cursor.getColumnIndexOrThrow(PRO_HUM)) ?: "",
         resultadoGlobal = cursor.getString(cursor.getColumnIndexOrThrow(PRO_RESULTADO)) ?: "Pendiente",
         estado = cursor.getString(cursor.getColumnIndexOrThrow(PRO_ESTADO)),
-        motivoObservacion = cursor.getString(cursor.getColumnIndexOrThrow(PRO_MOTIVO_OBS))
+        motivoObservacion = cursor.getString(cursor.getColumnIndexOrThrow(PRO_MOTIVO_OBS)),
+        comentarioVariacion = cursor.getString(cursor.getColumnIndexOrThrow(PRO_COMENTARIO_VAR))
     )
 
     fun actualizarEstadoProtocolo(protocoloId: Long, nuevoEstado: String) {
@@ -495,7 +544,14 @@ class UsuarioDbHelper(context: Context) :
         lectura1: String,
         lectura10: String,
         ip: String,
-        instrumentoId: Long
+        instrumentoId: Long,
+        corrienteAjuste: String = "",
+        corrienteOperacion: String = "",
+        tiempoEsperado: String = "",
+        tiempoMedido: String = "",
+        devanadoA: String = "",
+        devanadoB: String = "",
+        devanadoC: String = ""
     ): Long {
         val values = ContentValues().apply {
             put(MED_PROTOCOLO_ID, protocoloId)
@@ -504,6 +560,13 @@ class UsuarioDbHelper(context: Context) :
             put(MED_LECTURA_10MIN, lectura10)
             put(MED_IP, ip)
             put(MED_INSTRUMENTO_ID, instrumentoId)
+            put(MED_CORRIENTE_AJUSTE, corrienteAjuste)
+            put(MED_CORRIENTE_OPERACION, corrienteOperacion)
+            put(MED_TIEMPO_ESPERADO, tiempoEsperado)
+            put(MED_TIEMPO_MEDIDO, tiempoMedido)
+            put(MED_DEVANADO_A, devanadoA)
+            put(MED_DEVANADO_B, devanadoB)
+            put(MED_DEVANADO_C, devanadoC)
         }
         return writableDatabase.insert(TABLA_MEDICIONES, null, values)
     }
@@ -521,7 +584,15 @@ class UsuarioDbHelper(context: Context) :
                     lectura1Min = cursor.getString(cursor.getColumnIndexOrThrow(MED_LECTURA_1MIN)) ?: "",
                     lectura10Min = cursor.getString(cursor.getColumnIndexOrThrow(MED_LECTURA_10MIN)) ?: "",
                     indicePolarizacion = cursor.getString(cursor.getColumnIndexOrThrow(MED_IP)) ?: "",
-                    instrumentoId = cursor.getLong(cursor.getColumnIndexOrThrow(MED_INSTRUMENTO_ID))
+                    instrumentoId = cursor.getLong(cursor.getColumnIndexOrThrow(MED_INSTRUMENTO_ID)),
+                    // Nuevos campos:
+                    corrienteAjuste = cursor.getString(cursor.getColumnIndexOrThrow(MED_CORRIENTE_AJUSTE)) ?: "",
+                    corrienteOperacion = cursor.getString(cursor.getColumnIndexOrThrow(MED_CORRIENTE_OPERACION)) ?: "",
+                    tiempoEsperado = cursor.getString(cursor.getColumnIndexOrThrow(MED_TIEMPO_ESPERADO)) ?: "",
+                    tiempoMedido = cursor.getString(cursor.getColumnIndexOrThrow(MED_TIEMPO_MEDIDO)) ?: "",
+                    devanadoA = cursor.getString(cursor.getColumnIndexOrThrow(MED_DEVANADO_A)) ?: "",
+                    devanadoB = cursor.getString(cursor.getColumnIndexOrThrow(MED_DEVANADO_B)) ?: "",
+                    devanadoC = cursor.getString(cursor.getColumnIndexOrThrow(MED_DEVANADO_C)) ?: ""
                 )
             }
         }
@@ -704,6 +775,11 @@ class UsuarioDbHelper(context: Context) :
     }
 
     fun eliminarProtocolo(protocoloId: Long) {
+        val protocolo = obtenerProtocoloPorId(protocoloId)
+        if (protocolo?.estado == "FORMALIZADO") {
+            throw Exception("No se puede eliminar un protocolo FORMALIZADO (documento oficial).")
+        }
+
         writableDatabase.delete(TABLA_MEDICIONES, "$MED_PROTOCOLO_ID = ?", arrayOf(protocoloId.toString()))
         writableDatabase.delete(TABLA_RECEPCION, "$REC_PROTOCOLO_ID = ?", arrayOf(protocoloId.toString()))
         writableDatabase.delete(TABLA_PROTOCOLOS, "$PRO_ID = ?", arrayOf(protocoloId.toString()))
@@ -813,6 +889,17 @@ class UsuarioDbHelper(context: Context) :
             false
         }
     }
+    fun existeRut(rut: String): Boolean {
+        readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM $TABLA_USUARIOS WHERE $USU_RUT = ?",
+            arrayOf(rut)
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return cursor.getInt(0) > 0
+            }
+        }
+        return false
+    }
     fun obtenerIdClienteDeInstalacion(nombreInstalacion: String): Long {
         readableDatabase.rawQuery(
             "SELECT id_cliente FROM instalacion WHERE nombre = ?",
@@ -872,6 +959,17 @@ class UsuarioDbHelper(context: Context) :
         }
         return lista
     }
+    fun existeCorreo(correo: String): Boolean {
+        readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM $TABLA_USUARIOS WHERE $USU_CORREO = ?",
+            arrayOf(correo)
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return cursor.getInt(0) > 0
+            }
+        }
+        return false
+    }
     fun actualizarDatosCliente(idCliente: Long, nuevoNombre: String, nuevoRut: String, nuevoGiro: String, nuevoCorreo: String) {
         val values = ContentValues().apply {
             put(USU_NOMBRE, nuevoNombre)
@@ -882,8 +980,256 @@ class UsuarioDbHelper(context: Context) :
         writableDatabase.update(TABLA_USUARIOS, values, "$USU_ID = ?", arrayOf(idCliente.toString()))
     }
     fun eliminarCliente(clienteId: Long) {
+        val sql = """
+        SELECT COUNT(*) FROM $TABLA_PROTOCOLOS p
+        INNER JOIN $TABLA_EQUIPOS e ON p.$PRO_EQUIPO_ID = e.$EQ_ID
+        WHERE e.$EQ_ID_CLIENTE = ? AND p.$PRO_ESTADO = 'FORMALIZADO'
+    """.trimIndent()
+
+        readableDatabase.rawQuery(sql, arrayOf(clienteId.toString())).use { cursor ->
+            if (cursor.moveToFirst() && cursor.getInt(0) > 0) {
+                throw Exception("No se puede eliminar: el cliente tiene protocolos formalizados (documentos legales).")
+            }
+        }
         writableDatabase.delete(TABLA_EQUIPOS, "$EQ_ID_CLIENTE = ?", arrayOf(clienteId.toString()))
         writableDatabase.delete(TABLA_INSTALACIONES, "$INST_CLIENTE_ID = ?", arrayOf(clienteId.toString()))
         writableDatabase.delete(TABLA_USUARIOS, "$USU_ID = ?", arrayOf(clienteId.toString()))
+    }
+    fun tieneVariacionSignificativa(protocoloId: Long): Boolean {
+        val protocoloActual = obtenerProtocoloPorId(protocoloId) ?: return false
+        val medicionActual = obtenerMedicionDeProtocolo(protocoloId) ?: return false
+
+        // Buscamos el protocolo anterior del mismo equipo, con el mismo tipo de prueba
+        val sql = "SELECT p.id_protocolo FROM protocolo p " +
+                "INNER JOIN medicion m ON m.id_protocolo = p.id_protocolo " +
+                "WHERE p.id_equipo = ? AND m.tipo_prueba = ? AND p.id_protocolo < ? " +
+                "ORDER BY p.id_protocolo DESC LIMIT 1"
+
+        readableDatabase.rawQuery(sql, arrayOf(protocoloActual.equipoId.toString(), medicionActual.tipoPrueba, protocoloId.toString())).use { cursor ->
+            if (cursor.moveToFirst()) {
+                val idAnterior = cursor.getLong(0)
+                val medicionAnterior = obtenerMedicionDeProtocolo(idAnterior) ?: return false
+
+                val valorActual = medicionActual.lectura1Min.toDoubleOrNull() ?: return false
+                val valorAnterior = medicionAnterior.lectura1Min.toDoubleOrNull() ?: return false
+
+                if (valorAnterior == 0.0) return false
+                val variacion = Math.abs((valorActual - valorAnterior) / valorAnterior) * 100
+                return variacion > 25.0
+            }
+        }
+        return false
+    }
+    fun formalizarProtocoloConComentario(protocoloId: Long, comentario: String) {
+        val values = ContentValues().apply {
+            put(PRO_ESTADO, "FORMALIZADO")
+            put(PRO_COMENTARIO_VAR, comentario)
+        }
+        writableDatabase.update(TABLA_PROTOCOLOS, values, "$PRO_ID = ?", arrayOf(protocoloId.toString()))
+    }
+    fun cambiarContrasena(usuarioId: Long, nuevaContrasena: String) {
+        val values = ContentValues().apply {
+            put(USU_CONTRA, nuevaContrasena)
+        }
+        writableDatabase.update(TABLA_USUARIOS, values, "$USU_ID = ?", arrayOf(usuarioId.toString()))
+    }
+    fun listarInstalacionesPaginado(query: String, limit: Int, offset: Int): List<Pair<Long, String>> {
+        val lista = mutableListOf<Pair<Long, String>>()
+        val filtro = "%$query%"
+        val sql = "SELECT * FROM $TABLA_INSTALACIONES WHERE $INST_NOMBRE LIKE ? ORDER BY $INST_NOMBRE ASC LIMIT ? OFFSET ?"
+
+        readableDatabase.rawQuery(sql, arrayOf(filtro, limit.toString(), offset.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(
+                    Pair(
+                        cursor.getLong(cursor.getColumnIndexOrThrow(INST_ID)),
+                        cursor.getString(cursor.getColumnIndexOrThrow(INST_NOMBRE))
+                    )
+                )
+            }
+        }
+        return lista
+    }
+
+    // --- PAGINACIÓN Y BÚSQUEDA DE EQUIPOS (por instalación) ---
+    fun buscarEquiposPaginado(clienteId: Long, query: String, limit: Int, offset: Int): List<Equipo> {
+        val lista = mutableListOf<Equipo>()
+        val filtro = "%$query%"
+        // Si clienteId es 0, busca en todos, si no, filtra por cliente
+        val sql = if (clienteId > 0) {
+            "SELECT * FROM $TABLA_EQUIPOS WHERE $EQ_ID_CLIENTE = ? AND ($EQ_TAG LIKE ? OR $EQ_INSTALACION LIKE ?) ORDER BY $EQ_TAG ASC LIMIT ? OFFSET ?"
+        } else {
+            "SELECT * FROM $TABLA_EQUIPOS WHERE ($EQ_TAG LIKE ? OR $EQ_INSTALACION LIKE ?) ORDER BY $EQ_TAG ASC LIMIT ? OFFSET ?"
+        }
+
+        val args = if (clienteId > 0) {
+            arrayOf(clienteId.toString(), filtro, filtro, limit.toString(), offset.toString())
+        } else {
+            arrayOf(filtro, filtro, limit.toString(), offset.toString())
+        }
+
+        readableDatabase.rawQuery(sql, args).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(
+                    Equipo(
+                        id = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID)).toInt(),
+                        tag = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TAG)),
+                        tipoEquipo = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TIPO)),
+                        clasificacion = "Primario",
+                        instalacion = cursor.getString(cursor.getColumnIndexOrThrow(EQ_INSTALACION)),
+                        marca = cursor.getString(cursor.getColumnIndexOrThrow(EQ_MARCA)) ?: "",
+                        serie = cursor.getString(cursor.getColumnIndexOrThrow(EQ_SERIE)) ?: "",
+                        potenciaTension = "",
+                        idCliente = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID_CLIENTE))
+                    )
+                )
+            }
+        }
+        return lista
+    }
+
+    // --- PAGINACIÓN Y BÚSQUEDA DE INSTRUMENTOS ---
+    fun listarInstrumentosPaginado(query: String, limit: Int, offset: Int): List<Instrumento> {
+        val lista = mutableListOf<Instrumento>()
+        val filtro = "%$query%"
+        val sql = "SELECT * FROM $TABLA_INSTRUMENTOS WHERE $INS_NOMBRE LIKE ? OR $INS_MARCA LIKE ? ORDER BY $INS_NOMBRE ASC LIMIT ? OFFSET ?"
+
+        readableDatabase.rawQuery(sql, arrayOf(filtro, filtro, limit.toString(), offset.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(
+                    Instrumento(
+                        id = cursor.getLong(cursor.getColumnIndexOrThrow(INS_ID)),
+                        nombre = cursor.getString(cursor.getColumnIndexOrThrow(INS_NOMBRE)),
+                        marca = cursor.getString(cursor.getColumnIndexOrThrow(INS_MARCA)) ?: "",
+                        serie = cursor.getString(cursor.getColumnIndexOrThrow(INS_SERIE)) ?: "",
+                        fechaVencimiento = cursor.getString(cursor.getColumnIndexOrThrow(INS_VENCIMIENTO))
+                    )
+                )
+            }
+        }
+        return lista
+    }
+    fun listarClientesPaginado(query: String, limit: Int, offset: Int): List<Usuario> {
+        val lista = mutableListOf<Usuario>()
+        val filtro = "%$query%"
+        // Buscamos solo el rol 4 (CLIENTE) y filtramos por nombre, rut o correo
+        val sql = """
+        SELECT u.*, r.$ROL_CODIGO AS rol_codigo, r.$ROL_NOMBRE AS rol_nombre 
+        FROM $TABLA_USUARIOS u 
+        INNER JOIN $TABLA_ROLES r ON u.$USU_ROL = r.$ROL_ID
+        WHERE u.$USU_ROL = 4 AND (u.$USU_NOMBRE LIKE ? OR u.$USU_RUT LIKE ? OR u.$USU_CORREO LIKE ?)
+        ORDER BY u.$USU_NOMBRE ASC 
+        LIMIT ? OFFSET ?
+    """.trimIndent()
+
+        readableDatabase.rawQuery(sql, arrayOf(filtro, filtro, filtro, limit.toString(), offset.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(leerUsuario(cursor))
+            }
+        }
+        return lista
+    }
+    fun listarProtocolosParaHistorialPaginado(
+        equipoId: Long,
+        esCliente: Boolean,
+        limit: Int,
+        offset: Int
+    ): List<Protocolo> {
+        val lista = mutableListOf<Protocolo>()
+
+        val filtroEstado = if (esCliente) {
+            " AND $PRO_ESTADO NOT IN ('BORRADOR', 'ANULADO')"
+        } else {
+            ""
+        }
+
+        val sql = "SELECT * FROM $TABLA_PROTOCOLOS WHERE $PRO_EQUIPO_ID = ?$filtroEstado ORDER BY $PRO_FECHA DESC LIMIT ? OFFSET ?"
+
+        readableDatabase.rawQuery(sql, arrayOf(equipoId.toString(), limit.toString(), offset.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(leerProtocolo(cursor))
+            }
+        }
+        return lista
+    }
+    fun buscarEquipoPorId(id: Long): Equipo? {
+        readableDatabase.rawQuery("SELECT * FROM $TABLA_EQUIPOS WHERE $EQ_ID = ?", arrayOf(id.toString())).use { cursor ->
+            if (cursor.moveToNext()) {
+                return Equipo(
+                    id = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID)).toInt(),
+                    tag = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TAG)),
+                    tipoEquipo = cursor.getString(cursor.getColumnIndexOrThrow(EQ_TIPO)),
+                    clasificacion = "Primario",
+                    instalacion = cursor.getString(cursor.getColumnIndexOrThrow(EQ_INSTALACION)),
+                    marca = cursor.getString(cursor.getColumnIndexOrThrow(EQ_MARCA)) ?: "",
+                    serie = cursor.getString(cursor.getColumnIndexOrThrow(EQ_SERIE)) ?: "",
+                    potenciaTension = "",
+                    idCliente = cursor.getLong(cursor.getColumnIndexOrThrow(EQ_ID_CLIENTE))
+                )
+            }
+        }
+        return null
+    }
+    fun listarProtocolosPorTecnicoDetalladosPaginado(tecnicoId: Long, limit: Int, offset: Int): List<ProtocoloDetallado> {
+        val lista = mutableListOf<ProtocoloDetallado>()
+        val sql = """
+    SELECT p.id_protocolo, p.fecha_hora, p.resultado_global, p.estado, p.motivo_observacion,
+           e.tag AS equipo_tag, e.tipo_equipo, e.instalacion,
+           u.nombre AS tecnico_nombre
+    FROM protocolo p
+    INNER JOIN equipo e ON p.id_equipo = e.id_equipo
+    INNER JOIN usuario u ON p.id_usuario_registra = u.id_usuario
+    WHERE p.id_usuario_registra = ?
+    ORDER BY p.fecha_hora DESC
+    LIMIT ? OFFSET ?
+    """.trimIndent()
+
+        readableDatabase.rawQuery(sql, arrayOf(tecnicoId.toString(), limit.toString(), offset.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(
+                    ProtocoloDetallado(
+                        id = cursor.getLong(cursor.getColumnIndexOrThrow("id_protocolo")),
+                        equipoTag = cursor.getString(cursor.getColumnIndexOrThrow("equipo_tag")),
+                        equipoTipo = cursor.getString(cursor.getColumnIndexOrThrow("tipo_equipo")),
+                        instalacion = cursor.getString(cursor.getColumnIndexOrThrow("instalacion")),
+                        tecnicoNombre = cursor.getString(cursor.getColumnIndexOrThrow("tecnico_nombre")),
+                        fecha = cursor.getString(cursor.getColumnIndexOrThrow("fecha_hora")),
+                        resultadoGlobal = cursor.getString(cursor.getColumnIndexOrThrow("resultado_global")),
+                        estado = cursor.getString(cursor.getColumnIndexOrThrow("estado")),
+                        motivoObservacion = cursor.getString(cursor.getColumnIndexOrThrow("motivo_observacion"))
+                    )
+                )
+            }
+        }
+        return lista
+    }
+    fun listarPersonalInternoPaginado(query: String, limit: Int, offset: Int): List<Usuario> {
+        val lista = mutableListOf<Usuario>()
+        val filtro = "%$query%"
+        val sql = """
+        SELECT u.*, r.$ROL_CODIGO AS rol_codigo, r.$ROL_NOMBRE AS rol_nombre 
+        FROM $TABLA_USUARIOS u 
+        INNER JOIN $TABLA_ROLES r ON u.$USU_ROL = r.$ROL_ID
+        WHERE u.$USU_ROL IN (1, 2, 3) 
+        AND (u.$USU_NOMBRE LIKE ? OR u.$USU_RUT LIKE ? OR u.$USU_CORREO LIKE ?)
+        ORDER BY u.$USU_NOMBRE ASC 
+        LIMIT ? OFFSET ?
+    """.trimIndent()
+
+        readableDatabase.rawQuery(sql, arrayOf(filtro, filtro, filtro, limit.toString(), offset.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                lista.add(leerUsuario(cursor))
+            }
+        }
+        return lista
+    }
+    fun actualizarPersonalInterno(id: Long, nombre: String, rut: String, correo: String, rolId: Long) {
+        val values = ContentValues().apply {
+            put(USU_NOMBRE, nombre)
+            put(USU_RUT, rut)
+            put(USU_CORREO, correo)
+            put(USU_ROL, rolId.toInt())
+        }
+        writableDatabase.update(TABLA_USUARIOS, values, "$USU_ID = ?", arrayOf(id.toString()))
     }
 }

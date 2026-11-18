@@ -7,6 +7,13 @@ data class Medicion(
     val lectura1Min: String,
     val lectura10Min: String,
     val indicePolarizacion: String,
-    val instrumentoId: Long = 0L
+    val instrumentoId: Long = 0L,
+    val corrienteAjuste: String = "",
+    val corrienteOperacion: String = "",
+    val tiempoEsperado: String = "",
+    val tiempoMedido: String = "",
+    val devanadoA: String = "",
+    val devanadoB: String = "",
+    val devanadoC: String = ""
 )
 

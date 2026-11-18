@@ -22,7 +22,6 @@ fun DetalleProtocoloScreen(
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-
     val protocolo = remember(protocoloId) { dbHelper.obtenerProtocoloPorId(protocoloId) }
     val medicion = remember(protocoloId) { dbHelper.obtenerMedicionDeProtocolo(protocoloId) }
 
@@ -44,6 +43,7 @@ fun DetalleProtocoloScreen(
             ) {
                 Text("Protocolo #${protocolo.id}", style = MaterialTheme.typography.titleLarge)
 
+                // --- CARD DE DATOS GENERALES ---
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(Dimens.espacioMedio)) {
                         FilaInfo("Fecha", protocolo.fecha)
@@ -54,6 +54,7 @@ fun DetalleProtocoloScreen(
                     }
                 }
 
+                // --- CARD DE MEDICIONES ---
                 if (medicion != null) {
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(Dimens.espacioMedio)) {
@@ -76,10 +77,39 @@ fun DetalleProtocoloScreen(
                                     FilaInfo("Máximo de Placa", "${medicion.lectura10Min} μΩ")
                                 }
                                 "RELE" -> {
-
-                                    Text("Datos de relé registrados.")
+                                    FilaInfo("Corriente de Ajuste", "${medicion.corrienteAjuste} A")
+                                    FilaInfo("Corriente de Operación", "${medicion.corrienteOperacion} A")
+                                    FilaInfo("Tiempo Esperado", "${medicion.tiempoEsperado} ms")
+                                    FilaInfo("Tiempo Medido", "${medicion.tiempoMedido} ms")
+                                }
+                                "DEVANADOS" -> {
+                                    FilaInfo("Fase A", "${medicion.devanadoA} mΩ")
+                                    FilaInfo("Fase B", "${medicion.devanadoB} mΩ")
+                                    FilaInfo("Fase C", "${medicion.devanadoC} mΩ")
                                 }
                             }
+                        }
+                    }
+                }
+
+                // --- 👇 CARD DEL COMENTARIO DE VARIACIÓN ---
+                if (protocolo.comentarioVariacion != null && protocolo.comentarioVariacion!!.isNotBlank()) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(Modifier.padding(Dimens.espacioMedio)) {
+                            Text(
+                                "📝 Comentario de Variación (RN-09)",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = protocolo.comentarioVariacion!!,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
                         }
                     }
                 }

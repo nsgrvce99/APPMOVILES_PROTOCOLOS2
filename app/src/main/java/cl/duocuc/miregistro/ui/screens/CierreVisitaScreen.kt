@@ -31,13 +31,14 @@ fun CierreVisitaScreen(
 
     val puedeFirmarActa = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L
 
-
     val clienteDueno = remember(protocoloId) { dbHelper.obtenerClienteDeProtocolo(protocoloId) }
     val equipo = remember(protocoloId) { dbHelper.obtenerEquipoDeProtocolo(protocoloId) }
     val medicion = remember(protocoloId) { dbHelper.obtenerMedicionDeProtocolo(protocoloId) }
     val protocolo = remember(protocoloId) { dbHelper.obtenerProtocoloPorId(protocoloId) }
 
     var exito by remember { mutableStateOf(false) }
+
+    val puedeConfirmar = clienteDueno != null && protocolo != null && medicion != null
 
     Scaffold(
         topBar = { AppTopBar(titulo = "Acta de Terreno", onVolver = onVolver) }
@@ -55,7 +56,6 @@ fun CierreVisitaScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
             ) {
-
                 if (clienteDueno != null) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
@@ -67,8 +67,18 @@ fun CierreVisitaScreen(
                             Text("RUT: ${clienteDueno.rut}", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
+                } else {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "⚠️ No se puede generar el Acta: no se encontró la empresa cliente asociada al protocolo.",
+                            modifier = Modifier.padding(Dimens.espacioMedio),
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
                 }
-
 
                 Text("Resumen del Acta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
@@ -99,6 +109,17 @@ fun CierreVisitaScreen(
                                     FilaInfo("Resistencia Medida", "${medicion.lectura1Min} μΩ")
                                     FilaInfo("Máx Placa", "${medicion.lectura10Min} μΩ")
                                 }
+                                "RELE" -> {
+                                    FilaInfo("Corriente de Ajuste", "${medicion.corrienteAjuste} A")
+                                    FilaInfo("Corriente de Operación", "${medicion.corrienteOperacion} A")
+                                    FilaInfo("Tiempo Esperado", "${medicion.tiempoEsperado} ms")
+                                    FilaInfo("Tiempo Medido", "${medicion.tiempoMedido} ms")
+                                }
+                                "DEVANADOS" -> {
+                                    FilaInfo("Fase A", "${medicion.devanadoA} mΩ")
+                                    FilaInfo("Fase B", "${medicion.devanadoB} mΩ")
+                                    FilaInfo("Fase C", "${medicion.devanadoC} mΩ")
+                                }
                             }
                         }
                         if (protocolo != null) {
@@ -106,8 +127,6 @@ fun CierreVisitaScreen(
                         }
                     }
                 }
-
-
 
                 Text(
                     "El Acta se entregará marcada como 'Pendiente de formalización' (RN-14).",
@@ -131,7 +150,7 @@ fun CierreVisitaScreen(
                     onClick = {
                         if (exito) {
                             onActaEntregada()
-                        } else {
+                        } else if (puedeConfirmar) {
                             val fechaHora = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(Date())
                             dbHelper.guardarRecepcionActa(
                                 protocoloId = protocoloId,
@@ -143,6 +162,7 @@ fun CierreVisitaScreen(
                             exito = true
                         }
                     },
+                    habilitado = puedeConfirmar || exito,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

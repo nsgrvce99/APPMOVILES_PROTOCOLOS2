@@ -3,6 +3,7 @@ package cl.duocuc.miregistro.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,21 +28,58 @@ fun MisProtocolosScreen(
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
+    // --- ESTADOS PARA PAGINACIÓN ---
     var misProtocolos by remember { mutableStateOf<List<ProtocoloDetallado>>(emptyList()) }
-    var protocoloAEliminar by remember { mutableStateOf<ProtocoloDetallado?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+    var offset by remember { mutableIntStateOf(0) }
+    var hasMore by remember { mutableStateOf(true) }
+    val limit = 20
+    val listState = rememberLazyListState()
 
-    fun recargarProtocolos() {
-        misProtocolos = dbHelper.listarProtocolosPorTecnicoDetallados(usuarioActual?.id ?: 0L)
+    // --- ESTADOS PARA ELIMINACIÓN ---
+    var protocoloAEliminar by remember { mutableStateOf<ProtocoloDetallado?>(null) }
+    var errorEliminar by remember { mutableStateOf<String?>(null) }
+
+    // --- LÓGICA DE PAGINACIÓN ---
+    fun cargarProtocolos(reset: Boolean = false) {
+        if (isLoading) return
+        if (reset) {
+            offset = 0
+            hasMore = true
+            misProtocolos = emptyList()
+        }
+        if (!hasMore) return
+
+        isLoading = true
+        val nuevos = dbHelper.listarProtocolosPorTecnicoDetalladosPaginado(usuarioActual?.id ?: 0L, limit, offset)
+
+        misProtocolos = misProtocolos + nuevos
+        offset += limit
+        hasMore = nuevos.size == limit
+        isLoading = false
     }
 
+    // Carga inicial
     LaunchedEffect(Unit) {
-        recargarProtocolos()
+        cargarProtocolos(reset = true)
+    }
+
+    // Detectar scroll para cargar más
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val totalItems = layoutInfo.totalItemsCount
+            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisibleItem >= totalItems - 3
+        }.collect { shouldLoadMore ->
+            if (shouldLoadMore) cargarProtocolos()
+        }
     }
 
     Scaffold(
         topBar = { AppTopBar(titulo = "Mis Pruebas en Terreno", onVolver = onVolver) }
     ) { innerPadding ->
-        if (misProtocolos.isEmpty()) {
+        if (misProtocolos.isEmpty() && !isLoading) {
             Box(
                 Modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center
@@ -50,6 +88,7 @@ fun MisProtocolosScreen(
             }
         } else {
             LazyColumn(
+                state = listState, // 👈 Vinculamos el estado del scroll
                 modifier = Modifier.fillMaxSize().padding(innerPadding).padding(Dimens.espacioMedio),
                 verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
             ) {
@@ -57,33 +96,64 @@ fun MisProtocolosScreen(
                     TarjetaMisProtocolos(
                         protocolo = proto,
                         onEditar = { onEditarProtocolo(proto.id) },
-                        onEliminar = { protocoloAEliminar = proto },
+                        onEliminar = { protocoloAEliminar = proto; errorEliminar = null },
                         onVerDetalle = { onVerDetalleProtocolo(proto.id) },
                         onCerrarBorrador = {
                             dbHelper.cerrarBorrador(proto.id)
-                            recargarProtocolos()
+                            cargarProtocolos(reset = true) // 👈 Recargamos la lista paginada
                         }
                     )
+                }
+
+                // --- INDICADOR DE CARGA AL FINAL ---
+                if (isLoading) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
                 }
             }
         }
     }
 
-
+    // --- DIÁLOGO DE ELIMINACIÓN CON CONTROL DE ERRORES ---
     if (protocoloAEliminar != null) {
         AlertDialog(
-            onDismissRequest = { protocoloAEliminar = null },
+            onDismissRequest = {
+                protocoloAEliminar = null
+                errorEliminar = null
+            },
             title = { Text("¿Eliminar protocolo?") },
-            text = { Text("Esta acción borrará la prueba del equipo ${protocoloAEliminar?.equipoTag}. No se puede deshacer.") },
+            text = {
+                Column {
+                    if (errorEliminar == null) {
+                        Text("Esta acción borrará la prueba del equipo ${protocoloAEliminar?.equipoTag}. No se puede deshacer.")
+                    } else {
+                        Text(errorEliminar!!, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    dbHelper.eliminarProtocolo(protocoloAEliminar!!.id)
-                    protocoloAEliminar = null
-                    recargarProtocolos()
-                }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+                TextButton(
+                    onClick = {
+                        try {
+                            dbHelper.eliminarProtocolo(protocoloAEliminar!!.id)
+                            protocoloAEliminar = null
+                            errorEliminar = null
+                            cargarProtocolos(reset = true) // 👈 Recargamos la lista paginada
+                        } catch (e: Exception) {
+                            errorEliminar = e.message ?: "Error al eliminar el protocolo."
+                        }
+                    },
+                    enabled = errorEliminar == null
+                ) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { protocoloAEliminar = null }) { Text("Cancelar") }
+                TextButton(onClick = {
+                    protocoloAEliminar = null
+                    errorEliminar = null
+                }) { Text("Cancelar") }
             }
         )
     }

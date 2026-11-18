@@ -63,6 +63,11 @@ fun AppNavegacion() {
                         popUpTo(Ruta.Login.ruta) { inclusive = true }
                     }
                 },
+                onRequiereCambio = { // 👈 NUEVO CALLBACK
+                    navController.navigate(Ruta.CambiarContrasena.ruta) {
+                        popUpTo(Ruta.Login.ruta) { inclusive = true }
+                    }
+                },
                 onRegistroClick = { }
             )
         }
@@ -72,6 +77,21 @@ fun AppNavegacion() {
             PerfilScreen(
                 usuario = usuarioActual,
                 onVolver = { navController.navigateUp() }
+            )
+        }
+
+        // ---- CAMBIO DE CONTRASEÑA ----
+        composable(Ruta.CambiarContrasena.ruta) {
+            CambiarContrasenaScreen(
+                usuarioActual = usuarioActual,
+                onVolver = { navController.navigateUp() },
+                onContrasenaCambiada = {
+                    // Al cambiar la contraseña, lo mandamos a su pantalla principal
+                    val destino = if (usuarioActual?.rolId == 4L) Ruta.MisEquiposCliente.ruta else Ruta.Instalaciones.ruta
+                    navController.navigate(destino) {
+                        popUpTo(Ruta.CambiarContrasena.ruta) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -92,7 +112,8 @@ fun AppNavegacion() {
                     usuariosViewModel.cerrarSesion()
                     navController.navigate(Ruta.Login.ruta) { popUpTo(0) { inclusive = true } }
                 },
-                onVerMiPerfil = { navController.navigate(Ruta.Perfil.ruta) }
+                onVerMiPerfil = { navController.navigate(Ruta.Perfil.ruta) },
+                onCambiarContrasena = { navController.navigate(Ruta.CambiarContrasena.ruta) } // 👈 NUEVO
             )
         }
 
@@ -117,10 +138,12 @@ fun AppNavegacion() {
                 onIrARegistrarCliente = { navController.navigate(Ruta.RegistrarCliente.ruta) },
                 onVerMisPruebas = { navController.navigate(Ruta.MisProtocolos.ruta) },
                 onVerListaClientes = { navController.navigate(Ruta.ListaClientes.ruta) },
-
-                onVerResumenVisita = { navController.navigate(Ruta.ResumenVisita.ruta) }
+                onVerResumenVisita = { navController.navigate(Ruta.ResumenVisita.ruta) },
+                onCambiarContrasena = { navController.navigate(Ruta.CambiarContrasena.ruta) } // 👈 NUEVO
             )
         }
+
+        // ... (El resto de las rutas se mantienen igual: ListaEquipos, RegistrarEquipo, RegistroPrueba, HistorialEquipo, Formalizacion, CierreVisita, ResumenVisita, MisProtocolos, EditarProtocolo, GestionInstrumentos, CrearCliente, EditarCliente, ListaClientes, CrearInstalacion, RegistrarCliente, DetalleProtocolo) ...
 
         // ---- LISTA DE EQUIPOS ----
         composable(
@@ -289,6 +312,10 @@ fun AppNavegacion() {
                 onVolver = { navController.navigateUp() },
                 onEditarCliente = { cliente ->
                     navController.navigate(Ruta.EditarCliente.crear(cliente.id))
+                },
+                // 👇 AGREGAMOS ESTE NUEVO CALLBACK
+                onGestionarPersonalInterno = {
+                    navController.navigate(Ruta.GestionPersonalInterno.ruta)
                 }
             )
         }
@@ -344,6 +371,12 @@ fun AppNavegacion() {
             val protocoloId = backStackEntry.arguments?.getLong("protocoloId") ?: 0L
             DetalleProtocoloScreen(
                 protocoloId = protocoloId,
+                onVolver = { navController.navigateUp() }
+            )
+        }
+        composable(Ruta.GestionPersonalInterno.ruta) {
+            GestionPersonalInternoScreen(
+                usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() }
             )
         }

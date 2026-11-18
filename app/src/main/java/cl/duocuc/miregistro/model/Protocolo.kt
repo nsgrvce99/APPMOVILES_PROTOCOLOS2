@@ -8,5 +8,6 @@ data class Protocolo(
     val humedad: String,
     val resultadoGlobal: String,
     val estado: String,
-    val motivoObservacion: String? = null
+    val motivoObservacion: String? = null,
+    val comentarioVariacion: String? = null
 )

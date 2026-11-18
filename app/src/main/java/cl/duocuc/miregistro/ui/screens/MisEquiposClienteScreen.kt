@@ -10,7 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
-import cl.duocuc.miregistro.model.Equipo
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.CampoTexto
@@ -25,15 +24,14 @@ fun MisEquiposClienteScreen(
     onVolver: () -> Unit,
     onVerHistorialEquipo: (Long) -> Unit,
     onCerrarSesion: () -> Unit,
-    onVerMiPerfil: () -> Unit
+    onVerMiPerfil: () -> Unit,
+    onCambiarContrasena: () -> Unit // 👈 AGREGADO
 ) {
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
     var textoBusqueda by remember { mutableStateOf("") }
 
-    // 👇 AQUÍ USAMOS EL MÉTODO OPTIMIZADO
-    // Cada vez que 'textoBusqueda' cambie, se volverá a ejecutar la consulta en SQLite
     val equiposFiltrados = remember(usuarioActual?.id, textoBusqueda) {
         if (usuarioActual != null) {
             dbHelper.buscarEquiposPorCliente(usuarioActual.id, textoBusqueda)
@@ -45,7 +43,8 @@ fun MisEquiposClienteScreen(
     MenuLateral(
         usuarioActual = usuarioActual,
         onCerrarSesion = onCerrarSesion,
-        onVerMiPerfil = onVerMiPerfil
+        onVerMiPerfil = onVerMiPerfil,
+        onCambiarContrasena = onCambiarContrasena // 👈 AGREGADO
     ) { onAbrirMenu, snackbarHostState ->
         Scaffold(
             topBar = {
@@ -58,7 +57,6 @@ fun MisEquiposClienteScreen(
         ) { innerPadding ->
             Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(Dimens.espacioMedio)) {
 
-                // Barra de búsqueda
                 CampoTexto(
                     valor = textoBusqueda,
                     onValorCambia = { textoBusqueda = it },

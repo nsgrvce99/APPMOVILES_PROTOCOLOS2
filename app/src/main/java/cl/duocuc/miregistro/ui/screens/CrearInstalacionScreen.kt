@@ -13,6 +13,7 @@ import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.*
 import cl.duocuc.miregistro.ui.theme.Dimens
+import cl.duocuc.miregistro.utils.Validaciones
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +66,7 @@ fun CrearInstalacionScreen(
                     opciones = clientes,
                     seleccionada = clienteSeleccionado,
                     onSeleccionar = { clienteSeleccionado = it; error = null },
-                    textoDe = { "${it.nombre} (${it.rut})" } // Muestra el nombre y RUT de la empresa
+                    textoDe = { "${it.nombre} (${Validaciones.formatearRut(it.rut)})" }
                 )
             }
 

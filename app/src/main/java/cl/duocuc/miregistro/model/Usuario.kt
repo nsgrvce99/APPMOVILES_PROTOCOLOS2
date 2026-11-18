@@ -13,4 +13,5 @@ data class Usuario(
     val activo: Boolean = true,
     val giro: String? = null,
     val cargo: String? = null
+
 )

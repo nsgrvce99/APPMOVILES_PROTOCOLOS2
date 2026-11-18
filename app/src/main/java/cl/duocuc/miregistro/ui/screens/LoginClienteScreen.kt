@@ -17,9 +17,9 @@ import cl.duocuc.miregistro.R
 fun LoginClienteScreen(
     viewModel: LoginViewModel,
     onLoginSuccess: (Long) -> Unit,
+    onRequiereCambio: () -> Unit, // 👈 NUEVO PARÁMETRO
     onRegistroClick: () -> Unit
 ) {
-
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Surface(
@@ -33,7 +33,6 @@ fun LoginClienteScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Text(
                 text = "Induztek Ingeniería SpA",
                 style = MaterialTheme.typography.headlineMedium,
@@ -50,40 +49,48 @@ fun LoginClienteScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-
+            // Campo de Correo
             CampoTexto(
                 valor = uiState.correo,
                 onValorCambia = { viewModel.onCorreoChanged(it) },
                 etiqueta = "Correo electrónico corporativo",
                 icono = R.drawable.ic_correo
-
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-
+            // Campo de Contraseña
             CampoContrasena(
                 valor = uiState.contrasena,
                 onValorCambia = { viewModel.onContrasenaChanged(it) },
                 etiqueta = "Contraseña",
                 visible = uiState.contrasenaVisible,
                 onAlternarVisible = { viewModel.onAlternarVisibilidadContrasena() },
-                modifier = Modifier.fillMaxWidth(),
-                error = uiState.errorMensaje
+                modifier = Modifier.fillMaxWidth()
             )
 
-
-
+            // 👇 MOSTRAMOS EL ERROR GENERAL AQUÍ (Credenciales inválidas)
+            if (uiState.errorMensaje != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = uiState.errorMensaje!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-
             Button(
                 onClick = {
-                    viewModel.autenticar { rolId ->
-
-                        onLoginSuccess(rolId)
-                    }
+                    viewModel.autenticar(
+                        onSuccess = { rolId ->
+                            onLoginSuccess(rolId)
+                        },
+                        onRequiereCambio = { // 👈 NUEVO CALLBACK
+                            onRequiereCambio()
+                        }
+                    )
                 },
                 modifier = Modifier
                     .fillMaxWidth()
