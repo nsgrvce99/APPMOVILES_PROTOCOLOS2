@@ -61,7 +61,10 @@ sealed class Ruta(val ruta: String) {
         fun crear(protocoloId: Long) = "detalle_protocolo/$protocoloId"
     }
     data object ResumenVisita : Ruta("resumen_visita")
-    data object CambiarContrasena : Ruta("cambiar_contrasena")
+
     data object GestionPersonalInterno : Ruta("gestion_personal_interno")
+    data object CambiarContrasena : Ruta("cambiar_contrasena?esObligatorio={esObligatorio}") {
+        fun crear(esObligatorio: Boolean = false) = "cambiar_contrasena?esObligatorio=$esObligatorio"
+    }
 
 }

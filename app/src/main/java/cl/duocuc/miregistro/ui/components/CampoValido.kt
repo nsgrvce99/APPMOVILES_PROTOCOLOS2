@@ -38,7 +38,7 @@ fun CampoValidado(
                 modifier = Modifier.size(Dimens.tamanoIcono)
             )
         },
-        isError = error != null, // 👈 El borde se pone rojo si hay error
+        isError = error != null,
         supportingText = {
             if (error != null) {
                 Text(error, color = androidx.compose.material3.MaterialTheme.colorScheme.error)

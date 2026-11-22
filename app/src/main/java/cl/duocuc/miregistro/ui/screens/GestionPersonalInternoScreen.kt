@@ -34,7 +34,7 @@ fun GestionPersonalInternoScreen(
         return
     }
 
-    // --- ESTADOS PARA PAGINACIÓN ---
+
     var query by remember { mutableStateOf("") }
     var usuarios by remember { mutableStateOf<List<Usuario>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
@@ -43,7 +43,7 @@ fun GestionPersonalInternoScreen(
     val limit = 20
     val listState = rememberLazyListState()
 
-    // --- ESTADOS PARA CREAR USUARIO ---
+
     var mostrarDialogoCrear by remember { mutableStateOf(false) }
     var nuevoNombre by remember { mutableStateOf("") }
     var nuevoRut by remember { mutableStateOf("") }
@@ -55,7 +55,7 @@ fun GestionPersonalInternoScreen(
     var errorCorreo by remember { mutableStateOf<String?>(null) }
     var errorGeneral by remember { mutableStateOf<String?>(null) }
 
-    // --- 👇 ESTADOS PARA EDITAR USUARIO ---
+
     var usuarioAEditar by remember { mutableStateOf<Usuario?>(null) }
     var editNombre by remember { mutableStateOf("") }
     var editRut by remember { mutableStateOf("") }
@@ -73,11 +73,11 @@ fun GestionPersonalInternoScreen(
         Pair(3L, "Jefe Técnico")
     )
 
-    // --- ESTADOS PARA ELIMINAR ---
+
     var usuarioAEliminar by remember { mutableStateOf<Usuario?>(null) }
     var errorEliminar by remember { mutableStateOf<String?>(null) }
 
-    // --- LÓGICA DE PAGINACIÓN ---
+
     fun cargarUsuarios(reset: Boolean = false) {
         if (isLoading) return
         if (reset) {
@@ -146,7 +146,7 @@ fun GestionPersonalInternoScreen(
                             color = if (user.activo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                         )
 
-                        // 👇 FILA CON BOTONES EDITAR Y ELIMINAR
+
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
@@ -186,7 +186,7 @@ fun GestionPersonalInternoScreen(
         }
     }
 
-    // --- DIÁLOGO PARA CREAR NUEVO USUARIO INTERNO ---
+
     if (mostrarDialogoCrear) {
         AlertDialog(
             onDismissRequest = {
@@ -246,7 +246,7 @@ fun GestionPersonalInternoScreen(
         )
     }
 
-    // --- 👇 DIÁLOGO PARA EDITAR USUARIO ---
+
     if (usuarioAEditar != null) {
         AlertDialog(
             onDismissRequest = { usuarioAEditar = null },
@@ -277,12 +277,12 @@ fun GestionPersonalInternoScreen(
                             !Validaciones.esTextoValido(editNombre) -> editErrorNombre = "Caracteres inválidos"
                             editRut.isBlank() -> editErrorRut = "El RUT es obligatorio"
                             !Validaciones.esRutValido(editRut) -> editErrorRut = "RUT inválido"
-                            // Validamos si el RUT cambió y si ya existe en otro usuario
+
                             editRut != usuarioAEditar!!.rut && dbHelper.existeRut(editRut) -> editErrorRut = "El RUT ya está en uso"
 
                             editCorreo.isBlank() -> editErrorCorreo = "El correo es obligatorio"
                             !Validaciones.esCorreoValido(editCorreo) -> editErrorCorreo = "Formato de correo inválido"
-                            // Validamos si el correo cambió y si ya existe
+
                             editCorreo != usuarioAEditar!!.correo && dbHelper.existeCorreo(editCorreo) -> editErrorCorreo = "El correo ya está en uso"
 
                             else -> {
@@ -300,7 +300,7 @@ fun GestionPersonalInternoScreen(
         )
     }
 
-    // --- DIÁLOGO PARA ELIMINAR ---
+
     if (usuarioAEliminar != null) {
         AlertDialog(
             onDismissRequest = { usuarioAEliminar = null; errorEliminar = null },

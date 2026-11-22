@@ -11,28 +11,23 @@ import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.*
 import cl.duocuc.miregistro.ui.theme.Dimens
-import cl.duocuc.miregistro.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CambiarContrasenaScreen(
     usuarioActual: Usuario?,
     onVolver: () -> Unit,
-    onContrasenaCambiada: () -> Unit
+    onContrasenaCambiada: () -> Unit,
+    esClavePorDefecto: Boolean = false
 ) {
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-    // Obtenemos la contraseña real de la BD una sola vez
+
     val usuarioDb = remember { dbHelper.buscarPorId(usuarioActual?.id ?: 0L) }
     val contrasenaReal = usuarioDb?.contrasena ?: ""
 
-    // 👇 DETECTAMOS SI ES UNA CUENTA CON CONTRASEÑA POR DEFECTO
-    // Si la contraseña es "Induztek2026" o empieza con "PENDIENTE_", no pedimos la actual
-    val esClavePorDefecto = contrasenaReal == "Induztek2026" || contrasenaReal.startsWith("PENDIENTE_")
-
-    // Si es clave por defecto, ocultamos el campo "Contraseña Actual"
-    var actual by remember { mutableStateOf(if (esClavePorDefecto) contrasenaReal else "") }
+    var actual by remember { mutableStateOf("") }
     var nueva by remember { mutableStateOf("") }
     var confirmar by remember { mutableStateOf("") }
 
@@ -52,8 +47,11 @@ fun CambiarContrasenaScreen(
         return tieneMinimo && tieneMayuscula && tieneEspecial
     }
 
+
+    val onVolverSeguro = if (esClavePorDefecto) null else onVolver
+
     Scaffold(
-        topBar = { AppTopBar(titulo = "Cambiar Contraseña", onVolver = onVolver) }
+        topBar = { AppTopBar(titulo = "Cambiar Contraseña", onVolver = onVolverSeguro) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -63,10 +61,13 @@ fun CambiarContrasenaScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
         ) {
-            Text("Actualice su contraseña", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = if (esClavePorDefecto) "Su cuenta ha sido activada. Por seguridad, debe crear una nueva contraseña antes de continuar." else "Actualice su contraseña",
+                style = MaterialTheme.typography.titleMedium
+            )
             Text("Mínimo 6 caracteres, al menos una mayúscula y un carácter especial.", style = MaterialTheme.typography.bodySmall)
 
-            // 👇 MOSTRAMOS EL CAMPO ACTUAL SOLO SI NO ES CLAVE POR DEFECTO
+
             if (!esClavePorDefecto) {
                 CampoContrasena(
                     valor = actual,
@@ -104,7 +105,7 @@ fun CambiarContrasenaScreen(
             }
 
             BotonPrincipal(
-                texto = if (exito) "Volver" else "Cambiar Contraseña",
+                texto = if (exito) "Continuar" else "Cambiar Contraseña",
                 onClick = {
                     if (exito) {
                         onContrasenaCambiada()
@@ -114,14 +115,18 @@ fun CambiarContrasenaScreen(
                         errorConfirmar = null
 
                         when {
-                            // Si NO es clave por defecto, validamos la actual
+
                             !esClavePorDefecto && actual.isBlank() -> errorActual = "La contraseña actual es obligatoria"
                             !esClavePorDefecto && actual.trim() != contrasenaReal.trim() -> errorActual = "La contraseña actual es incorrecta"
+
                             nueva.isBlank() -> errorNueva = "La nueva contraseña es obligatoria"
                             !esContrasenaSegura(nueva) -> errorNueva = "Debe tener mínimo 6 caracteres, una mayúscula y un carácter especial"
-                            nueva == actual -> errorNueva = "La nueva contraseña no puede ser igual a la actual"
+                            nueva == "Induztek2026" -> errorNueva = "No puede usar la contraseña por defecto"
+                            !esClavePorDefecto && nueva == actual -> errorNueva = "La nueva contraseña no puede ser igual a la actual"
+
                             confirmar.isBlank() -> errorConfirmar = "Debe confirmar la contraseña"
                             nueva != confirmar -> errorConfirmar = "Las contraseñas no coinciden"
+
                             else -> {
                                 dbHelper.cambiarContrasena(usuarioActual!!.id, nueva)
                                 exito = true

@@ -13,7 +13,7 @@ fun TarjetaEquipo(
     equipo: Equipo,
     onVerHistorial: () -> Unit,
     onRegistrarPrueba: (() -> Unit)? = null,
-    onEliminar: (() -> Unit)? = null // 👈 NUEVO PARÁMETRO
+    onEliminar: (() -> Unit)? = null
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Dimens.espacioMedio)) {
@@ -42,7 +42,7 @@ fun TarjetaEquipo(
                 Text("Ver Historial (RF-10)")
             }
 
-            // 👇 BOTÓN ELIMINAR (Si se pasa el callback)
+
             if (onEliminar != null) {
                 Spacer(Modifier.height(Dimens.espacioMini))
                 Button(

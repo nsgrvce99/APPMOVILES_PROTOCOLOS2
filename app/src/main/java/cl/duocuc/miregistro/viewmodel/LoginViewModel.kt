@@ -26,7 +26,7 @@ class LoginViewModel(
         _uiState.update { it.copy(contrasena = contrasena, errorMensaje = null) }
     }
 
-    // 👇 AHORA RECIBE EL CALLBACK onRequiereCambio
+
     fun autenticar(onSuccess: (Long) -> Unit, onRequiereCambio: () -> Unit) {
         val currentState = _uiState.value
         if (currentState.correo.isBlank() || currentState.contrasena.isBlank()) {
@@ -39,7 +39,7 @@ class LoginViewModel(
         if (usuario != null) {
             sesionPrefs.guardar(usuario.id, usuario.rolId)
 
-            // 👇 VERIFICAMOS SI LA CONTRASEÑA ES AUTOMÁTICA
+
             if (usuario.contrasena.startsWith("PENDIENTE_") || usuario.contrasena == "Induztek2026") {
                 onRequiereCambio()
             } else {

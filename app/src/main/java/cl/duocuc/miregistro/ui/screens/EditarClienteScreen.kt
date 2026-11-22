@@ -97,7 +97,7 @@ fun EditarClienteScreen(
                     if (exito) {
                         onGuardadoExitoso()
                     } else {
-                        // 👇 VALIDACIÓN EN CASCADA
+
                         errorNombre = null
                         errorRut = null
                         errorCorreo = null

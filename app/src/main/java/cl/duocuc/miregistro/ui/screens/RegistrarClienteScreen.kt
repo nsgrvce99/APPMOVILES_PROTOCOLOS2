@@ -102,7 +102,7 @@ fun RegistrarClienteScreen(
             BotonPrincipal(
                 texto = "Registrar Empresa",
                 onClick = {
-                    // 👇 VALIDACIÓN EN CASCADA (El primero que falla, se detiene)
+
                     errorRazonSocial = null
                     errorRut = null
                     errorCorreo = null

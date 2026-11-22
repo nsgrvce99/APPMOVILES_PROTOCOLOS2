@@ -18,20 +18,20 @@ fun <T> SelectorDesplegablePaginado(
     etiqueta: String,
     itemSeleccionado: T?,
     textoDe: (T) -> String,
-    onBuscar: (String, Int, Int) -> List<T>, // query, limit, offset
+    onBuscar: (String, Int, Int) -> List<T>,
     onItemSeleccionado: (T) -> Unit
 ) {
     var mostrarDialogo by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
 
-    // Estados para la paginación
+
     var itemsList by remember { mutableStateOf<List<T>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var offset by remember { mutableIntStateOf(0) }
     var hasMore by remember { mutableStateOf(true) }
     val limit = 20
 
-    // Función para cargar datos (inicial o scroll)
+
     fun cargarDatos(reset: Boolean = false) {
         if (isLoading) return
         if (reset) {
@@ -46,16 +46,16 @@ fun <T> SelectorDesplegablePaginado(
 
         itemsList = itemsList + nuevosItems
         offset += limit
-        hasMore = nuevosItems.size == limit // Si trajo menos del límite, ya no hay más
+        hasMore = nuevosItems.size == limit
         isLoading = false
     }
 
-    // Cargar la primera vez o al cambiar la búsqueda
+
     LaunchedEffect(query) {
         cargarDatos(reset = true)
     }
 
-    // El campo que se ve en la pantalla
+
     OutlinedCard(
         onClick = { mostrarDialogo = true },
         modifier = Modifier.fillMaxWidth()
@@ -69,14 +69,14 @@ fun <T> SelectorDesplegablePaginado(
         }
     }
 
-    // El Diálogo con buscador y scroll infinito
+
     if (mostrarDialogo) {
         AlertDialog(
             onDismissRequest = { mostrarDialogo = false },
             title = { Text("Seleccionar $etiqueta") },
             text = {
                 Column(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
-                    // Buscador
+
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
@@ -86,16 +86,16 @@ fun <T> SelectorDesplegablePaginado(
                     )
                     Spacer(Modifier.height(8.dp))
 
-                    // Lista con Scroll Infinito
+
                     val listState = rememberLazyListState()
 
-                    // Detectar cuando llega al final de la lista
+
                     LaunchedEffect(listState) {
                         snapshotFlow {
                             val layoutInfo = listState.layoutInfo
                             val totalItems = layoutInfo.totalItemsCount
                             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                            lastVisibleItem >= totalItems - 3 // Cargar cuando falten 3 para el final
+                            lastVisibleItem >= totalItems - 3
                         }.collect { shouldLoadMore ->
                             if (shouldLoadMore) cargarDatos()
                         }

@@ -25,7 +25,7 @@ fun MisEquiposClienteScreen(
     onVerHistorialEquipo: (Long) -> Unit,
     onCerrarSesion: () -> Unit,
     onVerMiPerfil: () -> Unit,
-    onCambiarContrasena: () -> Unit // 👈 AGREGADO
+    onCambiarContrasena: () -> Unit
 ) {
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
@@ -44,7 +44,7 @@ fun MisEquiposClienteScreen(
         usuarioActual = usuarioActual,
         onCerrarSesion = onCerrarSesion,
         onVerMiPerfil = onVerMiPerfil,
-        onCambiarContrasena = onCambiarContrasena // 👈 AGREGADO
+        onCambiarContrasena = onCambiarContrasena
     ) { onAbrirMenu, snackbarHostState ->
         Scaffold(
             topBar = {

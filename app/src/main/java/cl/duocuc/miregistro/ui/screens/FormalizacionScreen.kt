@@ -31,7 +31,7 @@ fun FormalizacionScreen(
     var protocoloAObservar by remember { mutableStateOf<ProtocoloDetallado?>(null) }
     var motivoObservacion by remember { mutableStateOf("") }
 
-    // 👇 ESTADOS PARA EL DIÁLOGO DE FORMALIZAR CON COMENTARIO (RN-09)
+
     var mostrarDialogoFormalizar by remember { mutableStateOf(false) }
     var protocoloAFormalizar by remember { mutableStateOf<ProtocoloDetallado?>(null) }
     var comentarioVariacion by remember { mutableStateOf("") }
@@ -69,7 +69,7 @@ fun FormalizacionScreen(
                             protocolo = proto,
                             medicion = medicion,
                             onFormalizar = {
-                                // 👇 LÓGICA RN-09
+
                                 val hayVariacion = dbHelper.tieneVariacionSignificativa(proto.id)
                                 if (hayVariacion) {
                                     protocoloAFormalizar = proto
@@ -92,7 +92,7 @@ fun FormalizacionScreen(
         }
     }
 
-    // Diálogo para Observar
+
     if (mostrarDialogoObservar && protocoloAObservar != null) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoObservar = false },
@@ -129,7 +129,7 @@ fun FormalizacionScreen(
         )
     }
 
-    // 👇 DIÁLOGO PARA FORMALIZAR CON COMENTARIO (RN-09)
+
     if (mostrarDialogoFormalizar && protocoloAFormalizar != null) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoFormalizar = false },
@@ -149,7 +149,7 @@ fun FormalizacionScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        // 👇 GUARDAMOS EL COMENTARIO EN LA BASE DE DATOS
+
                         dbHelper.formalizarProtocoloConComentario(protocoloAFormalizar!!.id, comentarioVariacion)
                         recargar()
                         mostrarDialogoFormalizar = false

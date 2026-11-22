@@ -28,7 +28,7 @@ fun ListaEquiposScreen(
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-    // Estado para recargar la lista
+
     var equipos by remember { mutableStateOf(dbHelper.listarEquiposPorInstalacion(nombreInstalacion)) }
     var equipoAEliminar by remember { mutableStateOf<Equipo?>(null) }
     var mensajeError by remember { mutableStateOf<String?>(null) }
@@ -79,7 +79,7 @@ fun ListaEquiposScreen(
                             equipo = equipo,
                             onVerHistorial = { onVerHistorialEquipo(equipo.id.toLong()) },
                             onRegistrarPrueba = { onSeleccionarEquipoParaPrueba(equipo.id.toLong()) },
-                            onEliminar = { equipoAEliminar = equipo } // 👈 NUEVO CALLBACK
+                            onEliminar = { equipoAEliminar = equipo }
                         )
                     }
                 }
@@ -87,7 +87,7 @@ fun ListaEquiposScreen(
         }
     }
 
-    // Diálogo de confirmación para eliminar
+
     if (equipoAEliminar != null) {
         AlertDialog(
             onDismissRequest = { equipoAEliminar = null },

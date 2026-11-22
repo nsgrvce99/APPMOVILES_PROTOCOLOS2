@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 
 
-// --- Colores de marca (diseño propio) ---
+
 val Primario = Color(0xFF059669)
 val PrimarioOscuro = Color(0xFF0F766E)
 val PrimarioClaro = Color(0xFF10B981)
@@ -12,7 +12,7 @@ val Secundario = Color(0xFF090016)
 val Acento = Color(0xFF60A5FA)
 val AcentoOscuro = Color(0xFF4B5563)
 
-// --- Neutros ---
+
 val Blanco = Color(0xFFFFFFFF)
 val FondoClaro = Color(0xFFF3F4F6)
 val SuperficieClara = Color(0xFFFFFFFF)

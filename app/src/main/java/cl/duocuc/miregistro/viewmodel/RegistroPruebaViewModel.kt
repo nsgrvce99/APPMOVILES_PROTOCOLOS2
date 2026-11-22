@@ -70,6 +70,9 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
                 corrienteOperacion = "",
                 tiempoEsperado = "",
                 tiempoMedido = "",
+                lecturaDevanadoA = "",
+                lecturaDevanadoB = "",
+                lecturaDevanadoC = "",
                 resultadoPrueba = "Pendiente",
                 errorMedicion = null
             )
@@ -213,6 +216,21 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
         if (esEdicion && protocoloIdEditando != null) {
 
             dbHelper.actualizarProtocolo(protocoloIdEditando!!, state.temperaturaAmbiente, state.humedadRelativa, state.resultadoPrueba)
+            dbHelper.actualizarMedicion(
+                protocoloId = protocoloIdEditando!!,
+                tipoPrueba = state.tipoPrueba,
+                lectura1 = state.lectura1Min,
+                lectura10 = state.lectura10Min,
+                ip = state.resultadoPrueba,
+                instrumentoId = instrumento.id,
+                corrienteAjuste = state.corrienteAjuste,
+                corrienteOperacion = state.corrienteOperacion,
+                tiempoEsperado = state.tiempoEsperado,
+                tiempoMedido = state.tiempoMedido,
+                devanadoA = state.lecturaDevanadoA,
+                devanadoB = state.lecturaDevanadoB,
+                devanadoC = state.lecturaDevanadoC
+            )
             _uiState.update { it.copy(guardadoExitoso = true, protocoloGuardadoId = protocoloIdEditando) }
         } else {
 

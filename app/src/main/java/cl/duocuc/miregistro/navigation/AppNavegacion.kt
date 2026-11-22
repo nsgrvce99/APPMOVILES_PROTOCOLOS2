@@ -1,5 +1,6 @@
 package cl.duocuc.miregistro.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,8 +39,17 @@ fun AppNavegacion() {
         }
     }
 
+
+    val usuarioDbInicial = if (sesionPrefs.haySesionActiva()) dbHelper.buscarPorId(sesionPrefs.leer()) else null
     val startDestination = if (sesionPrefs.haySesionActiva()) {
-        if (sesionPrefs.leerRol() == 4L) Ruta.MisEquiposCliente.ruta else Ruta.Instalaciones.ruta
+
+        if (usuarioDbInicial?.contrasena == "Induztek2026") {
+            Ruta.CambiarContrasena.crear(esObligatorio = true)
+        } else if (sesionPrefs.leerRol() == 4L) {
+            Ruta.MisEquiposCliente.ruta
+        } else {
+            Ruta.Instalaciones.ruta
+        }
     } else {
         Ruta.Login.ruta
     }
@@ -63,8 +73,9 @@ fun AppNavegacion() {
                         popUpTo(Ruta.Login.ruta) { inclusive = true }
                     }
                 },
-                onRequiereCambio = { // 👈 NUEVO CALLBACK
-                    navController.navigate(Ruta.CambiarContrasena.ruta) {
+                onRequiereCambio = {
+
+                    navController.navigate(Ruta.CambiarContrasena.crear(esObligatorio = true)) {
                         popUpTo(Ruta.Login.ruta) { inclusive = true }
                     }
                 },
@@ -81,17 +92,36 @@ fun AppNavegacion() {
         }
 
         // ---- CAMBIO DE CONTRASEÑA ----
-        composable(Ruta.CambiarContrasena.ruta) {
+        composable(
+            route = Ruta.CambiarContrasena.ruta,
+            arguments = listOf(
+                navArgument("esObligatorio") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
+
+            val esObligatorio = backStackEntry.arguments?.getBoolean("esObligatorio") ?: false
+
+
+            if (esObligatorio) {
+                BackHandler {
+
+                }
+            }
+
             CambiarContrasenaScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() },
                 onContrasenaCambiada = {
-                    // Al cambiar la contraseña, lo mandamos a su pantalla principal
                     val destino = if (usuarioActual?.rolId == 4L) Ruta.MisEquiposCliente.ruta else Ruta.Instalaciones.ruta
                     navController.navigate(destino) {
-                        popUpTo(Ruta.CambiarContrasena.ruta) { inclusive = true }
+
+                        popUpTo(0) { inclusive = true }
                     }
-                }
+                },
+                esClavePorDefecto = esObligatorio
             )
         }
 
@@ -113,7 +143,8 @@ fun AppNavegacion() {
                     navController.navigate(Ruta.Login.ruta) { popUpTo(0) { inclusive = true } }
                 },
                 onVerMiPerfil = { navController.navigate(Ruta.Perfil.ruta) },
-                onCambiarContrasena = { navController.navigate(Ruta.CambiarContrasena.ruta) } // 👈 NUEVO
+
+                onCambiarContrasena = { navController.navigate(Ruta.CambiarContrasena.crear(esObligatorio = false)) }
             )
         }
 
@@ -139,11 +170,10 @@ fun AppNavegacion() {
                 onVerMisPruebas = { navController.navigate(Ruta.MisProtocolos.ruta) },
                 onVerListaClientes = { navController.navigate(Ruta.ListaClientes.ruta) },
                 onVerResumenVisita = { navController.navigate(Ruta.ResumenVisita.ruta) },
-                onCambiarContrasena = { navController.navigate(Ruta.CambiarContrasena.ruta) } // 👈 NUEVO
+
+                onCambiarContrasena = { navController.navigate(Ruta.CambiarContrasena.crear(esObligatorio = false)) }
             )
         }
-
-        // ... (El resto de las rutas se mantienen igual: ListaEquipos, RegistrarEquipo, RegistroPrueba, HistorialEquipo, Formalizacion, CierreVisita, ResumenVisita, MisProtocolos, EditarProtocolo, GestionInstrumentos, CrearCliente, EditarCliente, ListaClientes, CrearInstalacion, RegistrarCliente, DetalleProtocolo) ...
 
         // ---- LISTA DE EQUIPOS ----
         composable(
@@ -313,7 +343,6 @@ fun AppNavegacion() {
                 onEditarCliente = { cliente ->
                     navController.navigate(Ruta.EditarCliente.crear(cliente.id))
                 },
-                // 👇 AGREGAMOS ESTE NUEVO CALLBACK
                 onGestionarPersonalInterno = {
                     navController.navigate(Ruta.GestionPersonalInterno.ruta)
                 }
@@ -374,12 +403,13 @@ fun AppNavegacion() {
                 onVolver = { navController.navigateUp() }
             )
         }
+
+        // ---- GESTIÓN PERSONAL INTERNO ----
         composable(Ruta.GestionPersonalInterno.ruta) {
             GestionPersonalInternoScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() }
             )
         }
-
     }
 }

@@ -28,7 +28,7 @@ fun MisProtocolosScreen(
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-    // --- ESTADOS PARA PAGINACIÓN ---
+
     var misProtocolos by remember { mutableStateOf<List<ProtocoloDetallado>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var offset by remember { mutableIntStateOf(0) }
@@ -36,11 +36,11 @@ fun MisProtocolosScreen(
     val limit = 20
     val listState = rememberLazyListState()
 
-    // --- ESTADOS PARA ELIMINACIÓN ---
+
     var protocoloAEliminar by remember { mutableStateOf<ProtocoloDetallado?>(null) }
     var errorEliminar by remember { mutableStateOf<String?>(null) }
 
-    // --- LÓGICA DE PAGINACIÓN ---
+
     fun cargarProtocolos(reset: Boolean = false) {
         if (isLoading) return
         if (reset) {
@@ -59,12 +59,12 @@ fun MisProtocolosScreen(
         isLoading = false
     }
 
-    // Carga inicial
+
     LaunchedEffect(Unit) {
         cargarProtocolos(reset = true)
     }
 
-    // Detectar scroll para cargar más
+
     LaunchedEffect(listState) {
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
@@ -88,7 +88,7 @@ fun MisProtocolosScreen(
             }
         } else {
             LazyColumn(
-                state = listState, // 👈 Vinculamos el estado del scroll
+                state = listState,
                 modifier = Modifier.fillMaxSize().padding(innerPadding).padding(Dimens.espacioMedio),
                 verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
             ) {
@@ -100,12 +100,12 @@ fun MisProtocolosScreen(
                         onVerDetalle = { onVerDetalleProtocolo(proto.id) },
                         onCerrarBorrador = {
                             dbHelper.cerrarBorrador(proto.id)
-                            cargarProtocolos(reset = true) // 👈 Recargamos la lista paginada
+                            cargarProtocolos(reset = true)
                         }
                     )
                 }
 
-                // --- INDICADOR DE CARGA AL FINAL ---
+
                 if (isLoading) {
                     item {
                         Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
@@ -117,7 +117,7 @@ fun MisProtocolosScreen(
         }
     }
 
-    // --- DIÁLOGO DE ELIMINACIÓN CON CONTROL DE ERRORES ---
+
     if (protocoloAEliminar != null) {
         AlertDialog(
             onDismissRequest = {
@@ -141,7 +141,7 @@ fun MisProtocolosScreen(
                             dbHelper.eliminarProtocolo(protocoloAEliminar!!.id)
                             protocoloAEliminar = null
                             errorEliminar = null
-                            cargarProtocolos(reset = true) // 👈 Recargamos la lista paginada
+                            cargarProtocolos(reset = true)
                         } catch (e: Exception) {
                             errorEliminar = e.message ?: "Error al eliminar el protocolo."
                         }

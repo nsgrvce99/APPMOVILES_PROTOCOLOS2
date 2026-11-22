@@ -12,6 +12,7 @@ data class Usuario(
     val rolNombre: String? = null,
     val activo: Boolean = true,
     val giro: String? = null,
-    val cargo: String? = null
+    val cargo: String? = null,
+    val fotoUri: String? = null
 
 )

@@ -11,8 +11,9 @@ class UsuarioDbHelper(context: Context) :
     SQLiteOpenHelper(context, NOMBRE_BD, null, VERSION_BD) {
 
     companion object {
+        private const val USU_FOTO = "foto_uri"
         private const val NOMBRE_BD = "induztekterreno.db"
-        private const val VERSION_BD = 14
+        private const val VERSION_BD = 16
 
         // ---- ROL ----
         private const val TABLA_ROLES = "rol"
@@ -120,6 +121,7 @@ class UsuarioDbHelper(context: Context) :
                     "$USU_GIRO TEXT, " +
                     "$USU_CONTACTO_NOMBRE TEXT, " +
                     "$USU_CONTACTO_CARGO TEXT, " +
+                    "$USU_FOTO TEXT, " +
                     "FOREIGN KEY ($USU_ROL) REFERENCES $TABLA_ROLES($ROL_ID))"
 
         private const val SQL_CREAR_INSTRUMENTOS =
@@ -347,6 +349,7 @@ class UsuarioDbHelper(context: Context) :
         put(USU_ROL, usuario.rolId.toInt())
         put(USU_ACTIVO, if (usuario.activo) 1 else 0)
         put(USU_GIRO, usuario.giro)
+        put(USU_FOTO, usuario.fotoUri)
     }
 
     private fun consultarUsuarios(sql: String, args: Array<String>?): List<Usuario> {
@@ -359,7 +362,7 @@ class UsuarioDbHelper(context: Context) :
         return lista
     }
     fun eliminarEquipo(equipoId: Long) {
-        // 1. Verificamos si tiene protocolos asociados
+
         val cursor = readableDatabase.rawQuery(
             "SELECT COUNT(*) FROM $TABLA_PROTOCOLOS WHERE $PRO_EQUIPO_ID = ?",
             arrayOf(equipoId.toString())
@@ -370,11 +373,11 @@ class UsuarioDbHelper(context: Context) :
             }
         }
 
-        // 2. Si no tiene protocolos, lo eliminamos
+
         writableDatabase.delete(TABLA_EQUIPOS, "$EQ_ID = ?", arrayOf(equipoId.toString()))
     }
     fun eliminarInstalacion(nombreInstalacion: String) {
-        // Verificamos si tiene equipos asociados
+
         val cursor = readableDatabase.rawQuery(
             "SELECT COUNT(*) FROM $TABLA_EQUIPOS WHERE $EQ_INSTALACION = ?",
             arrayOf(nombreInstalacion)
@@ -384,7 +387,7 @@ class UsuarioDbHelper(context: Context) :
                 throw Exception("No se puede eliminar: la planta tiene equipos registrados.")
             }
         }
-        // Si no tiene, la eliminamos
+
         writableDatabase.delete(TABLA_INSTALACIONES, "$INST_NOMBRE = ?", arrayOf(nombreInstalacion))
     }
 
@@ -397,7 +400,8 @@ class UsuarioDbHelper(context: Context) :
         rolId = cursor.getLong(cursor.getColumnIndexOrThrow(USU_ROL)),
         rolNombre = cursor.getString(cursor.getColumnIndexOrThrow("rol_nombre")),
         activo = cursor.getInt(cursor.getColumnIndexOrThrow(USU_ACTIVO)) == 1,
-        giro = cursor.getString(cursor.getColumnIndexOrThrow(USU_GIRO))
+        giro = cursor.getString(cursor.getColumnIndexOrThrow(USU_GIRO)),
+        fotoUri = cursor.getString(cursor.getColumnIndexOrThrow(USU_FOTO))
     )
 
     // ---------------- EQUIPOS ----------------
@@ -585,7 +589,7 @@ class UsuarioDbHelper(context: Context) :
                     lectura10Min = cursor.getString(cursor.getColumnIndexOrThrow(MED_LECTURA_10MIN)) ?: "",
                     indicePolarizacion = cursor.getString(cursor.getColumnIndexOrThrow(MED_IP)) ?: "",
                     instrumentoId = cursor.getLong(cursor.getColumnIndexOrThrow(MED_INSTRUMENTO_ID)),
-                    // Nuevos campos:
+
                     corrienteAjuste = cursor.getString(cursor.getColumnIndexOrThrow(MED_CORRIENTE_AJUSTE)) ?: "",
                     corrienteOperacion = cursor.getString(cursor.getColumnIndexOrThrow(MED_CORRIENTE_OPERACION)) ?: "",
                     tiempoEsperado = cursor.getString(cursor.getColumnIndexOrThrow(MED_TIEMPO_ESPERADO)) ?: "",
@@ -889,6 +893,46 @@ class UsuarioDbHelper(context: Context) :
             false
         }
     }
+
+    fun actualizarMedicion(
+        protocoloId: Long,
+        tipoPrueba: String,
+        lectura1: String,
+        lectura10: String,
+        ip: String,
+        instrumentoId: Long,
+        corrienteAjuste: String,
+        corrienteOperacion: String,
+        tiempoEsperado: String,
+        tiempoMedido: String,
+        devanadoA: String,
+        devanadoB: String,
+        devanadoC: String
+    ): Boolean {
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            put(MED_TIPO_PRUEBA, tipoPrueba)
+            put(MED_LECTURA_1MIN, lectura1)
+            put(MED_LECTURA_10MIN, lectura10)
+            put(MED_IP, ip)
+            put(MED_INSTRUMENTO_ID, instrumentoId)
+            put(MED_CORRIENTE_AJUSTE, corrienteAjuste)
+            put(MED_CORRIENTE_OPERACION, corrienteOperacion)
+            put(MED_TIEMPO_ESPERADO, tiempoEsperado)
+            put(MED_TIEMPO_MEDIDO, tiempoMedido)
+            put(MED_DEVANADO_A, devanadoA)
+            put(MED_DEVANADO_B, devanadoB)
+            put(MED_DEVANADO_C, devanadoC)
+        }
+
+        val rowsAffected = db.update(
+            TABLA_MEDICIONES,
+            values,
+            "$MED_PROTOCOLO_ID = ?",
+            arrayOf(protocoloId.toString())
+        )
+        return rowsAffected > 0
+    }
     fun existeRut(rut: String): Boolean {
         readableDatabase.rawQuery(
             "SELECT COUNT(*) FROM $TABLA_USUARIOS WHERE $USU_RUT = ?",
@@ -999,7 +1043,7 @@ class UsuarioDbHelper(context: Context) :
         val protocoloActual = obtenerProtocoloPorId(protocoloId) ?: return false
         val medicionActual = obtenerMedicionDeProtocolo(protocoloId) ?: return false
 
-        // Buscamos el protocolo anterior del mismo equipo, con el mismo tipo de prueba
+
         val sql = "SELECT p.id_protocolo FROM protocolo p " +
                 "INNER JOIN medicion m ON m.id_protocolo = p.id_protocolo " +
                 "WHERE p.id_equipo = ? AND m.tipo_prueba = ? AND p.id_protocolo < ? " +
@@ -1051,11 +1095,11 @@ class UsuarioDbHelper(context: Context) :
         return lista
     }
 
-    // --- PAGINACIÓN Y BÚSQUEDA DE EQUIPOS (por instalación) ---
+
     fun buscarEquiposPaginado(clienteId: Long, query: String, limit: Int, offset: Int): List<Equipo> {
         val lista = mutableListOf<Equipo>()
         val filtro = "%$query%"
-        // Si clienteId es 0, busca en todos, si no, filtra por cliente
+
         val sql = if (clienteId > 0) {
             "SELECT * FROM $TABLA_EQUIPOS WHERE $EQ_ID_CLIENTE = ? AND ($EQ_TAG LIKE ? OR $EQ_INSTALACION LIKE ?) ORDER BY $EQ_TAG ASC LIMIT ? OFFSET ?"
         } else {
@@ -1112,7 +1156,7 @@ class UsuarioDbHelper(context: Context) :
     fun listarClientesPaginado(query: String, limit: Int, offset: Int): List<Usuario> {
         val lista = mutableListOf<Usuario>()
         val filtro = "%$query%"
-        // Buscamos solo el rol 4 (CLIENTE) y filtramos por nombre, rut o correo
+
         val sql = """
         SELECT u.*, r.$ROL_CODIGO AS rol_codigo, r.$ROL_NOMBRE AS rol_nombre 
         FROM $TABLA_USUARIOS u 
@@ -1231,5 +1275,11 @@ class UsuarioDbHelper(context: Context) :
             put(USU_ROL, rolId.toInt())
         }
         writableDatabase.update(TABLA_USUARIOS, values, "$USU_ID = ?", arrayOf(id.toString()))
+    }
+    fun actualizarFotoUsuario(idUsuario: Long, nuevaFotoUri: String?) {
+        val values = ContentValues().apply {
+            put(USU_FOTO, nuevaFotoUri)
+        }
+        writableDatabase.update(TABLA_USUARIOS, values, "$USU_ID = ?", arrayOf(idUsuario.toString()))
     }
 }

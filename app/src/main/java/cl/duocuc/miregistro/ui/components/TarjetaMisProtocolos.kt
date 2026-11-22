@@ -33,7 +33,7 @@ fun TarjetaMisProtocolos(
 
 
             val (textoEstado, colorEstado) = when (protocolo.estado) {
-                "BORRADOR" -> "Borrador (Sin cerrar)" to MaterialTheme.colorScheme.secondary // 👈 NUEVO ESTADO
+                "BORRADOR" -> "Borrador (Sin cerrar)" to MaterialTheme.colorScheme.secondary
                 "REGISTRADO_TERRENO" -> "Pendiente de formalización" to MaterialTheme.colorScheme.primary
                 "FORMALIZADO" -> "Formalizado" to MaterialTheme.colorScheme.tertiary
                 "PRECAUCION", "OBSERVADO" -> "Precaución (Requiere revisión)" to MaterialTheme.colorScheme.error

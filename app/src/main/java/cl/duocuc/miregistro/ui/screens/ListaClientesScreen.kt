@@ -26,7 +26,7 @@ fun ListaClientesScreen(
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-    // --- ESTADOS PARA PAGINACIÓN Y BÚSQUEDA ---
+
     var query by remember { mutableStateOf("") }
     var clientes by remember { mutableStateOf<List<Usuario>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
@@ -35,11 +35,11 @@ fun ListaClientesScreen(
     val limit = 20
     val listState = rememberLazyListState()
 
-    // --- ESTADOS PARA ELIMINACIÓN ---
+
     var clienteAEliminar by remember { mutableStateOf<Usuario?>(null) }
     var errorEliminar by remember { mutableStateOf<String?>(null) }
 
-    // --- VALIDACIÓN DE ROLES (Mantenida del rollback) ---
+
     val puedeVer = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
     if (!puedeVer) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -48,7 +48,7 @@ fun ListaClientesScreen(
         return
     }
 
-    // --- LÓGICA DE PAGINACIÓN ---
+
     fun cargarClientes(reset: Boolean = false) {
         if (isLoading) return
         if (reset) {
@@ -86,7 +86,7 @@ fun ListaClientesScreen(
         topBar = { AppTopBar(titulo = "Directorio de Empresas", onVolver = onVolver) }
     ) { innerPadding ->
         if (clientes.isEmpty() && !isLoading && query.isBlank()) {
-            // Validación original si no hay clientes en absoluto
+
             Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                 Text("No hay empresas registradas.")
             }
@@ -96,7 +96,7 @@ fun ListaClientesScreen(
                 modifier = Modifier.fillMaxSize().padding(innerPadding).padding(Dimens.espacioMedio),
                 verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
             ) {
-                // --- BUSCADOR ---
+
                 item {
                     OutlinedTextField(
                         value = query,
@@ -108,7 +108,7 @@ fun ListaClientesScreen(
                     Spacer(Modifier.height(Dimens.espacioMedio))
                 }
 
-                // --- LISTA DE CLIENTES ---
+
                 items(clientes) { cliente ->
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(Dimens.espacioMedio)) {
@@ -136,7 +136,7 @@ fun ListaClientesScreen(
                     }
                 }
 
-                // --- INDICADOR DE CARGA Y MENSAJE DE BÚSQUEDA VACÍA ---
+
                 if (isLoading) {
                     item {
                         Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
@@ -155,7 +155,7 @@ fun ListaClientesScreen(
         }
     }
 
-    // --- DIÁLOGO DE ELIMINACIÓN (Mantenido del rollback) ---
+
     if (clienteAEliminar != null) {
         AlertDialog(
             onDismissRequest = { clienteAEliminar = null; errorEliminar = null },
@@ -174,7 +174,7 @@ fun ListaClientesScreen(
                     onClick = {
                         try {
                             dbHelper.eliminarCliente(clienteAEliminar!!.id)
-                            cargarClientes(reset = true) // 👈 Recargamos la lista paginada
+                            cargarClientes(reset = true)
                             clienteAEliminar = null
                             errorEliminar = null
                         } catch (e: Exception) {

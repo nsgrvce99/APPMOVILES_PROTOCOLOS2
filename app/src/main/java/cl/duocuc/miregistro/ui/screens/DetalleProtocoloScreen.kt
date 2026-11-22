@@ -92,7 +92,7 @@ fun DetalleProtocoloScreen(
                     }
                 }
 
-                // --- 👇 CARD DEL COMENTARIO DE VARIACIÓN ---
+
                 if (protocolo.comentarioVariacion != null && protocolo.comentarioVariacion!!.isNotBlank()) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),

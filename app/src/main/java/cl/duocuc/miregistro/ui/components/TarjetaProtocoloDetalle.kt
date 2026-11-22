@@ -5,14 +5,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import cl.duocuc.miregistro.model.Medicion // 👈 Nueva importación
+import cl.duocuc.miregistro.model.Medicion
 import cl.duocuc.miregistro.model.ProtocoloDetallado
 import cl.duocuc.miregistro.ui.theme.Dimens
 
 @Composable
 fun TarjetaProtocoloDetalle(
     protocolo: ProtocoloDetallado,
-    medicion: Medicion?, // 👈 NUEVO PARÁMETRO
+    medicion: Medicion?,
     onFormalizar: () -> Unit,
     onObservar: () -> Unit
 ) {
@@ -29,7 +29,7 @@ fun TarjetaProtocoloDetalle(
             HorizontalDivider()
             Spacer(Modifier.height(Dimens.espacioChico))
 
-            // Detalles del técnico y la prueba
+
             Text(" Técnico: ${protocolo.tecnicoNombre}", style = MaterialTheme.typography.bodyMedium)
             Text(" Fecha: ${protocolo.fecha}", style = MaterialTheme.typography.bodyMedium)
 
@@ -39,7 +39,7 @@ fun TarjetaProtocoloDetalle(
 
             Text(" Resultado: ${protocolo.resultadoGlobal}", color = colorResultado, style = MaterialTheme.typography.titleMedium)
 
-            // 👇 NUEVO BLOQUE PARA MOSTRAR LAS MEDICIONES
+
             if (medicion != null) {
                 Spacer(Modifier.height(Dimens.espacioChico))
                 Text("Mediciones registradas:", style = MaterialTheme.typography.labelLarge)
@@ -70,7 +70,7 @@ fun TarjetaProtocoloDetalle(
                     }
                 }
             }
-            // 👆 FIN DEL NUEVO BLOQUE
+
 
             Spacer(Modifier.height(Dimens.espacioMedio))
 

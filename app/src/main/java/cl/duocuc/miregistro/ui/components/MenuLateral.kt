@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import cl.duocuc.miregistro.R
@@ -18,7 +17,7 @@ fun MenuLateral(
     onCerrarSesion: () -> Unit,
     onVerMiPerfil: () -> Unit = {},
     onVerUsuarios: () -> Unit = {},
-    onCambiarContrasena: () -> Unit = {}, // 👈 AGREGADO
+    onCambiarContrasena: () -> Unit = {},
     content: @Composable (onAbrirMenu: () -> Unit, snackbarHostState: SnackbarHostState) -> Unit
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -60,25 +59,24 @@ fun MenuLateral(
                 )
                 HorizontalDivider()
 
-                if (usuarioActual != null) {
-                    NavigationDrawerItem(
-                        label = { Text("Mi Perfil / Datos de Técnico") },
-                        selected = false,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            onVerMiPerfil()
-                        }
-                    )
-                    // 👇 NUEVO ITEM: CAMBIAR CONTRASEÑA
-                    NavigationDrawerItem(
-                        label = { Text("Cambiar Contraseña") },
-                        selected = false,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            onCambiarContrasena()
-                        }
-                    )
-                }
+
+                NavigationDrawerItem(
+                    label = { Text("Mi Perfil / Datos de Técnico") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onVerMiPerfil()
+                    }
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Cambiar Contraseña") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onCambiarContrasena()
+                    }
+                )
 
                 NavigationDrawerItem(
                     label = { Text("Consultar Equipos e Historial") },
@@ -89,16 +87,17 @@ fun MenuLateral(
                     }
                 )
 
-                if (usuarioActual != null) {
-                    NavigationDrawerItem(
-                        label = { Text(stringResource(R.string.menu_cerrar_sesion)) },
-                        selected = false,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            mostrarDialogo = true
-                        }
-                    )
-                }
+                HorizontalDivider()
+
+
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.menu_cerrar_sesion)) },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        mostrarDialogo = true
+                    }
+                )
             }
         }
     ) {

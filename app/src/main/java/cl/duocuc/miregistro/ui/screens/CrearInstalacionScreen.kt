@@ -24,7 +24,7 @@ fun CrearInstalacionScreen(
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-    // Permiso para Técnico (1), Ingeniero (2) y Jefe (3)
+
     val puedeCrear = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
     if (!puedeCrear) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -33,7 +33,7 @@ fun CrearInstalacionScreen(
         return
     }
 
-    // Cargamos la lista de clientes desde SQLite
+
     val clientes = remember { dbHelper.listarClientes() }
 
     var nombreInstalacion by remember { mutableStateOf("") }
@@ -54,7 +54,7 @@ fun CrearInstalacionScreen(
         ) {
             Text("Nueva Planta / Instalación", style = MaterialTheme.typography.titleMedium)
 
-            // 👇 SELECTOR DE CLIENTE (Obligatorio)
+
             if (clientes.isEmpty()) {
                 Text(
                     "⚠️ No hay empresas clientes registradas. Primero debes registrar una empresa en 'Registrar Empresa Cliente'.",
@@ -70,7 +70,7 @@ fun CrearInstalacionScreen(
                 )
             }
 
-            // Nombre de la planta
+
             CampoTexto(
                 valor = nombreInstalacion,
                 onValorCambia = { nombreInstalacion = it; error = null },
@@ -89,7 +89,7 @@ fun CrearInstalacionScreen(
                     } else if (clienteSeleccionado == null) {
                         error = "Debes asociar la planta a una empresa cliente"
                     } else {
-                        // 👇 AHORA USAMOS EL ID DEL CLIENTE SELECCIONADO
+
                         val id = dbHelper.insertarInstalacion(nombreInstalacion, clienteSeleccionado!!.id)
                         if (id > 0) {
                             exito = true

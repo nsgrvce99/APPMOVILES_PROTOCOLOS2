@@ -37,7 +37,7 @@ fun RegistrarEquipoScreen(
 
     var exito by remember { mutableStateOf(false) }
     var plantaSeleccionada by remember {
-        // Si viene con datos previos, los pre-cargamos
+
         mutableStateOf<Pair<Long, String>?>(instalacionId.takeIf { it > 0 }?.let { Pair(it, nombreInstalacion) })
     }
     val tiposEquipo = listOf("Transformador", "Interruptor", "Celda MT", "Cable de poder", "Relé de protección")
@@ -111,7 +111,7 @@ fun RegistrarEquipoScreen(
                     if (exito) {
                         onEquipoRegistrado()
                     } else {
-                        // 👇 VALIDACIÓN EN CASCADA
+
                         errorTag = null
                         errorMarca = null
                         errorSerie = null

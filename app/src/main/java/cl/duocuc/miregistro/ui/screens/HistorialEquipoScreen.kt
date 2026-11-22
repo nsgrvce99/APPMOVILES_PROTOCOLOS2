@@ -29,22 +29,22 @@ fun HistorialEquipoScreen(
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-    // 👇 NUEVO: Buscamos el equipo para obtener su TAG
+
     val equipo = remember(equipoId) { dbHelper.buscarEquipoPorId(equipoId) }
 
     val esCliente = usuarioActual?.rolId == 4L
 
-    // --- ESTADOS PARA PAGINACIÓN ---
+
     var protocolos by remember { mutableStateOf<List<Protocolo>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var offset by remember { mutableIntStateOf(0) }
     var hasMore by remember { mutableStateOf(true) }
-    val limit = 10 // Puedes ajustar el límite (10 o 20)
+    val limit = 10
     val listState = rememberLazyListState()
 
 
 
-    // --- LÓGICA DE PAGINACIÓN ---
+
     fun cargarHistorial(reset: Boolean = false) {
         if (isLoading) return
         if (reset) {
@@ -81,7 +81,7 @@ fun HistorialEquipoScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                // 👇 TÍTULO MODIFICADO
+
                 titulo = "Historial de Equipo: ${equipo?.tag ?: "ID $equipoId"}",
                 onVolver = onVolver
             )
@@ -99,13 +99,10 @@ fun HistorialEquipoScreen(
                 verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
             ) {
                 items(protocolos) { protocolo ->
-                    // Buscamos la medición actual
+
                     val medicion = dbHelper.obtenerMedicionDeProtocolo(protocolo.id)
 
-                    // Buscamos la medición ANTERIOR.
-                    // Ojo: Como estamos paginando, el "anterior" podría no estar en la lista actual.
-                    // Para solucionar esto de forma limpia, podrías consultar el anterior directo a la BD.
-                    // Pero para no complicar el código, usamos el índice actual.
+
                     val indiceActual = protocolos.indexOf(protocolo)
                     val protocoloAnterior = protocolos.getOrNull(indiceActual + 1)
                     val medicionAnterior = protocoloAnterior?.let { dbHelper.obtenerMedicionDeProtocolo(it.id) }
@@ -196,7 +193,7 @@ fun HistorialEquipoScreen(
                     }
                 }
 
-                // --- INDICADOR DE CARGA AL FINAL ---
+
                 if (isLoading) {
                     item {
                         Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {

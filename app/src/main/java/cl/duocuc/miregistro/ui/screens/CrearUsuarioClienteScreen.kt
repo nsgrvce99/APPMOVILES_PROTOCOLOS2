@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,7 +24,7 @@ fun CrearUsuarioClienteScreen(
     usuarioActual: Usuario?,
     onVolver: () -> Unit,
     onEditarCliente: (Usuario) -> Unit,
-    onGestionarPersonalInterno: () -> Unit // 👈 NUEVO PARÁMETRO
+    onGestionarPersonalInterno: () -> Unit
 ) {
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
@@ -33,7 +36,11 @@ fun CrearUsuarioClienteScreen(
         return
     }
 
-    // --- ESTADOS PARA PAGINACIÓN Y BÚSQUEDA ---
+
+    var expandirPersonalInterno by remember { mutableStateOf(false) }
+    var expandirClientes by remember { mutableStateOf(false) }
+
+
     var query by remember { mutableStateOf("") }
     var clientes by remember { mutableStateOf<List<Usuario>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
@@ -42,11 +49,11 @@ fun CrearUsuarioClienteScreen(
     val limit = 20
     val listState = rememberLazyListState()
 
-    // --- ESTADOS PARA ELIMINACIÓN ---
+
     var clienteAEliminar by remember { mutableStateOf<Usuario?>(null) }
     var errorEliminar by remember { mutableStateOf<String?>(null) }
 
-    // --- LÓGICA DE PAGINACIÓN ---
+
     fun cargarClientes(reset: Boolean = false) {
         if (isLoading) return
         if (reset) {
@@ -85,100 +92,125 @@ fun CrearUsuarioClienteScreen(
     ) { innerPadding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(Dimens.espacioMedio),
-            verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(Dimens.espacioMedio),
+            verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
         ) {
-            // --- TÍTULO, BOTÓN DE PERSONAL INTERNO Y BUSCADOR ---
+
             item {
-                Text("Clientes registrados en el sistema:", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(Dimens.espacioChico))
-
-                // 👇 NUEVO BOTÓN PARA IR A PERSONAL INTERNO
-                Button(
-                    onClick = onGestionarPersonalInterno,
-                    modifier = Modifier.fillMaxWidth()
+                AcordeonSeccion(
+                    titulo = "Personal Interno",
+                    icono = Icons.Default.People,
+                    expandido = expandirPersonalInterno,
+                    onToggle = { expandirPersonalInterno = !expandirPersonalInterno }
                 ) {
-                    Text("Gestionar Personal Interno (Técnicos / Jefes)")
+                    Text(
+                        text = "Gestione las cuentas de técnicos, ingenieros y jefes técnicos.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(Dimens.espacioChico))
+                    Button(
+                        onClick = onGestionarPersonalInterno,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Gestionar Personal Interno (Técnicos / Jefes)")
+                    }
                 }
-
-                Spacer(Modifier.height(Dimens.espacioMedio))
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    label = { Text("Buscar por nombre, RUT o correo...") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                Spacer(Modifier.height(Dimens.espacioChico))
             }
 
-            // --- LISTA DE CLIENTES ---
-            items(clientes) { cliente ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(Dimens.espacioMedio)) {
-                        Text(cliente.nombre, style = MaterialTheme.typography.titleMedium)
-                        Text("RUT: ${cliente.rut} | Correo: ${cliente.correo}")
-                        Text(
-                            "Estado: " + if (cliente.activo) "ACTIVO" else "INACTIVO",
-                            color = if (cliente.activo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+
+            item {
+                AcordeonSeccion(
+                    titulo = "Clientes",
+                    icono = Icons.Default.Person,
+                    expandido = expandirClientes,
+                    onToggle = { expandirClientes = !expandirClientes }
+                ) {
+                    Column {
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            label = { Text("Buscar por nombre, RUT o correo...") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = Dimens.espacioMedio),
+                            singleLine = true
                         )
 
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
-                        ) {
-                            OutlinedButton(
-                                onClick = { onEditarCliente(cliente) },
-                                modifier = Modifier.weight(1f)
+
+                        clientes.forEach { cliente ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = Dimens.espacioChico)
                             ) {
-                                Text("Editar")
-                            }
-                            Button(
-                                onClick = {
-                                    clienteAEliminar = cliente
-                                    errorEliminar = null
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Eliminar")
+                                Column(Modifier.padding(Dimens.espacioMedio)) {
+                                    Text(cliente.nombre, style = MaterialTheme.typography.titleMedium)
+                                    Text("RUT: ${cliente.rut} | Correo: ${cliente.correo}")
+                                    Text(
+                                        "Estado: " + if (cliente.activo) "ACTIVO" else "INACTIVO",
+                                        color = if (cliente.activo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                    )
+
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = { onEditarCliente(cliente) },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text("Editar")
+                                        }
+                                        Button(
+                                            onClick = {
+                                                clienteAEliminar = cliente
+                                                errorEliminar = null
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text("Eliminar")
+                                        }
+                                    }
+
+                                    if (!cliente.activo) {
+                                        Button(
+                                            onClick = {
+                                                dbHelper.activarCliente(cliente.id, "Induztek2026")
+                                                cargarClientes(reset = true)
+                                            },
+                                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                        ) {
+                                            Text("Activar Cuenta (Clave: Induztek2026)")
+                                        }
+                                    }
+                                }
                             }
                         }
 
-                        if (!cliente.activo) {
-                            Button(
-                                onClick = {
-                                    dbHelper.activarCliente(cliente.id, "Induztek2026")
-                                    cargarClientes(reset = true) // 👈 Recargamos la lista paginada
-                                },
-                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                            ) {
-                                Text("Activar Cuenta (Clave: Induztek2026)")
+
+                        if (isLoading) {
+                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                        if (clientes.isEmpty() && !isLoading) {
+                            Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text("No se encontraron clientes.")
                             }
                         }
                     }
                 }
             }
 
-            // --- INDICADOR DE CARGA Y MENSAJE DE LISTA VACÍA ---
-            if (isLoading) {
-                item {
-                    Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-            }
-            if (clientes.isEmpty() && !isLoading) {
-                item {
-                    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text("No se encontraron clientes.")
-                    }
-                }
-            }
+            item { Spacer(Modifier.height(32.dp)) }
         }
     }
 
-    // --- DIÁLOGO PARA ELIMINAR ---
+
     if (clienteAEliminar != null) {
         AlertDialog(
             onDismissRequest = { clienteAEliminar = null; errorEliminar = null },
@@ -197,7 +229,7 @@ fun CrearUsuarioClienteScreen(
                     onClick = {
                         try {
                             dbHelper.eliminarCliente(clienteAEliminar!!.id)
-                            cargarClientes(reset = true) // 👈 Recargamos la lista paginada
+                            cargarClientes(reset = true)
                             clienteAEliminar = null
                         } catch (e: Exception) {
                             errorEliminar = e.message ?: "Error al eliminar el cliente."

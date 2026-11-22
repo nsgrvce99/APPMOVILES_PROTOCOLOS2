@@ -17,7 +17,7 @@ import cl.duocuc.miregistro.R
 fun LoginClienteScreen(
     viewModel: LoginViewModel,
     onLoginSuccess: (Long) -> Unit,
-    onRequiereCambio: () -> Unit, // 👈 NUEVO PARÁMETRO
+    onRequiereCambio: () -> Unit,
     onRegistroClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -49,7 +49,7 @@ fun LoginClienteScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Campo de Correo
+
             CampoTexto(
                 valor = uiState.correo,
                 onValorCambia = { viewModel.onCorreoChanged(it) },
@@ -59,7 +59,7 @@ fun LoginClienteScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de Contraseña
+
             CampoContrasena(
                 valor = uiState.contrasena,
                 onValorCambia = { viewModel.onContrasenaChanged(it) },
@@ -69,7 +69,7 @@ fun LoginClienteScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // 👇 MOSTRAMOS EL ERROR GENERAL AQUÍ (Credenciales inválidas)
+
             if (uiState.errorMensaje != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -87,7 +87,7 @@ fun LoginClienteScreen(
                         onSuccess = { rolId ->
                             onLoginSuccess(rolId)
                         },
-                        onRequiereCambio = { // 👈 NUEVO CALLBACK
+                        onRequiereCambio = {
                             onRequiereCambio()
                         }
                     )
