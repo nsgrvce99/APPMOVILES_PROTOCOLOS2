@@ -89,19 +89,19 @@ fun RegistroPruebaScreen(
 
                 CampoValidado(
                     valor = uiState.temperaturaAmbiente,
-                    onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarTemperatura(it) },
+                    onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarTemperatura(it) },
                     etiqueta = "Temperatura Ambiente (°C)",
                     icono = R.drawable.ic_candado,
                     error = uiState.errorTemperatura,
-                    tipoTeclado = KeyboardType.Number
+                    tipoTeclado = KeyboardType.Decimal
                 )
 
                 CampoValidado(
                     valor = uiState.humedadRelativa,
-                    onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarHumedad(it) },
+                    onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarHumedad(it) },
                     etiqueta = "Humedad Relativa (%)",
                     icono = R.drawable.ic_candado,
-                    tipoTeclado = KeyboardType.Number
+                    tipoTeclado = KeyboardType.Decimal
                 )
 
                 SelectorDesplegable(
@@ -114,29 +114,29 @@ fun RegistroPruebaScreen(
 
                 when (uiState.tipoPrueba) {
                     "AISLACION" -> {
-                        CampoValidado(valor = uiState.lectura1Min, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarLectura1Min(it) }, etiqueta = "Lectura 1 min (MΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
-                        CampoValidado(valor = uiState.lectura10Min, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarLectura10Min(it) }, etiqueta = "Lectura 10 min (MΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
+                        CampoValidado(valor = uiState.lectura1Min, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarLectura1Min(it) }, etiqueta = "Lectura 1 min (MΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
+                        CampoValidado(valor = uiState.lectura10Min, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarLectura10Min(it) }, etiqueta = "Lectura 10 min (MΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
                     }
                     "TTR" -> {
-                        CampoValidado(valor = uiState.lectura1Min, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarLectura1Min(it) }, etiqueta = "Relación Teórica", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
-                        CampoValidado(valor = uiState.lectura10Min, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarLectura10Min(it) }, etiqueta = "Relación Medida", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
+                        CampoValidado(valor = uiState.lectura1Min, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarLectura1Min(it) }, etiqueta = "Relación Teórica", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
+                        CampoValidado(valor = uiState.lectura10Min, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarLectura10Min(it) }, etiqueta = "Relación Medida", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
                     }
                     "CONTACTOS" -> {
-                        CampoValidado(valor = uiState.lectura1Min, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarLectura1Min(it) }, etiqueta = "Resistencia Medida (μΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
-                        CampoValidado(valor = uiState.lectura10Min, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarLectura10Min(it) }, etiqueta = "Máximo de Placa (μΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
+                        CampoValidado(valor = uiState.lectura1Min, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarLectura1Min(it) }, etiqueta = "Resistencia Medida (μΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
+                        CampoValidado(valor = uiState.lectura10Min, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarLectura10Min(it) }, etiqueta = "Máximo de Placa (μΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
                     }
                     "RELE" -> {
                         Text("Prueba de Operación de Relé", style = MaterialTheme.typography.titleMedium)
-                        CampoValidado(valor = uiState.corrienteAjuste, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarCorrienteAjuste(it) }, etiqueta = "Corriente de Ajuste (A)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
-                        CampoValidado(valor = uiState.corrienteOperacion, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarCorrienteOperacion(it) }, etiqueta = "Corriente de Operación (A)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
-                        CampoValidado(valor = uiState.tiempoEsperado, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarTiempoEsperado(it) }, etiqueta = "Tiempo Esperado (ms)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
-                        CampoValidado(valor = uiState.tiempoMedido, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarTiempoMedido(it) }, etiqueta = "Tiempo Medido (ms)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
+                        CampoValidado(valor = uiState.corrienteAjuste, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarCorrienteAjuste(it) }, etiqueta = "Corriente de Ajuste (A)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
+                        CampoValidado(valor = uiState.corrienteOperacion, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarCorrienteOperacion(it) }, etiqueta = "Corriente de Operación (A)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
+                        CampoValidado(valor = uiState.tiempoEsperado, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarTiempoEsperado(it) }, etiqueta = "Tiempo Esperado (ms)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
+                        CampoValidado(valor = uiState.tiempoMedido, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarTiempoMedido(it) }, etiqueta = "Tiempo Medido (ms)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
                     }
                     "DEVANADOS" -> {
                         Text("Resistencia de Devanados (RN-08c)", style = MaterialTheme.typography.titleMedium)
-                        CampoValidado(valor = uiState.lecturaDevanadoA, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarDevanadoA(it) }, etiqueta = "Fase A (mΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
-                        CampoValidado(valor = uiState.lecturaDevanadoB, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarDevanadoB(it) }, etiqueta = "Fase B (mΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
-                        CampoValidado(valor = uiState.lecturaDevanadoC, onValorCambia = { if (Validaciones.esNumero(it)) viewModel.actualizarDevanadoC(it) }, etiqueta = "Fase C (mΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Number)
+                        CampoValidado(valor = uiState.lecturaDevanadoA, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarDevanadoA(it) }, etiqueta = "Fase A (mΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
+                        CampoValidado(valor = uiState.lecturaDevanadoB, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarDevanadoB(it) }, etiqueta = "Fase B (mΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
+                        CampoValidado(valor = uiState.lecturaDevanadoC, onValorCambia = { if (Validaciones.esDecimal(it)) viewModel.actualizarDevanadoC(it) }, etiqueta = "Fase C (mΩ)", icono = R.drawable.ic_check, tipoTeclado = KeyboardType.Decimal)
                     }
                 }
 

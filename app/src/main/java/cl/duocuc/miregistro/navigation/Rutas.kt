@@ -62,7 +62,6 @@ sealed class Ruta(val ruta: String) {
     }
     data object ResumenVisita : Ruta("resumen_visita")
 
-    data object GestionPersonalInterno : Ruta("gestion_personal_interno")
     data object CambiarContrasena : Ruta("cambiar_contrasena?esObligatorio={esObligatorio}") {
         fun crear(esObligatorio: Boolean = false) = "cambiar_contrasena?esObligatorio=$esObligatorio"
     }

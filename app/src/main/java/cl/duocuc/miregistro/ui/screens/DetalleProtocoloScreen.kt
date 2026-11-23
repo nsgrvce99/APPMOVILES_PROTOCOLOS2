@@ -48,7 +48,7 @@ fun DetalleProtocoloScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
                 ) {
-                    Text("Protocolo #${protocolo.id}", style = MaterialTheme.typography.titleLarge)
+                    Text("Protocolo Número ${protocolo.id}", style = MaterialTheme.typography.titleLarge)
 
                     // --- CARD DE DATOS GENERALES ---
                     Card(modifier = Modifier.fillMaxWidth()) {

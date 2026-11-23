@@ -65,7 +65,7 @@ fun RegistrarEquipoScreen(
 
                 CampoValidado(
                     valor = tag,
-                    onValorCambia = { tag = it.uppercase(); errorTag = null },
+                    onValorCambia = { tag = Validaciones.limitarTexto(it).uppercase(); errorTag = null },
                     etiqueta = "TAG del equipo.",
                     icono = R.drawable.ic_candado,
                     error = errorTag
@@ -86,7 +86,7 @@ fun RegistrarEquipoScreen(
 
                 CampoValidado(
                     valor = marca,
-                    onValorCambia = { marca = it; errorMarca = null },
+                    onValorCambia = { marca = Validaciones.limitarTexto(it); errorMarca = null },
                     etiqueta = "Marca",
                     icono = R.drawable.ic_candado,
                     error = errorMarca
@@ -94,7 +94,7 @@ fun RegistrarEquipoScreen(
 
                 CampoValidado(
                     valor = serie,
-                    onValorCambia = { serie = it; errorSerie = null },
+                    onValorCambia = { serie = Validaciones.limitarTexto(it); errorSerie = null },
                     etiqueta = "Número de serie",
                     icono = R.drawable.ic_candado,
                     error = errorSerie

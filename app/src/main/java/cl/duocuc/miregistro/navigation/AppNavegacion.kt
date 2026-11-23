@@ -342,9 +342,6 @@ fun AppNavegacion() {
                 onVolver = { navController.navigateUp() },
                 onEditarCliente = { cliente ->
                     navController.navigate(Ruta.EditarCliente.crear(cliente.id))
-                },
-                onGestionarPersonalInterno = {
-                    navController.navigate(Ruta.GestionPersonalInterno.ruta)
                 }
             )
         }
@@ -404,12 +401,5 @@ fun AppNavegacion() {
             )
         }
 
-        // ---- GESTIÓN PERSONAL INTERNO ----
-        composable(Ruta.GestionPersonalInterno.ruta) {
-            GestionPersonalInternoScreen(
-                usuarioActual = usuarioActual,
-                onVolver = { navController.navigateUp() }
-            )
-        }
     }
 }

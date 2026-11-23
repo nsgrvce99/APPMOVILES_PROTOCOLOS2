@@ -2,17 +2,26 @@ package cl.duocuc.miregistro.utils
 
 object Validaciones {
 
-    // 1. Solo números (para temperatura, humedad, lecturas)
+
     fun esNumero(valor: String): Boolean = valor.isEmpty() || valor.matches(Regex("^[0-9]*$"))
 
-    // 2. Solo números decimales (por si acaso)
-    fun esDecimal(valor: String): Boolean = valor.isEmpty() || valor.matches(Regex("^[0-9]*\\.?[0-9]*$"))
+    fun limitarTexto(texto: String, max: Int = 20): String = texto.take(max)
+
+
+    fun esDecimal(valor: String, maxDigitos: Int = 5): Boolean {
+        if (valor.isEmpty()) return true
+        // Solo dígitos y como máximo un punto
+        if (!valor.matches(Regex("^[0-9]*\\.?[0-9]*$"))) return false
+        // Contar dígitos sin contar el punto
+        val digitos = valor.count { it.isDigit() }
+        return digitos <= maxDigitos
+    }
 
     // 3. Correo electrónico
     fun esCorreoValido(correo: String): Boolean =
         correo.matches(Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$"))
 
-    // 4. RUT (formato simple: números, puntos, guion y K)
+    // 4. RUT
     fun esRutValido(rut: String): Boolean {
         val rutLimpio = rut.replace(".", "").replace("-", "").trim().uppercase()
         if (rutLimpio.length < 2) return false
@@ -35,29 +44,20 @@ object Validaciones {
         return dvString == dvIngresado.toString()
     }
 
-    // 5. Texto general (letras, números, guiones, puntos, espacios)
+    // 5. Texto general
     fun esTextoValido(texto: String): Boolean =
         texto.isEmpty() || texto.matches(Regex("^[A-Za-z0-9áéíóúÁÉÍÓÚñÑ\\s.,-]*$"))
 
-    // 6. TAG (letras mayúsculas, números y guiones)
+    // 6. TAG
     fun esTagValido(tag: String): Boolean =
         tag.isEmpty() || tag.matches(Regex("^[A-Z0-9-]*$"))
 
     fun formatearRut(rut: String): String {
-        // 1. Limpiamos el RUT: quitamos puntos, guiones y espacios
         val rutLimpio = rut.replace(".", "").replace("-", "").trim()
-
-        // 2. Si está vacío o es muy corto, lo devolvemos tal cual
         if (rutLimpio.length < 2) return rut
-
-        // 3. Separamos el cuerpo (dígitos) y el dígito verificador (último caracter)
         val cuerpo = rutLimpio.substring(0, rutLimpio.length - 1)
         val dv = rutLimpio.substring(rutLimpio.length - 1).uppercase()
-
-        // 4. Formateamos el cuerpo con puntos
         val cuerpoFormateado = cuerpo.reversed().chunked(3).joinToString(".").reversed()
-
-        // 5. Retornamos el RUT con el formato final
         return "$cuerpoFormateado-$dv"
     }
 }

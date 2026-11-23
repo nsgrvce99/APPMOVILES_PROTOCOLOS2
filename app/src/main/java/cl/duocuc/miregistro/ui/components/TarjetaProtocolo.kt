@@ -17,7 +17,7 @@ fun TarjetaProtocolo(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Dimens.espacioMedio)) {
             Text(
-                "Protocolo #${protocolo.id} — Equipo ID: ${protocolo.equipoId}",
+                "Protocolo Número ${protocolo.id} — Equipo ID: ${protocolo.equipoId}",
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(Modifier.height(Dimens.espacioMini))

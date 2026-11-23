@@ -46,7 +46,7 @@ fun RegistrarClienteScreen(
     var exito by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { AppTopBar(titulo = "Registrar Empresa Cliente", onVolver = onVolver) }
+        topBar = { AppTopBar(titulo = "Registrar Cliente", onVolver = onVolver) }
     ) { innerPadding ->
         FondoFooter(
             modifier = Modifier.padding(innerPadding)
@@ -58,13 +58,13 @@ fun RegistrarClienteScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
             ) {
-                Text("Datos de la Empresa (RF-01)", style = MaterialTheme.typography.titleMedium)
+                Text("Datos de la Empresa ", style = MaterialTheme.typography.titleMedium)
                 Text("La cuenta quedará inactiva. El Jefe Técnico la habilitará luego.", style = MaterialTheme.typography.bodySmall)
 
                 CampoValidado(
                     valor = razonSocial,
                     onValorCambia = { razonSocial = it; errorRazonSocial = null },
-                    etiqueta = "Razón Social",
+                    etiqueta = "Nombre Del Cliente",
                     icono = R.drawable.ic_persona,
                     error = errorRazonSocial
                 )
@@ -72,7 +72,7 @@ fun RegistrarClienteScreen(
                 CampoValidado(
                     valor = rut,
                     onValorCambia = { rut = it; errorRut = null },
-                    etiqueta = "RUT Empresa (ej. 76.482.915-8)",
+                    etiqueta = "RUT (ej. 26.482.915-8)",
                     icono = R.drawable.ic_persona,
                     error = errorRut
                 )
@@ -98,11 +98,11 @@ fun RegistrarClienteScreen(
                 }
 
                 if (exito) {
-                    MensajeExito(titulo = "Empresa Registrada", detalles = listOf("Pendiente de activación por el Jefe Técnico."))
+                    MensajeExito(titulo = "Cliente Registrado", detalles = listOf("Pendiente de activación por el Jefe Técnico."))
                 }
 
                 BotonPrincipal(
-                    texto = "Registrar Empresa",
+                    texto = "Registrar Cliente",
                     onClick = {
 
                         errorRazonSocial = null
@@ -111,9 +111,9 @@ fun RegistrarClienteScreen(
                         errorGeneral = null
 
                         when {
-                            razonSocial.isBlank() -> errorRazonSocial = "La razón social es obligatoria"
+                            razonSocial.isBlank() -> errorRazonSocial = "El nombre es obligatorio"
                             rut.isBlank() -> errorRut = "El RUT es obligatorio"
-                            !Validaciones.esRutValido(rut) -> errorRut = "RUT inválido (RN-03)"
+                            !Validaciones.esRutValido(rut) -> errorRut = "RUT inválido "
                             correo.isBlank() -> errorCorreo = "El correo es obligatorio"
                             !Validaciones.esCorreoValido(correo) -> errorCorreo = "Correo inválido"
                             dbHelper.existeRut(rut) -> errorRut = "Este RUT ya está registrado"

@@ -45,9 +45,10 @@ fun InstalacionesScreen(
     var instalacionSeleccionada by remember { mutableStateOf<Pair<Long, String>?>(null) }
     var mostrarDialogoGestionPlantas by remember { mutableStateOf(false) }
     var mensajeError by remember { mutableStateOf<String?>(null) }
+    var mensajeExito by remember { mutableStateOf<String?>(null) }
     var instalacionesParaGestionar by remember { mutableStateOf(dbHelper.listarInstalaciones()) }
 
-    var expandirInstalaciones by remember { mutableStateOf(true) }
+    var expandirInstalaciones by remember { mutableStateOf(false) }
     var expandirGestionActivos by remember { mutableStateOf(false) }
     var expandirReportes by remember { mutableStateOf(false) }
     var expandirAdmin by remember { mutableStateOf(false) }
@@ -62,7 +63,7 @@ fun InstalacionesScreen(
         Scaffold(
             topBar = {
                 AppTopBar(
-                    titulo = "Induztek - Selección de Planta",
+                    titulo = "Induztek - Panel General",
                     onAbrirMenu = onAbrirMenu
                 )
             },
@@ -139,7 +140,7 @@ fun InstalacionesScreen(
                                 ) {
                                     Icon(Icons.Default.Business, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Registrar Empresa Cliente.")
+                                    Text("Registrar Cliente.")
                                 }
                                 OutlinedButton(
                                     onClick = onVerListaClientes,
@@ -147,13 +148,14 @@ fun InstalacionesScreen(
                                 ) {
                                     Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Editar Empresas Clientes")
+                                    Text("Editar Clientes")
                                 }
                                 Button(
                                     onClick = {
                                         instalacionesParaGestionar = dbHelper.listarInstalaciones()
                                         mostrarDialogoGestionPlantas = true
                                         mensajeError = null
+                                        mensajeExito = null
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = ButtonDefaults.buttonColors(
@@ -236,7 +238,10 @@ fun InstalacionesScreen(
 
     if (mostrarDialogoGestionPlantas) {
         AlertDialog(
-            onDismissRequest = { mostrarDialogoGestionPlantas = false },
+            onDismissRequest = {
+                mostrarDialogoGestionPlantas = false
+                mensajeExito = null
+            },
             title = { Text("Gestionar Plantas") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -254,32 +259,47 @@ fun InstalacionesScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(nombre, modifier = Modifier.weight(1f))
-                                IconButton(onClick = {
-                                    try {
-                                        dbHelper.eliminarInstalacion(nombre)
-                                        instalacionesParaGestionar = dbHelper.listarInstalaciones()
-                                        if (instalacionSeleccionada?.second == nombre) {
-                                            instalacionSeleccionada = null
+                                TextButton(
+                                    onClick = {
+                                        try {
+                                            dbHelper.eliminarInstalacion(nombre)
+                                            instalacionesParaGestionar = dbHelper.listarInstalaciones()
+                                            if (instalacionSeleccionada?.second == nombre) {
+                                                instalacionSeleccionada = null
+                                            }
+                                            mensajeError = null
+                                            mensajeExito = "Planta eliminada correctamente"
+                                        } catch (e: Exception) {
+                                            mensajeError = e.message
+                                            mensajeExito = null
                                         }
-                                        mensajeError = null
-                                    } catch (e: Exception) {
-                                        mensajeError = e.message
                                     }
-                                }) {
-                                    Icon(
-                                        painter = androidx.compose.ui.res.painterResource(cl.duocuc.miregistro.R.drawable.ic_volver),
-                                        contentDescription = "Eliminar",
-                                        tint = MaterialTheme.colorScheme.error
+                                ) {
+                                    Text(
+                                        text = "Eliminar",
+                                        color = MaterialTheme.colorScheme.error
                                     )
                                 }
                             }
                             HorizontalDivider()
                         }
                     }
+
+                    if (mensajeExito != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = mensajeExito!!,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { mostrarDialogoGestionPlantas = false }) { Text("Cerrar") }
+                TextButton(onClick = {
+                    mostrarDialogoGestionPlantas = false
+                    mensajeExito = null
+                }) { Text("Cerrar") }
             }
         )
     }
