@@ -14,6 +14,7 @@ import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.ProtocoloDetallado
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
+import cl.duocuc.miregistro.ui.components.FondoFooter
 import cl.duocuc.miregistro.ui.components.TarjetaMisProtocolos
 import cl.duocuc.miregistro.ui.theme.Dimens
 
@@ -79,37 +80,41 @@ fun MisProtocolosScreen(
     Scaffold(
         topBar = { AppTopBar(titulo = "Mis Pruebas en Terreno", onVolver = onVolver) }
     ) { innerPadding ->
-        if (misProtocolos.isEmpty() && !isLoading) {
-            Box(
-                Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Aún no has registrado pruebas.")
-            }
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().padding(innerPadding).padding(Dimens.espacioMedio),
-                verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
-            ) {
-                items(misProtocolos) { proto ->
-                    TarjetaMisProtocolos(
-                        protocolo = proto,
-                        onEditar = { onEditarProtocolo(proto.id) },
-                        onEliminar = { protocoloAEliminar = proto; errorEliminar = null },
-                        onVerDetalle = { onVerDetalleProtocolo(proto.id) },
-                        onCerrarBorrador = {
-                            dbHelper.cerrarBorrador(proto.id)
-                            cargarProtocolos(reset = true)
-                        }
-                    )
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            if (misProtocolos.isEmpty() && !isLoading) {
+                Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Aún no has registrado pruebas.")
                 }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().padding(Dimens.espacioMedio),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
+                ) {
+                    items(misProtocolos) { proto ->
+                        TarjetaMisProtocolos(
+                            protocolo = proto,
+                            onEditar = { onEditarProtocolo(proto.id) },
+                            onEliminar = { protocoloAEliminar = proto; errorEliminar = null },
+                            onVerDetalle = { onVerDetalleProtocolo(proto.id) },
+                            onCerrarBorrador = {
+                                dbHelper.cerrarBorrador(proto.id)
+                                cargarProtocolos(reset = true)
+                            }
+                        )
+                    }
 
 
-                if (isLoading) {
-                    item {
-                        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                    if (isLoading) {
+                        item {
+                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
                 }

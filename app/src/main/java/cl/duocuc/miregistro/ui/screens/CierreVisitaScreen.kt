@@ -43,128 +43,137 @@ fun CierreVisitaScreen(
     Scaffold(
         topBar = { AppTopBar(titulo = "Acta de Terreno", onVolver = onVolver) }
     ) { innerPadding ->
-        if (!puedeFirmarActa) {
-            Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                Text("Acceso denegado. Solo Técnicos e Ingenieros pueden entregar el Acta.", color = MaterialTheme.colorScheme.error)
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(Dimens.espacioPantalla)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
-            ) {
-                if (clienteDueno != null) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(Modifier.padding(Dimens.espacioMedio)) {
-                            Text("Empresa Cliente:", style = MaterialTheme.typography.labelMedium)
-                            Text(clienteDueno.nombre, style = MaterialTheme.typography.titleLarge)
-                            Text("RUT: ${clienteDueno.rut}", style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                } else {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            "⚠️ No se puede generar el Acta: no se encontró la empresa cliente asociada al protocolo.",
-                            modifier = Modifier.padding(Dimens.espacioMedio),
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-
-                Text("Resumen del Acta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(Dimens.espacioMedio), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        FilaInfo("N° Protocolo", "#$protocoloId")
-                        if (equipo != null) {
-                            FilaInfo("Equipo", "${equipo.tipoEquipo} ${equipo.tag}")
-                            FilaInfo("Instalación", equipo.instalacion)
-                        }
-                        if (protocolo != null) {
-                            FilaInfo("Fecha de Prueba", protocolo.fecha)
-                            FilaInfo("T° / Humedad", "${protocolo.temperatura}°C / ${protocolo.humedad}%")
-                        }
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                        if (medicion != null) {
-                            FilaInfo("Tipo de Prueba", medicion.tipoPrueba)
-                            when (medicion.tipoPrueba) {
-                                "AISLACION" -> {
-                                    FilaInfo("Lectura 1 min", "${medicion.lectura1Min} MΩ")
-                                    FilaInfo("Lectura 10 min", "${medicion.lectura10Min} MΩ")
-                                }
-                                "TTR" -> {
-                                    FilaInfo("Relación Teórica", medicion.lectura1Min)
-                                    FilaInfo("Relación Medida", medicion.lectura10Min)
-                                }
-                                "CONTACTOS" -> {
-                                    FilaInfo("Resistencia Medida", "${medicion.lectura1Min} μΩ")
-                                    FilaInfo("Máx Placa", "${medicion.lectura10Min} μΩ")
-                                }
-                                "RELE" -> {
-                                    FilaInfo("Corriente de Ajuste", "${medicion.corrienteAjuste} A")
-                                    FilaInfo("Corriente de Operación", "${medicion.corrienteOperacion} A")
-                                    FilaInfo("Tiempo Esperado", "${medicion.tiempoEsperado} ms")
-                                    FilaInfo("Tiempo Medido", "${medicion.tiempoMedido} ms")
-                                }
-                                "DEVANADOS" -> {
-                                    FilaInfo("Fase A", "${medicion.devanadoA} mΩ")
-                                    FilaInfo("Fase B", "${medicion.devanadoB} mΩ")
-                                    FilaInfo("Fase C", "${medicion.devanadoC} mΩ")
-                                }
-                            }
-                        }
-                        if (protocolo != null) {
-                            FilaInfo("Resultado", protocolo.resultadoGlobal, colorValor = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                }
-
-                Text(
-                    "El Acta se entregará marcada como 'Pendiente de formalización' (RN-14).",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-
-                if (exito) {
-                    MensajeExito(
-                        titulo = "Acta entregada exitosamente",
-                        detalles = listOf(
-                            "Empresa: ${clienteDueno?.nombre ?: "N/A"}",
-                            "Protocolo: #$protocoloId",
-                            "Estado: Pendiente de formalización"
-                        )
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            if (!puedeFirmarActa) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Acceso denegado. Solo Técnicos e Ingenieros pueden entregar el Acta.",
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
-
-                BotonPrincipal(
-                    texto = if (exito) "Volver al inicio" else "Confirmar Entrega de Acta",
-                    onClick = {
-                        if (exito) {
-                            onActaEntregada()
-                        } else if (puedeConfirmar) {
-                            val fechaHora = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(Date())
-                            dbHelper.guardarRecepcionActa(
-                                protocoloId = protocoloId,
-                                nombre = clienteDueno?.nombre ?: "Cliente",
-                                rut = clienteDueno?.rut ?: "N/A",
-                                cargo = "Representante Legal / Jefe de Planta",
-                                fechaHora = fechaHora
-                            )
-                            exito = true
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(Dimens.espacioPantalla)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+                ) {
+                    if (clienteDueno != null) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(Modifier.padding(Dimens.espacioMedio)) {
+                                Text("Empresa Cliente:", style = MaterialTheme.typography.labelMedium)
+                                Text(clienteDueno.nombre, style = MaterialTheme.typography.titleLarge)
+                                Text("RUT: ${clienteDueno.rut}", style = MaterialTheme.typography.bodyMedium)
+                            }
                         }
-                    },
-                    habilitado = puedeConfirmar || exito,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    } else {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "No se puede generar el Acta: no se encontró la empresa cliente asociada al protocolo.",
+                                modifier = Modifier.padding(Dimens.espacioMedio),
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+
+                    Text("Resumen del Acta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(Dimens.espacioMedio), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            FilaInfo("N° Protocolo", "#$protocoloId")
+                            if (equipo != null) {
+                                FilaInfo("Equipo", "${equipo.tipoEquipo} ${equipo.tag}")
+                                FilaInfo("Instalación", equipo.instalacion)
+                            }
+                            if (protocolo != null) {
+                                FilaInfo("Fecha de Prueba", protocolo.fecha)
+                                FilaInfo("T° / Humedad", "${protocolo.temperatura}°C / ${protocolo.humedad}%")
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            if (medicion != null) {
+                                FilaInfo("Tipo de Prueba", medicion.tipoPrueba)
+                                when (medicion.tipoPrueba) {
+                                    "AISLACION" -> {
+                                        FilaInfo("Lectura 1 min", "${medicion.lectura1Min} MΩ")
+                                        FilaInfo("Lectura 10 min", "${medicion.lectura10Min} MΩ")
+                                    }
+                                    "TTR" -> {
+                                        FilaInfo("Relación Teórica", medicion.lectura1Min)
+                                        FilaInfo("Relación Medida", medicion.lectura10Min)
+                                    }
+                                    "CONTACTOS" -> {
+                                        FilaInfo("Resistencia Medida", "${medicion.lectura1Min} μΩ")
+                                        FilaInfo("Máx Placa", "${medicion.lectura10Min} μΩ")
+                                    }
+                                    "RELE" -> {
+                                        FilaInfo("Corriente de Ajuste", "${medicion.corrienteAjuste} A")
+                                        FilaInfo("Corriente de Operación", "${medicion.corrienteOperacion} A")
+                                        FilaInfo("Tiempo Esperado", "${medicion.tiempoEsperado} ms")
+                                        FilaInfo("Tiempo Medido", "${medicion.tiempoMedido} ms")
+                                    }
+                                    "DEVANADOS" -> {
+                                        FilaInfo("Fase A", "${medicion.devanadoA} mΩ")
+                                        FilaInfo("Fase B", "${medicion.devanadoB} mΩ")
+                                        FilaInfo("Fase C", "${medicion.devanadoC} mΩ")
+                                    }
+                                }
+                            }
+                            if (protocolo != null) {
+                                FilaInfo("Resultado", protocolo.resultadoGlobal, colorValor = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+
+                    Text(
+                        "El Acta se entregará marcada como 'Pendiente de formalización'.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+
+                    if (exito) {
+                        MensajeExito(
+                            titulo = "Acta entregada exitosamente",
+                            detalles = listOf(
+                                "Empresa: ${clienteDueno?.nombre ?: "N/A"}",
+                                "Protocolo: #$protocoloId",
+                                "Estado: Pendiente de formalización"
+                            )
+                        )
+                    }
+
+                    BotonPrincipal(
+                        texto = if (exito) "Volver al inicio" else "Confirmar Entrega de Acta",
+                        onClick = {
+                            if (exito) {
+                                onActaEntregada()
+                            } else if (puedeConfirmar) {
+                                val fechaHora = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(Date())
+                                dbHelper.guardarRecepcionActa(
+                                    protocoloId = protocoloId,
+                                    nombre = clienteDueno?.nombre ?: "Cliente",
+                                    rut = clienteDueno?.rut ?: "N/A",
+                                    cargo = "Representante Legal / Jefe de Planta",
+                                    fechaHora = fechaHora
+                                )
+                                exito = true
+                            }
+                        },
+                        habilitado = puedeConfirmar || exito,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }

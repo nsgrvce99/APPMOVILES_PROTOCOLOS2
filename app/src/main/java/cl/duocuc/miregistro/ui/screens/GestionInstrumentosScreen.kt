@@ -1,24 +1,17 @@
 package cl.duocuc.miregistro.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
@@ -141,178 +134,181 @@ fun GestionInstrumentosScreen(
     Scaffold(
         topBar = { AppTopBar(titulo = "Gestionar Instrumentos", onVolver = onVolver) }
     ) { innerPadding ->
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(Dimens.espacioMedio),
-            verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
         ) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(Dimens.espacioMedio),
+                verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+            ) {
 
-            item {
-                AcordeonSeccion(
-                    titulo = "Registrar Nuevo Instrumento",
-                    icono = Icons.Default.Add,
-                    expandido = expandirRegistro,
-                    onToggle = { expandirRegistro = !expandirRegistro }
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)) {
-                        CampoValidado(
-                            valor = nombre,
-                            onValorCambia = { nombre = it; errorNombre = null; mensajeExito = null },
-                            etiqueta = "Nombre (ej. Megóhmetro)",
-                            icono = R.drawable.ic_persona,
-                            error = errorNombre
-                        )
+                item {
+                    AcordeonSeccion(
+                        titulo = "Registrar Nuevo Instrumento",
+                        icono = Icons.Default.Add,
+                        expandido = expandirRegistro,
+                        onToggle = { expandirRegistro = !expandirRegistro }
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)) {
+                            CampoValidado(
+                                valor = nombre,
+                                onValorCambia = { nombre = it; errorNombre = null; mensajeExito = null },
+                                etiqueta = "Nombre (ej. Megóhmetro)",
+                                icono = R.drawable.ic_persona,
+                                error = errorNombre
+                            )
 
-                        CampoValidado(
-                            valor = marca,
-                            onValorCambia = { marca = it; errorMarca = null; mensajeExito = null },
-                            etiqueta = "Marca",
-                            icono = R.drawable.ic_persona,
-                            error = errorMarca
-                        )
+                            CampoValidado(
+                                valor = marca,
+                                onValorCambia = { marca = it; errorMarca = null; mensajeExito = null },
+                                etiqueta = "Marca",
+                                icono = R.drawable.ic_persona,
+                                error = errorMarca
+                            )
 
-                        CampoValidado(
-                            valor = serie,
-                            onValorCambia = { serie = it; errorSerie = null; mensajeExito = null },
-                            etiqueta = "Número de Serie",
-                            icono = R.drawable.ic_persona,
-                            error = errorSerie
-                        )
+                            CampoValidado(
+                                valor = serie,
+                                onValorCambia = { serie = it; errorSerie = null; mensajeExito = null },
+                                etiqueta = "Número de Serie",
+                                icono = R.drawable.ic_persona,
+                                error = errorSerie
+                            )
 
-                        CampoValidado(
-                            valor = fechaVencimiento,
-                            onValorCambia = { fechaVencimiento = it; errorFecha = null; mensajeExito = null },
-                            etiqueta = "Vencimiento (dd-MM-yyyy)",
-                            icono = R.drawable.ic_persona,
-                            error = errorFecha
-                        )
+                            CampoValidado(
+                                valor = fechaVencimiento,
+                                onValorCambia = { fechaVencimiento = it; errorFecha = null; mensajeExito = null },
+                                etiqueta = "Vencimiento (dd-MM-yyyy)",
+                                icono = R.drawable.ic_persona,
+                                error = errorFecha
+                            )
 
-                        Spacer(Modifier.height(Dimens.espacioChico))
+                            Spacer(Modifier.height(Dimens.espacioChico))
 
-                        BotonPrincipal(
-                            texto = "Guardar Instrumento",
-                            onClick = {
-                                errorNombre = null
-                                errorMarca = null
-                                errorSerie = null
-                                errorFecha = null
-                                mensajeExito = null
+                            BotonPrincipal(
+                                texto = "Guardar Instrumento",
+                                onClick = {
+                                    errorNombre = null
+                                    errorMarca = null
+                                    errorSerie = null
+                                    errorFecha = null
+                                    mensajeExito = null
 
-                                when {
-                                    nombre.isBlank() -> errorNombre = "El nombre es obligatorio"
-                                    marca.isBlank() -> errorMarca = "La marca es obligatoria"
-                                    serie.isBlank() -> errorSerie = "El número de serie es obligatorio"
-                                    fechaVencimiento.isBlank() -> errorFecha = "La fecha es obligatoria"
-                                    !validarFecha(fechaVencimiento) -> errorFecha = "Formato inválido. Use dd-MM-yyyy"
-                                    else -> {
-                                        dbHelper.insertarInstrumento(nombre, marca, serie, fechaVencimiento)
-                                        cargarInstrumentos(reset = true)
-                                        nombre = ""; marca = ""; serie = ""; fechaVencimiento = ""
-                                        mensajeExito = "Instrumento guardado exitosamente"
+                                    when {
+                                        nombre.isBlank() -> errorNombre = "El nombre es obligatorio"
+                                        marca.isBlank() -> errorMarca = "La marca es obligatoria"
+                                        serie.isBlank() -> errorSerie = "El número de serie es obligatorio"
+                                        fechaVencimiento.isBlank() -> errorFecha = "La fecha es obligatoria"
+                                        !validarFecha(fechaVencimiento) -> errorFecha = "Formato inválido. Use dd-MM-yyyy"
+                                        else -> {
+                                            dbHelper.insertarInstrumento(nombre, marca, serie, fechaVencimiento)
+                                            cargarInstrumentos(reset = true)
+                                            nombre = ""; marca = ""; serie = ""; fechaVencimiento = ""
+                                            mensajeExito = "Instrumento guardado exitosamente"
+                                        }
                                     }
                                 }
-                            }
-                        )
+                            )
 
-                        if (mensajeExito != null) {
-                            Text(mensajeExito!!, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
+                            if (mensajeExito != null) {
+                                Text(mensajeExito!!, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
+                            }
                         }
                     }
                 }
-            }
 
 
-            item {
-                AcordeonSeccion(
-                    titulo = "Instrumentos Registrados",
-                    icono = Icons.Default.Search,
-                    expandido = expandirLista,
-                    onToggle = { expandirLista = !expandirLista }
-                ) {
-                    Column {
-                        OutlinedTextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            label = { Text("Buscar por nombre o marca...") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = Dimens.espacioMedio),
-                            singleLine = true
-                        )
-
-
-                        instrumentos.forEach { inst ->
-                            val porVencer = dbHelper.estaPorVencer(inst.fechaVencimiento)
-                            val vencido = dbHelper.estaVencido(inst.fechaVencimiento)
-
-                            val colorFondo = when {
-                                vencido -> Color(0xFFFFCDD2)
-                                porVencer -> Color(0xFFFFE0B2)
-                                else -> MaterialTheme.colorScheme.surface
-                            }
-
-                            Card(
+                item {
+                    AcordeonSeccion(
+                        titulo = "Instrumentos Registrados",
+                        icono = Icons.Default.Search,
+                        expandido = expandirLista,
+                        onToggle = { expandirLista = !expandirLista }
+                    ) {
+                        Column {
+                            OutlinedTextField(
+                                value = query,
+                                onValueChange = { query = it },
+                                label = { Text("Buscar por nombre o marca...") },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = Dimens.espacioChico),
-                                colors = CardDefaults.cardColors(containerColor = colorFondo)
-                            ) {
-                                Column(Modifier.padding(Dimens.espacioMedio)) {
-                                    FilaInfo("Nombre", inst.nombre)
-                                    FilaInfo("Marca", inst.marca)
-                                    FilaInfo("Serie", inst.serie)
-                                    FilaInfo("Vence", inst.fechaVencimiento)
+                                    .padding(bottom = Dimens.espacioMedio),
+                                singleLine = true
+                            )
 
-                                    if (vencido) {
-                                        Text("❌ INSTRUMENTO VENCIDO", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 4.dp))
-                                    } else if (porVencer) {
-                                        Text("⚠️ PRÓXIMO A VENCER (Menos de 30 días)", color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 4.dp))
-                                    }
 
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                                        OutlinedButton(
-                                            onClick = {
-                                                instrumentoAEditar = inst
-                                                editNombre = inst.nombre
-                                                editMarca = inst.marca
-                                                editSerie = inst.serie
-                                                editVencimiento = inst.fechaVencimiento
-                                                editErrorNombre = null; editErrorMarca = null; editErrorSerie = null; editErrorFecha = null
-                                            },
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Text("Editar")
+                            instrumentos.forEach { inst ->
+                                val porVencer = dbHelper.estaPorVencer(inst.fechaVencimiento)
+                                val vencido = dbHelper.estaVencido(inst.fechaVencimiento)
+
+                                val colorFondo = when {
+                                    vencido -> Color(0xFFFFCDD2)
+                                    porVencer -> Color(0xFFFFE0B2)
+                                    else -> MaterialTheme.colorScheme.surface
+                                }
+
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = Dimens.espacioChico),
+                                    colors = CardDefaults.cardColors(containerColor = colorFondo)
+                                ) {
+                                    Column(Modifier.padding(Dimens.espacioMedio)) {
+                                        FilaInfo("Nombre", inst.nombre)
+                                        FilaInfo("Marca", inst.marca)
+                                        FilaInfo("Serie", inst.serie)
+                                        FilaInfo("Vence", inst.fechaVencimiento)
+
+                                        if (vencido) {
+                                            Text("INSTRUMENTO VENCIDO", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 4.dp))
+                                        } else if (porVencer) {
+                                            Text("PRÓXIMO A VENCER (Menos de 30 días)", color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 4.dp))
                                         }
-                                        Button(
-                                            onClick = { instrumentoAEliminar = inst; errorEliminar = null },
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Text("Eliminar")
+
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                                            OutlinedButton(
+                                                onClick = {
+                                                    instrumentoAEditar = inst
+                                                    editNombre = inst.nombre
+                                                    editMarca = inst.marca
+                                                    editSerie = inst.serie
+                                                    editVencimiento = inst.fechaVencimiento
+                                                    editErrorNombre = null; editErrorMarca = null; editErrorSerie = null; editErrorFecha = null
+                                                },
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text("Editar")
+                                            }
+                                            Button(
+                                                onClick = { instrumentoAEliminar = inst; errorEliminar = null },
+                                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text("Eliminar")
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        if (isLoading) {
-                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
+                            if (isLoading) {
+                                Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
                             }
-                        }
-                        if (instrumentos.isEmpty() && !isLoading) {
-                            Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text("No se encontraron instrumentos.")
+                            if (instrumentos.isEmpty() && !isLoading) {
+                                Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                    Text("No se encontraron instrumentos.")
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            item { Spacer(Modifier.height(32.dp)) }
+                item { Spacer(Modifier.height(32.dp)) }
+            }
         }
     }
 
@@ -383,4 +379,3 @@ fun GestionInstrumentosScreen(
         )
     }
 }
-

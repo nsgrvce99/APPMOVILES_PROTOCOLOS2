@@ -61,7 +61,7 @@ fun MenuLateral(
 
 
                 NavigationDrawerItem(
-                    label = { Text("Mi Perfil / Datos de Técnico") },
+                    label = { Text("Mi Perfil") },
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }

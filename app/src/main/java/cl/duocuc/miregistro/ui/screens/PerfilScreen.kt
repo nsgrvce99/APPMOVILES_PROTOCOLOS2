@@ -32,6 +32,7 @@ import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Perfil
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AvatarCircular
+import cl.duocuc.miregistro.ui.components.FondoFooter
 import cl.duocuc.miregistro.ui.components.TarjetaSeccion
 import cl.duocuc.miregistro.ui.theme.Dimens
 import cl.duocuc.miregistro.viewmodel.PerfilViewModel
@@ -126,75 +127,78 @@ fun PerfilScreen(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
         ) {
-
-            EncabezadoPerfil(
-                fotoUri = fotoActual,
-                onCambiarFotoClick = { mostrarBottomSheet = true }
-            )
-
-            Spacer(Modifier.height(Dimens.espacioChico))
-
-            Text(
-                text = perfilActual?.nombre ?: "Sin nombre",
-                style = MaterialTheme.typography.titleLarge
-            )
-            Text(
-                text = perfilActual?.rolNombre ?: "Rol no asignado",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = Dimens.espacioMini)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_persona),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(16.dp)
+
+                EncabezadoPerfil(
+                    fotoUri = fotoActual,
+                    onCambiarFotoClick = { mostrarBottomSheet = true }
+                )
+
+                Spacer(Modifier.height(Dimens.espacioChico))
+
+                Text(
+                    text = perfilActual?.nombre ?: "Sin nombre",
+                    style = MaterialTheme.typography.titleLarge
                 )
                 Text(
-                    text = "RUT: ${perfilActual?.rut ?: "N/A"} · ${perfilActual?.correo ?: ""}",
+                    text = perfilActual?.rolNombre ?: "Rol no asignado",
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(start = Dimens.espacioMini)
+                    color = MaterialTheme.colorScheme.primary
                 )
-            }
 
-            Column(
-                modifier = Modifier.padding(Dimens.espacioPantalla),
-                verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
-            ) {
-                TarjetaSeccion(titulo = "Detalles de Cuenta / Terreno") {
-                    Text(
-                        text = "Estado: " + if (perfilActual?.activo == true) "Activo (Habilitado para operar)" else "Desactivado",
-                        style = MaterialTheme.typography.bodyMedium
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = Dimens.espacioMini)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_persona),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(16.dp)
                     )
-                    perfilActual?.cargo?.let { cargo ->
-                        Text(text = "Cargo: $cargo", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    perfilActual?.giro?.let { giro ->
-                        Text(text = "Giro Empresa: $giro", style = MaterialTheme.typography.bodyMedium)
-                    }
+                    Text(
+                        text = "RUT: ${perfilActual?.rut ?: "N/A"} · ${perfilActual?.correo ?: ""}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(start = Dimens.espacioMini)
+                    )
                 }
 
-                if (usuario?.rolId != 4L) {
-                    TarjetaSeccion(titulo = "Normativa y Seguridad") {
+                Column(
+                    modifier = Modifier.padding(Dimens.espacioPantalla),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+                ) {
+                    TarjetaSeccion(titulo = "Detalles de Cuenta") {
                         Text(
-                            text = "El personal de terreno debe utilizar obligatoriamente Equipo de Protección Personal (EPP) en salas eléctricas y subestaciones.",
+                            text = "Estado: " + if (perfilActual?.activo == true) "Activo" else "Desactivado",
                             style = MaterialTheme.typography.bodyMedium
                         )
+                        perfilActual?.cargo?.let { cargo ->
+                            Text(text = "Cargo: $cargo", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        perfilActual?.giro?.let { giro ->
+                            Text(text = "Giro Empresa: $giro", style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
-                }
 
-                Spacer(Modifier.height(72.dp))
+                    if (usuario?.rolId != 4L) {
+                        TarjetaSeccion(titulo = "Normativa y Seguridad") {
+                            Text(
+                                text = "El personal de terreno debe utilizar obligatoriamente Equipo de Protección Personal (EPP) en salas eléctricas y subestaciones.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(72.dp))
+                }
             }
         }
     }

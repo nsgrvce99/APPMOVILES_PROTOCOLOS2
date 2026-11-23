@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
+import cl.duocuc.miregistro.ui.components.FondoFooter
 import cl.duocuc.miregistro.ui.theme.Dimens
 import cl.duocuc.miregistro.utils.Validaciones
 
@@ -85,69 +86,72 @@ fun ListaClientesScreen(
     Scaffold(
         topBar = { AppTopBar(titulo = "Directorio de Empresas", onVolver = onVolver) }
     ) { innerPadding ->
-        if (clientes.isEmpty() && !isLoading && query.isBlank()) {
-
-            Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                Text("No hay empresas registradas.")
-            }
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().padding(innerPadding).padding(Dimens.espacioMedio),
-                verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
-            ) {
-
-                item {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        label = { Text("Buscar empresa por nombre, RUT...") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                    Spacer(Modifier.height(Dimens.espacioMedio))
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            if (clientes.isEmpty() && !isLoading && query.isBlank()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No hay empresas registradas.")
                 }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().padding(Dimens.espacioMedio),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
+                ) {
+
+                    item {
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            label = { Text("Buscar empresa por nombre, RUT...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        Spacer(Modifier.height(Dimens.espacioMedio))
+                    }
 
 
-                items(clientes) { cliente ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(Dimens.espacioMedio)) {
-                            Text(cliente.nombre, style = MaterialTheme.typography.titleMedium)
-                            Text("RUT: ${Validaciones.formatearRut(cliente.rut)} | Giro: ${cliente.giro ?: "N/A"}")
-                            Text("Estado: " + if (cliente.activo) "ACTIVO" else "INACTIVO",
-                                color = if (cliente.activo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                    items(clientes) { cliente ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(Dimens.espacioMedio)) {
+                                Text(cliente.nombre, style = MaterialTheme.typography.titleMedium)
+                                Text("RUT: ${Validaciones.formatearRut(cliente.rut)} | Giro: ${cliente.giro ?: "N/A"}")
+                                Text("Estado: " + if (cliente.activo) "ACTIVO" else "INACTIVO",
+                                    color = if (cliente.activo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
 
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                                OutlinedButton(
-                                    onClick = { onEditarCliente(cliente) },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("Editar")
-                                }
-                                Button(
-                                    onClick = { clienteAEliminar = cliente; errorEliminar = null },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("Eliminar")
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                                    OutlinedButton(
+                                        onClick = { onEditarCliente(cliente) },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Editar")
+                                    }
+                                    Button(
+                                        onClick = { clienteAEliminar = cliente; errorEliminar = null },
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Eliminar")
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
 
-                if (isLoading) {
-                    item {
-                        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                    if (isLoading) {
+                        item {
+                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
-                }
-                if (clientes.isEmpty() && !isLoading && query.isNotBlank()) {
-                    item {
-                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("No se encontraron empresas con ese criterio.")
+                    if (clientes.isEmpty() && !isLoading && query.isNotBlank()) {
+                        item {
+                            Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text("No se encontraron empresas con ese criterio.")
+                            }
                         }
                     }
                 }

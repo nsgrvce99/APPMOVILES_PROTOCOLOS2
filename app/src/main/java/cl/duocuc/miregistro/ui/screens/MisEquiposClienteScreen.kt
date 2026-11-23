@@ -13,6 +13,7 @@ import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.CampoTexto
+import cl.duocuc.miregistro.ui.components.FondoFooter
 import cl.duocuc.miregistro.ui.components.MenuLateral
 import cl.duocuc.miregistro.ui.components.TarjetaEquipo
 import cl.duocuc.miregistro.ui.theme.Dimens
@@ -55,31 +56,35 @@ fun MisEquiposClienteScreen(
             },
             snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { innerPadding ->
-            Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(Dimens.espacioMedio)) {
+            FondoFooter(
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                Column(modifier = Modifier.fillMaxSize().padding(Dimens.espacioMedio)) {
 
-                CampoTexto(
-                    valor = textoBusqueda,
-                    onValorCambia = { textoBusqueda = it },
-                    etiqueta = "Buscar por TAG o Planta...",
-                    icono = R.drawable.ic_persona
-                )
+                    CampoTexto(
+                        valor = textoBusqueda,
+                        onValorCambia = { textoBusqueda = it },
+                        etiqueta = "Buscar por TAG o Planta...",
+                        icono = R.drawable.ic_persona
+                    )
 
-                Spacer(Modifier.height(Dimens.espacioMedio))
+                    Spacer(Modifier.height(Dimens.espacioMedio))
 
-                if (equiposFiltrados.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No se encontraron equipos.")
-                    }
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
-                    ) {
-                        items(equiposFiltrados) { equipo ->
-                            TarjetaEquipo(
-                                equipo = equipo,
-                                onVerHistorial = { onVerHistorialEquipo(equipo.id.toLong()) },
-                                onRegistrarPrueba = null
-                            )
+                    if (equiposFiltrados.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No se encontraron equipos.")
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+                        ) {
+                            items(equiposFiltrados) { equipo ->
+                                TarjetaEquipo(
+                                    equipo = equipo,
+                                    onVerHistorial = { onVerHistorialEquipo(equipo.id.toLong()) },
+                                    onRegistrarPrueba = null
+                                )
+                            }
                         }
                     }
                 }

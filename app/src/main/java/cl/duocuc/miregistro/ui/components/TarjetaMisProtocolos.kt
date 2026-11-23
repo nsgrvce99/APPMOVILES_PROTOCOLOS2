@@ -33,7 +33,7 @@ fun TarjetaMisProtocolos(
 
 
             val (textoEstado, colorEstado) = when (protocolo.estado) {
-                "BORRADOR" -> "Borrador (Sin cerrar)" to MaterialTheme.colorScheme.secondary
+                "BORRADOR" -> "Borrador" to MaterialTheme.colorScheme.secondary
                 "REGISTRADO_TERRENO" -> "Pendiente de formalización" to MaterialTheme.colorScheme.primary
                 "FORMALIZADO" -> "Formalizado" to MaterialTheme.colorScheme.tertiary
                 "PRECAUCION", "OBSERVADO" -> "Precaución (Requiere revisión)" to MaterialTheme.colorScheme.error
@@ -96,7 +96,7 @@ fun TarjetaMisProtocolos(
             } else {
 
                 Text(
-                    "🔒 Protocolo Formalizado (No editable)",
+                    "Protocolo Formalizado",
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodySmall
                 )

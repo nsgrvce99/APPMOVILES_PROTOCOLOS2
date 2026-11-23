@@ -16,6 +16,7 @@ import cl.duocuc.miregistro.model.Protocolo
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.FilaInfo
+import cl.duocuc.miregistro.ui.components.FondoFooter
 import cl.duocuc.miregistro.ui.theme.Dimens
 import kotlin.math.abs
 
@@ -87,117 +88,121 @@ fun HistorialEquipoScreen(
             )
         }
     ) { innerPadding ->
-        if (protocolos.isEmpty() && !isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                Text("No hay historial para este equipo.")
-            }
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = PaddingValues(Dimens.espacioMedio),
-                verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
-            ) {
-                items(protocolos) { protocolo ->
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            if (protocolos.isEmpty() && !isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No hay historial para este equipo.")
+                }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(Dimens.espacioMedio),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
+                ) {
+                    items(protocolos) { protocolo ->
 
-                    val medicion = dbHelper.obtenerMedicionDeProtocolo(protocolo.id)
+                        val medicion = dbHelper.obtenerMedicionDeProtocolo(protocolo.id)
 
 
-                    val indiceActual = protocolos.indexOf(protocolo)
-                    val protocoloAnterior = protocolos.getOrNull(indiceActual + 1)
-                    val medicionAnterior = protocoloAnterior?.let { dbHelper.obtenerMedicionDeProtocolo(it.id) }
-                    val tecnico = remember(protocolo.tecnicoId) { dbHelper.buscarPorId(protocolo.tecnicoId) }
-                    val nombreTecnico = tecnico?.nombre ?: "Desconocido"
+                        val indiceActual = protocolos.indexOf(protocolo)
+                        val protocoloAnterior = protocolos.getOrNull(indiceActual + 1)
+                        val medicionAnterior = protocoloAnterior?.let { dbHelper.obtenerMedicionDeProtocolo(it.id) }
+                        val tecnico = remember(protocolo.tecnicoId) { dbHelper.buscarPorId(protocolo.tecnicoId) }
+                        val nombreTecnico = tecnico?.nombre ?: "Desconocido"
 
-                    val estadoMostrado = when (protocolo.estado) {
-                        "REGISTRADO_TERRENO", "OBSERVADO", "PRECAUCION" -> "Pendiente de formalización"
-                        "FORMALIZADO" -> "Formalizado"
-                        "BORRADOR" -> "Borrador"
-                        "ANULADO" -> "Anulado"
-                        else -> protocolo.estado
-                    }
+                        val estadoMostrado = when (protocolo.estado) {
+                            "REGISTRADO_TERRENO", "OBSERVADO", "PRECAUCION" -> "Pendiente de formalización"
+                            "FORMALIZADO" -> "Formalizado"
+                            "BORRADOR" -> "Borrador"
+                            "ANULADO" -> "Anulado"
+                            else -> protocolo.estado
+                        }
 
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(Dimens.espacioMedio)) {
-                            FilaInfo("Fecha", protocolo.fecha)
-                            FilaInfo("Técnico", nombreTecnico)
-                            FilaInfo("Resultado", protocolo.resultadoGlobal)
-                            FilaInfo("Estado", estadoMostrado)
-                            FilaInfo("T° / Humedad", "${protocolo.temperatura}°C / ${protocolo.humedad}%")
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(Dimens.espacioMedio)) {
+                                FilaInfo("Fecha", protocolo.fecha)
+                                FilaInfo("Técnico", nombreTecnico)
+                                FilaInfo("Resultado", protocolo.resultadoGlobal)
+                                FilaInfo("Estado", estadoMostrado)
+                                FilaInfo("T° / Humedad", "${protocolo.temperatura}°C / ${protocolo.humedad}%")
 
-                            if (medicion != null) {
-                                Spacer(Modifier.height(8.dp))
-                                Text("Tipo Prueba: ${medicion.tipoPrueba}", style = MaterialTheme.typography.labelLarge)
+                                if (medicion != null) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("Tipo Prueba: ${medicion.tipoPrueba}", style = MaterialTheme.typography.labelLarge)
 
-                                when (medicion.tipoPrueba) {
-                                    "AISLACION" -> {
-                                        FilaInfo("Lectura 1min", "${medicion.lectura1Min} MΩ")
-                                        FilaInfo("Lectura 10min", "${medicion.lectura10Min} MΩ")
+                                    when (medicion.tipoPrueba) {
+                                        "AISLACION" -> {
+                                            FilaInfo("Lectura 1min", "${medicion.lectura1Min} MΩ")
+                                            FilaInfo("Lectura 10min", "${medicion.lectura10Min} MΩ")
+                                        }
+                                        "TTR" -> {
+                                            FilaInfo("Relación Teórica", medicion.lectura1Min)
+                                            FilaInfo("Relación Medida", medicion.lectura10Min)
+                                        }
+                                        "CONTACTOS" -> {
+                                            FilaInfo("Resistencia Medida", "${medicion.lectura1Min} μΩ")
+                                            FilaInfo("Máx de Placa", "${medicion.lectura10Min} μΩ")
+                                        }
+                                        "RELE" -> {
+                                            FilaInfo("Corriente de Ajuste", "${medicion.corrienteAjuste} A")
+                                            FilaInfo("Corriente de Operación", "${medicion.corrienteOperacion} A")
+                                            FilaInfo("Tiempo Esperado", "${medicion.tiempoEsperado} ms")
+                                            FilaInfo("Tiempo Medido", "${medicion.tiempoMedido} ms")
+                                        }
+                                        "DEVANADOS" -> {
+                                            FilaInfo("Fase A", "${medicion.devanadoA} mΩ")
+                                            FilaInfo("Fase B", "${medicion.devanadoB} mΩ")
+                                            FilaInfo("Fase C", "${medicion.devanadoC} mΩ")
+                                        }
                                     }
-                                    "TTR" -> {
-                                        FilaInfo("Relación Teórica", medicion.lectura1Min)
-                                        FilaInfo("Relación Medida", medicion.lectura10Min)
-                                    }
-                                    "CONTACTOS" -> {
-                                        FilaInfo("Resistencia Medida", "${medicion.lectura1Min} μΩ")
-                                        FilaInfo("Máx de Placa", "${medicion.lectura10Min} μΩ")
-                                    }
-                                    "RELE" -> {
-                                        FilaInfo("Corriente de Ajuste", "${medicion.corrienteAjuste} A")
-                                        FilaInfo("Corriente de Operación", "${medicion.corrienteOperacion} A")
-                                        FilaInfo("Tiempo Esperado", "${medicion.tiempoEsperado} ms")
-                                        FilaInfo("Tiempo Medido", "${medicion.tiempoMedido} ms")
-                                    }
-                                    "DEVANADOS" -> {
-                                        FilaInfo("Fase A", "${medicion.devanadoA} mΩ")
-                                        FilaInfo("Fase B", "${medicion.devanadoB} mΩ")
-                                        FilaInfo("Fase C", "${medicion.devanadoC} mΩ")
-                                    }
-                                }
 
-                                var lecturaActual: Double? = null
-                                var lecturaAnterior: Double? = null
-                                var etiquetaComparacion = ""
+                                    var lecturaActual: Double? = null
+                                    var lecturaAnterior: Double? = null
+                                    var etiquetaComparacion = ""
 
-                                when (medicion.tipoPrueba) {
-                                    "AISLACION", "TTR", "CONTACTOS" -> {
-                                        lecturaActual = medicion.lectura1Min.toDoubleOrNull()
-                                        lecturaAnterior = medicionAnterior?.lectura1Min?.toDoubleOrNull()
-                                        etiquetaComparacion = "Lectura 1min"
+                                    when (medicion.tipoPrueba) {
+                                        "AISLACION", "TTR", "CONTACTOS" -> {
+                                            lecturaActual = medicion.lectura1Min.toDoubleOrNull()
+                                            lecturaAnterior = medicionAnterior?.lectura1Min?.toDoubleOrNull()
+                                            etiquetaComparacion = "Lectura 1min"
+                                        }
+                                        "RELE" -> {
+                                            lecturaActual = medicion.tiempoMedido.toDoubleOrNull()
+                                            lecturaAnterior = medicionAnterior?.tiempoMedido?.toDoubleOrNull()
+                                            etiquetaComparacion = "Tiempo Medido"
+                                        }
+                                        "DEVANADOS" -> {
+                                            lecturaActual = medicion.devanadoA.toDoubleOrNull()
+                                            lecturaAnterior = medicionAnterior?.devanadoA?.toDoubleOrNull()
+                                            etiquetaComparacion = "Fase A"
+                                        }
                                     }
-                                    "RELE" -> {
-                                        lecturaActual = medicion.tiempoMedido.toDoubleOrNull()
-                                        lecturaAnterior = medicionAnterior?.tiempoMedido?.toDoubleOrNull()
-                                        etiquetaComparacion = "Tiempo Medido"
-                                    }
-                                    "DEVANADOS" -> {
-                                        lecturaActual = medicion.devanadoA.toDoubleOrNull()
-                                        lecturaAnterior = medicionAnterior?.devanadoA?.toDoubleOrNull()
-                                        etiquetaComparacion = "Fase A"
-                                    }
-                                }
 
-                                if (medicionAnterior != null && medicionAnterior.tipoPrueba == medicion.tipoPrueba && lecturaActual != null && lecturaAnterior != null && lecturaAnterior > 0) {
-                                    val variacion = ((lecturaActual - lecturaAnterior) / lecturaAnterior) * 100
-                                    Spacer(Modifier.height(4.dp))
-                                    if (abs(variacion) > 25.0) {
-                                        Text("⚠ Variación significativa en $etiquetaComparacion: ${"%.1f".format(variacion)}% vs anterior (RN-09)", color = Color(0xFFD32F2F))
-                                    } else {
-                                        Text("Variación en $etiquetaComparacion vs anterior: ${"%.1f".format(variacion)}%", color = Color(0xFF388E3C))
+                                    if (medicionAnterior != null && medicionAnterior.tipoPrueba == medicion.tipoPrueba && lecturaActual != null && lecturaAnterior != null && lecturaAnterior > 0) {
+                                        val variacion = ((lecturaActual - lecturaAnterior) / lecturaAnterior) * 100
+                                        Spacer(Modifier.height(4.dp))
+                                        if (abs(variacion) > 25.0) {
+                                            Text("⚠ Variación significativa en $etiquetaComparacion: ${"%.1f".format(variacion)}% vs anterior.", color = Color(0xFFD32F2F))
+                                        } else {
+                                            Text("Variación en $etiquetaComparacion vs anterior: ${"%.1f".format(variacion)}%", color = Color(0xFF388E3C))
+                                        }
+                                    } else if (medicionAnterior == null || medicionAnterior.tipoPrueba != medicion.tipoPrueba) {
+                                        Text("Sin historial previo del mismo tipo para comparar", color = Color.Gray)
                                     }
-                                } else if (medicionAnterior == null || medicionAnterior.tipoPrueba != medicion.tipoPrueba) {
-                                    Text("Sin historial previo del mismo tipo para comparar", color = Color.Gray)
                                 }
                             }
                         }
                     }
-                }
 
 
-                if (isLoading) {
-                    item {
-                        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                    if (isLoading) {
+                        item {
+                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
                 }

@@ -119,67 +119,71 @@ fun GestionPersonalInternoScreen(
             }
         }
     ) { innerPadding ->
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(Dimens.espacioMedio),
-            verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
         ) {
-            item {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    label = { Text("Buscar por nombre, RUT o correo...") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                Spacer(Modifier.height(Dimens.espacioMedio))
-            }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize().padding(Dimens.espacioMedio),
+                verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
+            ) {
+                item {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = { Text("Buscar por nombre, RUT o correo...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(Modifier.height(Dimens.espacioMedio))
+                }
 
-            items(usuarios) { user ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(Dimens.espacioMedio)) {
-                        Text(user.nombre, style = MaterialTheme.typography.titleMedium)
-                        Text("RUT: ${Validaciones.formatearRut(user.rut)} | Rol: ${user.rolNombre ?: "N/A"}")
-                        Text("Correo: ${user.correo}", style = MaterialTheme.typography.bodySmall)
-                        Text(
-                            "Estado: " + if (user.activo) "ACTIVO" else "INACTIVO",
-                            color = if (user.activo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                        )
+                items(usuarios) { user ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(Dimens.espacioMedio)) {
+                            Text(user.nombre, style = MaterialTheme.typography.titleMedium)
+                            Text("RUT: ${Validaciones.formatearRut(user.rut)} | Rol: ${user.rolNombre ?: "N/A"}")
+                            Text("Correo: ${user.correo}", style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                "Estado: " + if (user.activo) "ACTIVO" else "INACTIVO",
+                                color = if (user.activo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
 
 
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
-                        ) {
-                            OutlinedButton(
-                                onClick = {
-                                    usuarioAEditar = user
-                                    editNombre = user.nombre
-                                    editRut = user.rut
-                                    editCorreo = user.correo
-                                    editRolId = user.rolId
-                                    editErrorNombre = null; editErrorRut = null; editErrorCorreo = null; editErrorGeneral = null
-                                },
-                                modifier = Modifier.weight(1f)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
                             ) {
-                                Text("Editar")
-                            }
-                            Button(
-                                onClick = { usuarioAEliminar = user; errorEliminar = null },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Eliminar")
+                                OutlinedButton(
+                                    onClick = {
+                                        usuarioAEditar = user
+                                        editNombre = user.nombre
+                                        editRut = user.rut
+                                        editCorreo = user.correo
+                                        editRolId = user.rolId
+                                        editErrorNombre = null; editErrorRut = null; editErrorCorreo = null; editErrorGeneral = null
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Editar")
+                                }
+                                Button(
+                                    onClick = { usuarioAEliminar = user; errorEliminar = null },
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Eliminar")
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            if (isLoading) {
-                item {
-                    Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                if (isLoading) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
                     }
                 }
             }

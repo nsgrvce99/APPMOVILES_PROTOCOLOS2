@@ -2,7 +2,6 @@ package cl.duocuc.miregistro.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.People
@@ -31,15 +30,16 @@ fun CrearUsuarioClienteScreen(
 
     if (usuarioActual?.rolId != 3L) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Acceso denegado. Solo el Jefe Técnico puede gestionar clientes (RN-20).", color = MaterialTheme.colorScheme.error)
+            Text(
+                text = "Acceso denegado. Solo el Jefe Técnico puede gestionar clientes.",
+                color = MaterialTheme.colorScheme.error
+            )
         }
         return
     }
 
-
     var expandirPersonalInterno by remember { mutableStateOf(false) }
     var expandirClientes by remember { mutableStateOf(false) }
-
 
     var query by remember { mutableStateOf("") }
     var clientes by remember { mutableStateOf<List<Usuario>>(emptyList()) }
@@ -49,10 +49,8 @@ fun CrearUsuarioClienteScreen(
     val limit = 20
     val listState = rememberLazyListState()
 
-
     var clienteAEliminar by remember { mutableStateOf<Usuario?>(null) }
     var errorEliminar by remember { mutableStateOf<String?>(null) }
-
 
     fun cargarClientes(reset: Boolean = false) {
         if (isLoading) return
@@ -90,126 +88,124 @@ fun CrearUsuarioClienteScreen(
     Scaffold(
         topBar = { AppTopBar(titulo = "Gestión de Clientes", onVolver = onVolver) }
     ) { innerPadding ->
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(Dimens.espacioMedio),
-            verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
         ) {
-
-            item {
-                AcordeonSeccion(
-                    titulo = "Personal Interno",
-                    icono = Icons.Default.People,
-                    expandido = expandirPersonalInterno,
-                    onToggle = { expandirPersonalInterno = !expandirPersonalInterno }
-                ) {
-                    Text(
-                        text = "Gestione las cuentas de técnicos, ingenieros y jefes técnicos.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(Modifier.height(Dimens.espacioChico))
-                    Button(
-                        onClick = onGestionarPersonalInterno,
-                        modifier = Modifier.fillMaxWidth()
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(Dimens.espacioMedio),
+                verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+            ) {
+                item {
+                    AcordeonSeccion(
+                        titulo = "Personal Interno",
+                        icono = Icons.Default.People,
+                        expandido = expandirPersonalInterno,
+                        onToggle = { expandirPersonalInterno = !expandirPersonalInterno }
                     ) {
-                        Text("Gestionar Personal Interno (Técnicos / Jefes)")
+                        Text(
+                            text = "Gestione las cuentas de técnicos, ingenieros y jefes técnicos.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(Modifier.height(Dimens.espacioChico))
+                        Button(
+                            onClick = onGestionarPersonalInterno,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Gestionar Personal Interno (Técnicos / Jefes)")
+                        }
                     }
                 }
-            }
 
-
-            item {
-                AcordeonSeccion(
-                    titulo = "Clientes",
-                    icono = Icons.Default.Person,
-                    expandido = expandirClientes,
-                    onToggle = { expandirClientes = !expandirClientes }
-                ) {
-                    Column {
-                        OutlinedTextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            label = { Text("Buscar por nombre, RUT o correo...") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = Dimens.espacioMedio),
-                            singleLine = true
-                        )
-
-
-                        clientes.forEach { cliente ->
-                            Card(
+                item {
+                    AcordeonSeccion(
+                        titulo = "Clientes",
+                        icono = Icons.Default.Person,
+                        expandido = expandirClientes,
+                        onToggle = { expandirClientes = !expandirClientes }
+                    ) {
+                        Column {
+                            OutlinedTextField(
+                                value = query,
+                                onValueChange = { query = it },
+                                label = { Text("Buscar por nombre, RUT o correo...") },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = Dimens.espacioChico)
-                            ) {
-                                Column(Modifier.padding(Dimens.espacioMedio)) {
-                                    Text(cliente.nombre, style = MaterialTheme.typography.titleMedium)
-                                    Text("RUT: ${cliente.rut} | Correo: ${cliente.correo}")
-                                    Text(
-                                        "Estado: " + if (cliente.activo) "ACTIVO" else "INACTIVO",
-                                        color = if (cliente.activo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                                    )
+                                    .padding(bottom = Dimens.espacioMedio),
+                                singleLine = true
+                            )
 
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
-                                    ) {
-                                        OutlinedButton(
-                                            onClick = { onEditarCliente(cliente) },
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Text("Editar")
-                                        }
-                                        Button(
-                                            onClick = {
-                                                clienteAEliminar = cliente
-                                                errorEliminar = null
-                                            },
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Text("Eliminar")
-                                        }
-                                    }
+                            clientes.forEach { cliente ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = Dimens.espacioChico)
+                                ) {
+                                    Column(Modifier.padding(Dimens.espacioMedio)) {
+                                        Text(cliente.nombre, style = MaterialTheme.typography.titleMedium)
+                                        Text("RUT: ${cliente.rut} | Correo: ${cliente.correo}")
+                                        Text(
+                                            "Estado: " + if (cliente.activo) "ACTIVO" else "INACTIVO",
+                                            color = if (cliente.activo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                        )
 
-                                    if (!cliente.activo) {
-                                        Button(
-                                            onClick = {
-                                                dbHelper.activarCliente(cliente.id, "Induztek2026")
-                                                cargarClientes(reset = true)
-                                            },
-                                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
                                         ) {
-                                            Text("Activar Cuenta (Clave: Induztek2026)")
+                                            OutlinedButton(
+                                                onClick = { onEditarCliente(cliente) },
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text("Editar")
+                                            }
+                                            Button(
+                                                onClick = {
+                                                    clienteAEliminar = cliente
+                                                    errorEliminar = null
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text("Eliminar")
+                                            }
+                                        }
+
+                                        if (!cliente.activo) {
+                                            Button(
+                                                onClick = {
+                                                    dbHelper.activarCliente(cliente.id, "Induztek2026")
+                                                    cargarClientes(reset = true)
+                                                },
+                                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                            ) {
+                                                Text("Activar Cuenta (Clave: Induztek2026)")
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-
-                        if (isLoading) {
-                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
+                            if (isLoading) {
+                                Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
                             }
-                        }
-                        if (clientes.isEmpty() && !isLoading) {
-                            Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text("No se encontraron clientes.")
+                            if (clientes.isEmpty() && !isLoading) {
+                                Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                    Text("No se encontraron clientes.")
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            item { Spacer(Modifier.height(32.dp)) }
+                item { Spacer(Modifier.height(32.dp)) }
+            }
         }
     }
-
 
     if (clienteAEliminar != null) {
         AlertDialog(

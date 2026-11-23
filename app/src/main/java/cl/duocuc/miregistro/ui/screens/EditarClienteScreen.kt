@@ -40,100 +40,106 @@ fun EditarClienteScreen(
     Scaffold(
         topBar = { AppTopBar(titulo = "Editar Cliente", onVolver = onVolver) }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(Dimens.espacioMedio)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
         ) {
-            CampoValidado(
-                valor = nombre,
-                onValorCambia = { nombre = it; errorNombre = null },
-                etiqueta = "Razón Social",
-                icono = R.drawable.ic_persona,
-                error = errorNombre
-            )
-
-            CampoValidado(
-                valor = rut,
-                onValorCambia = { rut = it; errorRut = null },
-                etiqueta = "RUT Empresa",
-                icono = R.drawable.ic_persona,
-                error = errorRut
-            )
-
-            CampoValidado(
-                valor = giro,
-                onValorCambia = { giro = it },
-                etiqueta = "Giro",
-                icono = R.drawable.ic_persona
-            )
-
-            CampoValidado(
-                valor = correo,
-                onValorCambia = { correo = it; errorCorreo = null },
-                etiqueta = "Correo Electrónico",
-                icono = R.drawable.ic_correo,
-                error = errorCorreo,
-                tipoTeclado = KeyboardType.Email
-            )
-
-            if (errorGeneral != null) {
-                Text(errorGeneral!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            }
-
-            if (exito) {
-                MensajeExito(
-                    titulo = "Cliente actualizado",
-                    detalles = listOf("Los datos se guardaron correctamente.")
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(Dimens.espacioMedio)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
+            ) {
+                CampoValidado(
+                    valor = nombre,
+                    onValorCambia = { nombre = it; errorNombre = null },
+                    etiqueta = "Razón Social",
+                    icono = R.drawable.ic_persona,
+                    error = errorNombre
                 )
-            }
 
-            BotonPrincipal(
-                texto = if (exito) "Volver" else "Guardar Cambios",
-                onClick = {
-                    if (exito) {
-                        onGuardadoExitoso()
-                    } else {
+                CampoValidado(
+                    valor = rut,
+                    onValorCambia = { rut = it; errorRut = null },
+                    etiqueta = "RUT Empresa",
+                    icono = R.drawable.ic_persona,
+                    error = errorRut
+                )
 
-                        errorNombre = null
-                        errorRut = null
-                        errorCorreo = null
-                        errorGeneral = null
+                CampoValidado(
+                    valor = giro,
+                    onValorCambia = { giro = it },
+                    etiqueta = "Giro",
+                    icono = R.drawable.ic_persona
+                )
 
-                        when {
-                            nombre.isBlank() -> errorNombre = "La razón social es obligatoria"
-                            rut.isBlank() -> errorRut = "El RUT es obligatorio"
-                            !Validaciones.esRutValido(rut) -> errorRut = "RUT inválido (RN-03)"
-                            correo.isBlank() -> errorCorreo = "El correo es obligatorio"
-                            !Validaciones.esCorreoValido(correo) -> errorCorreo = "Correo inválido"
-                            rut != cliente.rut && dbHelper.existeRut(rut) -> errorRut = "Este RUT ya está registrado en otro cliente."
-                            correo != cliente.correo && dbHelper.existeCorreo(correo) -> errorCorreo = "Este correo ya está registrado en otro usuario."
-                            else -> {
-                                try {
-                                    dbHelper.actualizarDatosCliente(
-                                        idCliente = cliente.id,
-                                        nuevoNombre = nombre,
-                                        nuevoRut = rut,
-                                        nuevoGiro = giro,
-                                        nuevoCorreo = correo
-                                    )
-                                    exito = true
-                                } catch (e: Exception) {
-                                    errorGeneral = if (e.message?.contains("UNIQUE constraint", ignoreCase = true) == true) {
-                                        "El correo o RUT ya está registrado en otro usuario del sistema."
-                                    } else {
-                                        "Error al actualizar los datos. Por favor, verifique la información e intente nuevamente."
+                CampoValidado(
+                    valor = correo,
+                    onValorCambia = { correo = it; errorCorreo = null },
+                    etiqueta = "Correo Electrónico",
+                    icono = R.drawable.ic_correo,
+                    error = errorCorreo,
+                    tipoTeclado = KeyboardType.Email
+                )
+
+                if (errorGeneral != null) {
+                    Text(
+                        text = errorGeneral!!,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                if (exito) {
+                    MensajeExito(
+                        titulo = "Cliente actualizado",
+                        detalles = listOf("Los datos se guardaron correctamente.")
+                    )
+                }
+
+                BotonPrincipal(
+                    texto = if (exito) "Volver" else "Guardar Cambios",
+                    onClick = {
+                        if (exito) {
+                            onGuardadoExitoso()
+                        } else {
+                            errorNombre = null
+                            errorRut = null
+                            errorCorreo = null
+                            errorGeneral = null
+
+                            when {
+                                nombre.isBlank() -> errorNombre = "La razón social es obligatoria"
+                                rut.isBlank() -> errorRut = "El RUT es obligatorio"
+                                !Validaciones.esRutValido(rut) -> errorRut = "RUT inválido."
+                                correo.isBlank() -> errorCorreo = "El correo es obligatorio"
+                                !Validaciones.esCorreoValido(correo) -> errorCorreo = "Correo inválido"
+                                rut != cliente.rut && dbHelper.existeRut(rut) -> errorRut = "Este RUT ya está registrado en otro cliente."
+                                correo != cliente.correo && dbHelper.existeCorreo(correo) -> errorCorreo = "Este correo ya está registrado en otro usuario."
+                                else -> {
+                                    try {
+                                        dbHelper.actualizarDatosCliente(
+                                            idCliente = cliente.id,
+                                            nuevoNombre = nombre,
+                                            nuevoRut = rut,
+                                            nuevoGiro = giro,
+                                            nuevoCorreo = correo
+                                        )
+                                        exito = true
+                                    } catch (e: Exception) {
+                                        errorGeneral = if (e.message?.contains("UNIQUE constraint", ignoreCase = true) == true) {
+                                            "El correo o RUT ya está registrado en otro usuario del sistema."
+                                        } else {
+                                            "Error al actualizar los datos. Por favor, verifique la información e intente nuevamente."
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }

@@ -50,104 +50,107 @@ fun RegistrarEquipoScreen(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(Dimens.espacioPantalla)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
         ) {
-            Text("Complete los datos del equipo (RF-02 / HU-01)", style = MaterialTheme.typography.titleMedium)
-            Text("Instalación: $nombreInstalacion", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(Dimens.espacioPantalla)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+            ) {
+                Text("Complete los datos del equipo.", style = MaterialTheme.typography.titleMedium)
+                Text("Instalación: $nombreInstalacion", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
 
-            CampoValidado(
-                valor = tag,
-                onValorCambia = { tag = it.uppercase(); errorTag = null },
-                etiqueta = "TAG del equipo (ej. TR-03)",
-                icono = R.drawable.ic_candado,
-                error = errorTag
-            )
-
-            SelectorDesplegablePaginado(
-                etiqueta = "Instalación / Planta",
-                itemSeleccionado = plantaSeleccionada,
-                textoDe = { it.second },
-                onBuscar = { query, limit, offset ->
-
-                    dbHelper.listarInstalacionesPaginado(query, limit, offset)
-                },
-                onItemSeleccionado = { planta ->
-                    plantaSeleccionada = planta
-                }
-            )
-
-            CampoValidado(
-                valor = marca,
-                onValorCambia = { marca = it; errorMarca = null },
-                etiqueta = "Marca",
-                icono = R.drawable.ic_candado,
-                error = errorMarca
-            )
-
-            CampoValidado(
-                valor = serie,
-                onValorCambia = { serie = it; errorSerie = null },
-                etiqueta = "Número de serie",
-                icono = R.drawable.ic_candado,
-                error = errorSerie
-            )
-
-            if (exito) {
-                MensajeExito(
-                    titulo = "Equipo registrado exitosamente",
-                    detalles = listOf("TAG: $tag", "Tipo: $tipoEquipo", "Instalación: $nombreInstalacion")
+                CampoValidado(
+                    valor = tag,
+                    onValorCambia = { tag = it.uppercase(); errorTag = null },
+                    etiqueta = "TAG del equipo.",
+                    icono = R.drawable.ic_candado,
+                    error = errorTag
                 )
-            }
 
-            BotonPrincipal(
-                texto = if (exito) "Volver a la lista" else "Registrar Equipo",
-                onClick = {
-                    if (exito) {
-                        onEquipoRegistrado()
-                    } else {
+                SelectorDesplegablePaginado(
+                    etiqueta = "Instalación / Planta",
+                    itemSeleccionado = plantaSeleccionada,
+                    textoDe = { it.second },
+                    onBuscar = { query, limit, offset ->
 
-                        errorTag = null
-                        errorMarca = null
-                        errorSerie = null
+                        dbHelper.listarInstalacionesPaginado(query, limit, offset)
+                    },
+                    onItemSeleccionado = { planta ->
+                        plantaSeleccionada = planta
+                    }
+                )
 
-                        when {
-                            tag.isBlank() -> errorTag = "El TAG es obligatorio"
-                            !Validaciones.esTagValido(tag) -> errorTag = "Solo letras mayúsculas, números y guiones"
-                            dbHelper.existeTagEnInstalacion(tag, nombreInstalacion) -> errorTag = "El TAG '$tag' ya existe en esta instalación (RN-01)"
-                            marca.isBlank() -> errorMarca = "La marca es obligatoria"
-                            !Validaciones.esTextoValido(marca) -> errorMarca = "Caracteres inválidos"
-                            serie.isBlank() -> errorSerie = "El número de serie es obligatorio"
-                            !Validaciones.esTextoValido(serie) -> errorSerie = "Caracteres inválidos"
-                            else -> {
-                                val idClienteReal = dbHelper.obtenerIdClienteDeInstalacion(nombreInstalacion)
-                                val nuevoEquipo = Equipo(
-                                    tag = tag.trim(),
-                                    tipoEquipo = tipoEquipo,
-                                    clasificacion = "Primario",
-                                    instalacion = nombreInstalacion,
-                                    marca = marca.trim(),
-                                    serie = serie.trim(),
-                                    potenciaTension = "",
-                                    idCliente = idClienteReal
-                                )
-                                val idInsertado = dbHelper.insertarEquipo(nuevoEquipo)
-                                if (idInsertado > 0) {
-                                    exito = true
-                                } else {
-                                    errorSerie = "Error al guardar. Intente nuevamente."
+                CampoValidado(
+                    valor = marca,
+                    onValorCambia = { marca = it; errorMarca = null },
+                    etiqueta = "Marca",
+                    icono = R.drawable.ic_candado,
+                    error = errorMarca
+                )
+
+                CampoValidado(
+                    valor = serie,
+                    onValorCambia = { serie = it; errorSerie = null },
+                    etiqueta = "Número de serie",
+                    icono = R.drawable.ic_candado,
+                    error = errorSerie
+                )
+
+                if (exito) {
+                    MensajeExito(
+                        titulo = "Equipo registrado exitosamente",
+                        detalles = listOf("TAG: $tag", "Tipo: $tipoEquipo", "Instalación: $nombreInstalacion")
+                    )
+                }
+
+                BotonPrincipal(
+                    texto = if (exito) "Volver a la lista" else "Registrar Equipo",
+                    onClick = {
+                        if (exito) {
+                            onEquipoRegistrado()
+                        } else {
+
+                            errorTag = null
+                            errorMarca = null
+                            errorSerie = null
+
+                            when {
+                                tag.isBlank() -> errorTag = "El TAG es obligatorio"
+                                !Validaciones.esTagValido(tag) -> errorTag = "Solo letras mayúsculas, números y guiones"
+                                dbHelper.existeTagEnInstalacion(tag, nombreInstalacion) -> errorTag = "El TAG '$tag' ya existe en esta instalación."
+                                marca.isBlank() -> errorMarca = "La marca es obligatoria"
+                                !Validaciones.esTextoValido(marca) -> errorMarca = "Caracteres inválidos"
+                                serie.isBlank() -> errorSerie = "El número de serie es obligatorio"
+                                !Validaciones.esTextoValido(serie) -> errorSerie = "Caracteres inválidos"
+                                else -> {
+                                    val idClienteReal = dbHelper.obtenerIdClienteDeInstalacion(nombreInstalacion)
+                                    val nuevoEquipo = Equipo(
+                                        tag = tag.trim(),
+                                        tipoEquipo = tipoEquipo,
+                                        clasificacion = "Primario",
+                                        instalacion = nombreInstalacion,
+                                        marca = marca.trim(),
+                                        serie = serie.trim(),
+                                        potenciaTension = "",
+                                        idCliente = idClienteReal
+                                    )
+                                    val idInsertado = dbHelper.insertarEquipo(nuevoEquipo)
+                                    if (idInsertado > 0) {
+                                        exito = true
+                                    } else {
+                                        errorSerie = "Error al guardar. Intente nuevamente."
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }

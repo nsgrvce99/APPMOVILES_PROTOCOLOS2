@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Equipo
 import cl.duocuc.miregistro.ui.components.AppTopBar
+import cl.duocuc.miregistro.ui.components.FondoFooter
 import cl.duocuc.miregistro.ui.components.TarjetaEquipo
 import cl.duocuc.miregistro.ui.theme.Dimens
 
@@ -45,42 +46,45 @@ fun ListaEquiposScreen(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(Dimens.espacioPantalla)
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
         ) {
-            Button(
-                onClick = onRegistrarEquipoNuevo,
-                modifier = Modifier.fillMaxWidth().padding(bottom = Dimens.espacioMedio)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(Dimens.espacioPantalla)
             ) {
-                Text("➕ Registrar Equipo Nuevo")
-            }
-
-            if (mensajeError != null) {
-                Text(mensajeError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 8.dp))
-            }
-
-            if (equipos.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                Button(
+                    onClick = onRegistrarEquipoNuevo,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = Dimens.espacioMedio)
                 ) {
-                    Text("No hay equipos registrados en esta instalación.")
+                    Text("Registrar Equipo Nuevo")
                 }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(Dimens.espacioMedio),
-                    verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
-                ) {
-                    items(equipos) { equipo ->
-                        TarjetaEquipo(
-                            equipo = equipo,
-                            onVerHistorial = { onVerHistorialEquipo(equipo.id.toLong()) },
-                            onRegistrarPrueba = { onSeleccionarEquipoParaPrueba(equipo.id.toLong()) },
-                            onEliminar = { equipoAEliminar = equipo }
-                        )
+
+                if (mensajeError != null) {
+                    Text(mensajeError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 8.dp))
+                }
+
+                if (equipos.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No hay equipos registrados en esta instalación.")
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(Dimens.espacioMedio),
+                        verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+                    ) {
+                        items(equipos) { equipo ->
+                            TarjetaEquipo(
+                                equipo = equipo,
+                                onVerHistorial = { onVerHistorialEquipo(equipo.id.toLong()) },
+                                onRegistrarPrueba = { onSeleccionarEquipoParaPrueba(equipo.id.toLong()) },
+                                onEliminar = { equipoAEliminar = equipo }
+                            )
+                        }
                     }
                 }
             }

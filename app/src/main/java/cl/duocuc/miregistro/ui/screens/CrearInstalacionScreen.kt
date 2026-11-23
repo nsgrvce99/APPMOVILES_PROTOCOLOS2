@@ -24,7 +24,6 @@ fun CrearInstalacionScreen(
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
 
-
     val puedeCrear = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
     if (!puedeCrear) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -32,7 +31,6 @@ fun CrearInstalacionScreen(
         }
         return
     }
-
 
     val clientes = remember { dbHelper.listarClientes() }
 
@@ -44,65 +42,70 @@ fun CrearInstalacionScreen(
     Scaffold(
         topBar = { AppTopBar(titulo = "Crear Instalación", onVolver = onVolver) }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(Dimens.espacioMedio)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
         ) {
-            Text("Nueva Planta / Instalación", style = MaterialTheme.typography.titleMedium)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(Dimens.espacioMedio)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
+            ) {
+                Text("Nueva Planta / Instalación", style = MaterialTheme.typography.titleMedium)
 
+                if (clientes.isEmpty()) {
+                    Text(
+                        "No hay empresas clientes registradas. Primero debes registrar una empresa en 'Registrar Empresa Cliente'.",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    SelectorDesplegable(
+                        etiqueta = "Empresa Cliente Dueña de la Planta",
+                        opciones = clientes,
+                        seleccionada = clienteSeleccionado,
+                        onSeleccionar = { clienteSeleccionado = it; error = null },
+                        textoDe = { "${it.nombre} (${Validaciones.formatearRut(it.rut)})" }
+                    )
+                }
 
-            if (clientes.isEmpty()) {
-                Text(
-                    "⚠️ No hay empresas clientes registradas. Primero debes registrar una empresa en 'Registrar Empresa Cliente'.",
-                    color = MaterialTheme.colorScheme.error
+                CampoTexto(
+                    valor = nombreInstalacion,
+                    onValorCambia = { nombreInstalacion = it; error = null },
+                    etiqueta = "Nombre de la instalación (ej. Planta Lampa)",
+                    icono = R.drawable.ic_persona
                 )
-            } else {
-                SelectorDesplegable(
-                    etiqueta = "Empresa Cliente Dueña de la Planta",
-                    opciones = clientes,
-                    seleccionada = clienteSeleccionado,
-                    onSeleccionar = { clienteSeleccionado = it; error = null },
-                    textoDe = { "${it.nombre} (${Validaciones.formatearRut(it.rut)})" }
+
+                MensajeError(texto = error)
+                if (exito) {
+                    MensajeExito(
+                        titulo = "¡Instalación creada!",
+                        detalles = listOf("Ya está disponible en la lista.")
+                    )
+                }
+
+                BotonPrincipal(
+                    texto = "Guardar Instalación",
+                    onClick = {
+                        if (nombreInstalacion.isBlank()) {
+                            error = "El nombre de la planta es obligatorio"
+                        } else if (clienteSeleccionado == null) {
+                            error = "Debes asociar la planta a una empresa cliente"
+                        } else {
+                            val id = dbHelper.insertarInstalacion(nombreInstalacion, clienteSeleccionado!!.id)
+                            if (id > 0) {
+                                exito = true
+                                nombreInstalacion = ""
+                                clienteSeleccionado = null
+                                error = null
+                            } else {
+                                error = "Error al crear la instalación."
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
-
-
-            CampoTexto(
-                valor = nombreInstalacion,
-                onValorCambia = { nombreInstalacion = it; error = null },
-                etiqueta = "Nombre de la instalación (ej. Planta Lampa)",
-                icono = R.drawable.ic_persona
-            )
-
-            MensajeError(texto = error)
-            if (exito) MensajeExito(titulo = "¡Instalación creada!", detalles = listOf("Ya está disponible en la lista."))
-
-            BotonPrincipal(
-                texto = "Guardar Instalación",
-                onClick = {
-                    if (nombreInstalacion.isBlank()) {
-                        error = "El nombre de la planta es obligatorio"
-                    } else if (clienteSeleccionado == null) {
-                        error = "Debes asociar la planta a una empresa cliente"
-                    } else {
-
-                        val id = dbHelper.insertarInstalacion(nombreInstalacion, clienteSeleccionado!!.id)
-                        if (id > 0) {
-                            exito = true
-                            nombreInstalacion = ""
-                            clienteSeleccionado = null
-                            error = null
-                        } else {
-                            error = "Error al crear la instalación."
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
         }
     }
 }

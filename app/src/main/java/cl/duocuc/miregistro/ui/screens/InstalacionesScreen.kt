@@ -1,8 +1,5 @@
 package cl.duocuc.miregistro.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -12,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,6 +16,7 @@ import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AcordeonSeccion
 import cl.duocuc.miregistro.ui.components.AppTopBar
+import cl.duocuc.miregistro.ui.components.FondoFooter
 import cl.duocuc.miregistro.ui.components.MenuLateral
 import cl.duocuc.miregistro.ui.components.SelectorDesplegablePaginado
 import cl.duocuc.miregistro.ui.theme.Dimens
@@ -50,7 +47,6 @@ fun InstalacionesScreen(
     var mensajeError by remember { mutableStateOf<String?>(null) }
     var instalacionesParaGestionar by remember { mutableStateOf(dbHelper.listarInstalaciones()) }
 
-
     var expandirInstalaciones by remember { mutableStateOf(true) }
     var expandirGestionActivos by remember { mutableStateOf(false) }
     var expandirReportes by remember { mutableStateOf(false) }
@@ -72,175 +68,171 @@ fun InstalacionesScreen(
             },
             snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(Dimens.espacioPantalla),
-                verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+            FondoFooter(
+                modifier = Modifier.padding(innerPadding)
             ) {
-
-                Text(
-                    text = "Bienvenido, ${usuarioActual?.nombre ?: "Operador"}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Rol: ${usuarioActual?.rolNombre ?: "Técnico"}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-
-                AcordeonSeccion(
-                    titulo = "Instalaciones",
-                    icono = Icons.Default.LocationOn,
-                    expandido = expandirInstalaciones,
-                    onToggle = { expandirInstalaciones = !expandirInstalaciones }
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(Dimens.espacioPantalla),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
                 ) {
                     Text(
-                        text = "Seleccione la planta a inspeccionar:",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "Bienvenido, ${usuarioActual?.nombre ?: "Operador"}",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
                     )
+                    Text(
+                        text = "Rol: ${usuarioActual?.rolNombre ?: "Técnico"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
                     Spacer(modifier = Modifier.height(8.dp))
-                    SelectorDesplegablePaginado(
-                        etiqueta = "Plantas",
-                        itemSeleccionado = instalacionSeleccionada,
-                        textoDe = { it.second },
-                        onBuscar = { query, limit, offset ->
-                            dbHelper.listarInstalacionesPaginado(query, limit, offset)
-                        },
-                        onItemSeleccionado = { planta ->
-                            instalacionSeleccionada = planta
-                            onSeleccionarInstalacion(planta.first, planta.second)
-                        }
-                    )
-                }
 
-
-                val puedeCrear = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
-                if (puedeCrear) {
                     AcordeonSeccion(
-                        titulo = "Gestión de Activos",
-                        icono = Icons.Default.Build,
-                        expandido = expandirGestionActivos,
-                        onToggle = { expandirGestionActivos = !expandirGestionActivos }
+                        titulo = "Instalaciones",
+                        icono = Icons.Default.LocationOn,
+                        expandido = expandirInstalaciones,
+                        onToggle = { expandirInstalaciones = !expandirInstalaciones }
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(
-                                onClick = onIrACrearInstalacion,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Crear Instalación (RF-01)")
+                        Text(
+                            text = "Seleccione la planta a inspeccionar:",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        SelectorDesplegablePaginado(
+                            etiqueta = "Plantas",
+                            itemSeleccionado = instalacionSeleccionada,
+                            textoDe = { it.second },
+                            onBuscar = { query, limit, offset ->
+                                dbHelper.listarInstalacionesPaginado(query, limit, offset)
+                            },
+                            onItemSeleccionado = { planta ->
+                                instalacionSeleccionada = planta
+                                onSeleccionarInstalacion(planta.first, planta.second)
                             }
-                            OutlinedButton(
-                                onClick = onIrARegistrarCliente,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Default.Business, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Registrar Empresa Cliente (RF-01)")
-                            }
-                            OutlinedButton(
-                                onClick = onVerListaClientes,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Editar Empresas Clientes")
-                            }
-                            Button(
-                                onClick = {
-                                    instalacionesParaGestionar = dbHelper.listarInstalaciones()
-                                    mostrarDialogoGestionPlantas = true
-                                    mensajeError = null
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            ) {
-                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Gestionar Plantas (Eliminar)")
-                            }
-                        }
+                        )
                     }
-                }
 
-
-                if (usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L) {
-                    AcordeonSeccion(
-                        titulo = "Reportes y Pruebas",
-                        icono = Icons.Default.Assessment,
-                        expandido = expandirReportes,
-                        onToggle = { expandirReportes = !expandirReportes }
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-
-                            if (usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L) {
-                                Button(
-                                    onClick = onIrAFormalizacion,
+                    val puedeCrear = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
+                    if (puedeCrear) {
+                        AcordeonSeccion(
+                            titulo = "Gestión de Activos",
+                            icono = Icons.Default.Build,
+                            expandido = expandirGestionActivos,
+                            onToggle = { expandirGestionActivos = !expandirGestionActivos }
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = onIrACrearInstalacion,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("Ir a Formalización de Protocolos")
-                                }
-                            }
-
-                            if (usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L) {
-                                Button(
-                                    onClick = onVerMisPruebas,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text("Ver Mis Pruebas Registradas")
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Crear Instalación.")
                                 }
                                 OutlinedButton(
-                                    onClick = onVerResumenVisita,
+                                    onClick = onIrARegistrarCliente,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("Ver Resumen de Visita (RF-18)")
+                                    Icon(Icons.Default.Business, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Registrar Empresa Cliente.")
+                                }
+                                OutlinedButton(
+                                    onClick = onVerListaClientes,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Editar Empresas Clientes")
+                                }
+                                Button(
+                                    onClick = {
+                                        instalacionesParaGestionar = dbHelper.listarInstalaciones()
+                                        mostrarDialogoGestionPlantas = true
+                                        mensajeError = null
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Gestionar Plantas (Eliminar)")
                                 }
                             }
                         }
                     }
-                }
 
+                    if (usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L) {
+                        AcordeonSeccion(
+                            titulo = "Reportes y Pruebas",
+                            icono = Icons.Default.Assessment,
+                            expandido = expandirReportes,
+                            onToggle = { expandirReportes = !expandirReportes }
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L) {
+                                    Button(
+                                        onClick = onIrAFormalizacion,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Ir a Formalización de Protocolos")
+                                    }
+                                }
 
-                if (usuarioActual?.rolId == 3L) {
-                    AcordeonSeccion(
-                        titulo = "Administración",
-                        icono = Icons.Default.AdminPanelSettings,
-                        expandido = expandirAdmin,
-                        onToggle = { expandirAdmin = !expandirAdmin }
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
-                                onClick = onIrAInstrumentos,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Gestionar Instrumentos (RN-12)")
-                            }
-                            OutlinedButton(
-                                onClick = onIrACrearCliente,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Gestionar Cuentas de Cliente (RN-20)")
+                                if (usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L) {
+                                    Button(
+                                        onClick = onVerMisPruebas,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Ver Mis Pruebas Registradas")
+                                    }
+                                    OutlinedButton(
+                                        onClick = onVerResumenVisita,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Ver Resumen de Visita.")
+                                    }
+                                }
                             }
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                    if (usuarioActual?.rolId == 3L) {
+                        AcordeonSeccion(
+                            titulo = "Administración",
+                            icono = Icons.Default.AdminPanelSettings,
+                            expandido = expandirAdmin,
+                            onToggle = { expandirAdmin = !expandirAdmin }
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = onIrAInstrumentos,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Gestionar Instrumentos.")
+                                }
+                                OutlinedButton(
+                                    onClick = onIrACrearCliente,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Gestionar Cuentas de Cliente.")
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
             }
         }
     }
-
 
     if (mostrarDialogoGestionPlantas) {
         AlertDialog(
@@ -292,4 +284,3 @@ fun InstalacionesScreen(
         )
     }
 }
-

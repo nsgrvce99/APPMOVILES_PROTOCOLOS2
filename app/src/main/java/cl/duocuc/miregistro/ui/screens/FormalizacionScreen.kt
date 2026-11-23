@@ -13,6 +13,7 @@ import cl.duocuc.miregistro.model.ProtocoloDetallado
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.CampoMultilinea
+import cl.duocuc.miregistro.ui.components.FondoFooter
 import cl.duocuc.miregistro.ui.components.TarjetaProtocoloDetalle
 import cl.duocuc.miregistro.ui.theme.Dimens
 
@@ -31,7 +32,6 @@ fun FormalizacionScreen(
     var protocoloAObservar by remember { mutableStateOf<ProtocoloDetallado?>(null) }
     var motivoObservacion by remember { mutableStateOf("") }
 
-
     var mostrarDialogoFormalizar by remember { mutableStateOf(false) }
     var protocoloAFormalizar by remember { mutableStateOf<ProtocoloDetallado?>(null) }
     var comentarioVariacion by remember { mutableStateOf("") }
@@ -47,51 +47,63 @@ fun FormalizacionScreen(
     Scaffold(
         topBar = { AppTopBar(titulo = "Formalización de Protocolos", onVolver = onVolver) }
     ) { innerPadding ->
-        val esIngeniero = usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
+        FondoFooter(
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            val esIngeniero = usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
 
-        if (!esIngeniero) {
-            Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                Text("Acceso denegado. Solo Ingenieros o Jefes Técnicos.", color = MaterialTheme.colorScheme.error)
-            }
-        } else {
-            if (protocolos.isEmpty()) {
-                Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                    Text("No hay protocolos pendientes de formalización.")
+            if (!esIngeniero) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Acceso denegado. Solo Ingenieros o Jefes Técnicos.",
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(innerPadding),
-                    contentPadding = PaddingValues(Dimens.espacioMedio),
-                    verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
-                ) {
-                    items(protocolos) { proto -> val medicion = remember(proto.id) { dbHelper.obtenerMedicionDeProtocolo(proto.id) }
-                        TarjetaProtocoloDetalle(
-                            protocolo = proto,
-                            medicion = medicion,
-                            onFormalizar = {
-
-                                val hayVariacion = dbHelper.tieneVariacionSignificativa(proto.id)
-                                if (hayVariacion) {
-                                    protocoloAFormalizar = proto
-                                    comentarioVariacion = ""
-                                    mostrarDialogoFormalizar = true
-                                } else {
-                                    dbHelper.actualizarEstadoProtocolo(proto.id, "FORMALIZADO")
-                                    recargar()
+                if (protocolos.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No hay protocolos pendientes de formalización.")
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(Dimens.espacioMedio),
+                        verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
+                    ) {
+                        items(protocolos) { proto ->
+                            val medicion = remember(proto.id) { dbHelper.obtenerMedicionDeProtocolo(proto.id) }
+                            TarjetaProtocoloDetalle(
+                                protocolo = proto,
+                                medicion = medicion,
+                                onFormalizar = {
+                                    val hayVariacion = dbHelper.tieneVariacionSignificativa(proto.id)
+                                    if (hayVariacion) {
+                                        protocoloAFormalizar = proto
+                                        comentarioVariacion = ""
+                                        mostrarDialogoFormalizar = true
+                                    } else {
+                                        dbHelper.actualizarEstadoProtocolo(proto.id, "FORMALIZADO")
+                                        recargar()
+                                    }
+                                },
+                                onObservar = {
+                                    protocoloAObservar = proto
+                                    motivoObservacion = ""
+                                    mostrarDialogoObservar = true
                                 }
-                            },
-                            onObservar = {
-                                protocoloAObservar = proto
-                                motivoObservacion = ""
-                                mostrarDialogoObservar = true
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
         }
     }
-
 
     if (mostrarDialogoObservar && protocoloAObservar != null) {
         AlertDialog(
@@ -129,11 +141,10 @@ fun FormalizacionScreen(
         )
     }
 
-
     if (mostrarDialogoFormalizar && protocoloAFormalizar != null) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoFormalizar = false },
-            title = { Text("Variación Significativa Detectada (RN-09)") },
+            title = { Text("Variación Significativa Detectada.") },
             text = {
                 Column {
                     Text("Este protocolo tiene una variación mayor al 25% respecto al anterior. Debe dejar un comentario justificando la decisión.")
@@ -149,7 +160,6 @@ fun FormalizacionScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-
                         dbHelper.formalizarProtocoloConComentario(protocoloAFormalizar!!.id, comentarioVariacion)
                         recargar()
                         mostrarDialogoFormalizar = false
