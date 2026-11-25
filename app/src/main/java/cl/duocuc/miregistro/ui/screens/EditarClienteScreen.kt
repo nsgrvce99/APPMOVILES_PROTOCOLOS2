@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.network.*
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.*
 import cl.duocuc.miregistro.ui.theme.Dimens
@@ -23,7 +24,9 @@ fun EditarClienteScreen(
     onGuardadoExitoso: () -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
 
     var nombre by remember { mutableStateOf(cliente.nombre) }
     var rut by remember { mutableStateOf(cliente.rut) }
@@ -97,7 +100,9 @@ fun EditarClienteScreen(
                     )
                 }
 
+                MensajeError(texto = operacion.error)
                 BotonPrincipal(
+                    habilitado = !operacion.ejecutando,
                     texto = if (exito) "Volver" else "Guardar Cambios",
                     onClick = {
                         if (exito) {
@@ -114,11 +119,18 @@ fun EditarClienteScreen(
                                 !Validaciones.esRutValido(rut) -> errorRut = "RUT inválido."
                                 correo.isBlank() -> errorCorreo = "El correo es obligatorio"
                                 !Validaciones.esCorreoValido(correo) -> errorCorreo = "Correo inválido"
-                                rut != cliente.rut && dbHelper.existeRut(rut) -> errorRut = "Este RUT ya está registrado en otro cliente."
-                                correo != cliente.correo && dbHelper.existeCorreo(correo) -> errorCorreo = "Este correo ya está registrado en otro usuario."
+                                rut != cliente.rut && dbHelper?.existeRut(rut) == true -> errorRut = "Este RUT ya está registrado en otro cliente."
+                                correo != cliente.correo && dbHelper?.existeCorreo(correo) == true -> errorCorreo = "Este correo ya está registrado en otro usuario."
                                 else -> {
+                                    if (api != null) {
+                                        operacion.ejecutar {
+                                            api.editarCliente(cliente.id, ClienteSolicitud(nombre.trim(), rut, correo.trim(), giro.trim()))
+                                            exito = true
+                                        }
+                                        return@BotonPrincipal
+                                    }
                                     try {
-                                        dbHelper.actualizarDatosCliente(
+                                        checkNotNull(dbHelper).actualizarDatosCliente(
                                             idCliente = cliente.id,
                                             nuevoNombre = nombre,
                                             nuevoRut = rut,

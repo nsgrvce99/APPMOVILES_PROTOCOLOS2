@@ -11,6 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.network.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.FondoFooter
@@ -25,7 +28,9 @@ fun ListaClientesScreen(
     onEditarCliente: (Usuario) -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
 
 
     var query by remember { mutableStateOf("") }
@@ -50,7 +55,8 @@ fun ListaClientesScreen(
     }
 
 
-    fun cargarClientes(reset: Boolean = false) {
+    var errorCarga by remember { mutableStateOf<String?>(null) }
+    suspend fun cargarClientes(reset: Boolean = false) {
         if (isLoading) return
         if (reset) {
             offset = 0
@@ -60,15 +66,24 @@ fun ListaClientesScreen(
         if (!hasMore) return
 
         isLoading = true
-        val nuevos = dbHelper.listarClientesPaginado(query, limit, offset)
-
-        clientes = clientes + nuevos
-        offset += limit
-        hasMore = nuevos.size == limit
-        isLoading = false
+        errorCarga = null
+        try {
+            val nuevos = if (api == null) checkNotNull(dbHelper).listarClientesPaginado(query, limit, offset)
+                else api.clientes(query, limit, offset).map { it.aUsuario() }
+            clientes += nuevos
+            offset += limit
+            hasMore = nuevos.size == limit
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            errorCarga = mensajeRed(error)
+        } finally {
+            isLoading = false
+        }
     }
 
     LaunchedEffect(query) {
+        if (api != null && query.isNotEmpty()) delay(250)
         cargarClientes(reset = true)
     }
 
@@ -169,20 +184,20 @@ fun ListaClientesScreen(
                     if (errorEliminar == null) {
                         Text("Se eliminará la empresa '${clienteAEliminar?.nombre}'. Esta acción no se puede deshacer.")
                     } else {
-                        Text(errorEliminar!!, color = MaterialTheme.colorScheme.error)
+                        Text(errorEliminar ?: checkNotNull(operacion.error), color = MaterialTheme.colorScheme.error)
                     }
                 }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        try {
-                            dbHelper.eliminarCliente(clienteAEliminar!!.id)
+                        val id = checkNotNull(clienteAEliminar).id
+                        operacion.ejecutar {
+                            if (api == null) checkNotNull(dbHelper).eliminarCliente(id)
+                            else api.eliminarCliente(id).verificar()
                             cargarClientes(reset = true)
                             clienteAEliminar = null
                             errorEliminar = null
-                        } catch (e: Exception) {
-                            errorEliminar = e.message ?: "No se puede eliminar este cliente."
                         }
                     },
                     enabled = errorEliminar == null

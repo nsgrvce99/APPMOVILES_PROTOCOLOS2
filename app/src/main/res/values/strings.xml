@@ -6,7 +6,7 @@
     Ventaja: traducir la app = crear values-en/strings.xml con los mismos nombres.
 -->
 <resources>
-    <string name="app_name">MiRegistro</string>
+    <string name="app_name">Induztek</string>
 
     <!-- Pantalla 1: Formulario -->
     <string name="titulo_formulario">Crear cuenta</string>

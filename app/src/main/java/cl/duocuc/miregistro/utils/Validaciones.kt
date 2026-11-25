@@ -1,6 +1,11 @@
 package cl.duocuc.miregistro.utils
 
 object Validaciones {
+    const val CLAVE_ACTIVACION_CLIENTE = "Induztek2026!"
+
+    fun esClaveTemporalLocal(valor: String?): Boolean =
+        valor == CLAVE_ACTIVACION_CLIENTE || valor == "Induztek2026" || valor == "clave" ||
+            valor?.startsWith("PENDIENTE_") == true
 
 
     fun esNumero(valor: String): Boolean = valor.isEmpty() || valor.matches(Regex("^[0-9]*$"))

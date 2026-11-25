@@ -11,6 +11,8 @@ import androidx.compose.ui.platform.LocalContext
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
+import cl.duocuc.miregistro.network.*
+import kotlinx.coroutines.delay
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.CampoTexto
 import cl.duocuc.miregistro.ui.components.FondoFooter
@@ -26,18 +28,32 @@ fun MisEquiposClienteScreen(
     onVerHistorialEquipo: (Long) -> Unit,
     onCerrarSesion: () -> Unit,
     onVerMiPerfil: () -> Unit,
-    onCambiarContrasena: () -> Unit
+    onCambiarContrasena: () -> Unit,
+    api: InduztekApi? = null
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
 
     var textoBusqueda by remember { mutableStateOf("") }
 
-    val equiposFiltrados = remember(usuarioActual?.id, textoBusqueda) {
-        if (usuarioActual != null) {
-            dbHelper.buscarEquiposPorCliente(usuarioActual.id, textoBusqueda)
+    var paginas by remember(textoBusqueda) { mutableIntStateOf(1) }
+    var revision by remember { mutableIntStateOf(0) }
+    val carga by cargar(usuarioActual?.id, textoBusqueda, paginas, revision, api) {
+        if (api != null) {
+            if (textoBusqueda.isNotBlank()) delay(250)
+            val primera = api.misEquipos(textoBusqueda, 0)
+            val equipos = buildList {
+                addAll(primera.content)
+                for (pagina in 1 until minOf(paginas, primera.page.totalPages)) {
+                    addAll(api.misEquipos(textoBusqueda, pagina).content)
+                }
+            }
+            equipos.distinctBy { it.id } to (paginas < primera.page.totalPages)
         } else {
-            emptyList()
+            val equipos = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                usuarioActual?.let { dbHelper?.buscarEquiposPorCliente(it.id, textoBusqueda) }.orEmpty()
+            }
+            equipos to false
         }
     }
 
@@ -45,6 +61,7 @@ fun MisEquiposClienteScreen(
         usuarioActual = usuarioActual,
         onCerrarSesion = onCerrarSesion,
         onVerMiPerfil = onVerMiPerfil,
+        onVerUsuarios = { textoBusqueda = "" },
         onCambiarContrasena = onCambiarContrasena
     ) { onAbrirMenu, snackbarHostState ->
         Scaffold(
@@ -70,6 +87,7 @@ fun MisEquiposClienteScreen(
 
                     Spacer(Modifier.height(Dimens.espacioMedio))
 
+                    ContenidoRemoto(carga, { revision++ }) { (equiposFiltrados, hayMas) ->
                     if (equiposFiltrados.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text("No se encontraron equipos.")
@@ -78,14 +96,18 @@ fun MisEquiposClienteScreen(
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
                         ) {
-                            items(equiposFiltrados) { equipo ->
+                            items(equiposFiltrados, key = { it.id }) { equipo ->
                                 TarjetaEquipo(
                                     equipo = equipo,
                                     onVerHistorial = { onVerHistorialEquipo(equipo.id.toLong()) },
                                     onRegistrarPrueba = null
                                 )
                             }
+                            if (hayMas) item {
+                                TextButton(onClick = { paginas++ }) { Text("Cargar más equipos") }
+                            }
                         }
+                    }
                     }
                 }
             }

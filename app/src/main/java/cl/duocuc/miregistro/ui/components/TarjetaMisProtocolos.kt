@@ -14,7 +14,8 @@ fun TarjetaMisProtocolos(
     onEditar: () -> Unit,
     onEliminar: () -> Unit,
     onVerDetalle: () -> Unit,
-    onCerrarBorrador: () -> Unit
+    onCerrarBorrador: () -> Unit,
+    enServidor: Boolean = false
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Dimens.espacioMedio)) {
@@ -60,6 +61,9 @@ fun TarjetaMisProtocolos(
 
 
             if (protocolo.estado == "BORRADOR") {
+                if (enServidor) OutlinedButton(onClick = onEditar, modifier = Modifier.fillMaxWidth()) {
+                    Text("Editar borrador")
+                }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
@@ -76,7 +80,7 @@ fun TarjetaMisProtocolos(
                         Text("Eliminar")
                     }
                 }
-            } else if (protocolo.estado != "FORMALIZADO") {
+            } else if (protocolo.estado != "FORMALIZADO" && (!enServidor || protocolo.estado != "ANULADO")) {
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
@@ -90,10 +94,10 @@ fun TarjetaMisProtocolos(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Eliminar")
+                        Text(if (enServidor) "Anular" else "Eliminar")
                     }
                 }
-            } else {
+            } else if (protocolo.estado == "FORMALIZADO") {
 
                 Text(
                     "Protocolo Formalizado",

@@ -16,6 +16,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import androidx.compose.runtime.remember
+import android.graphics.BitmapFactory
+import android.util.Base64
+import cl.duocuc.miregistro.network.PREFIJO_FOTO
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.ui.theme.Dimens
 import cl.duocuc.miregistro.ui.theme.MiRegistroTheme
@@ -33,10 +37,17 @@ fun AvatarCircular(
         .clip(CircleShape)
         .border(Dimens.bordeAvatar, MaterialTheme.colorScheme.surface, CircleShape)
 
-    if (fotoUri != null) {
-
+    val imagen = remember(fotoUri) {
+        if (fotoUri?.startsWith(PREFIJO_FOTO) == true) {
+            runCatching {
+                val bytes = Base64.decode(fotoUri.removePrefix(PREFIJO_FOTO), Base64.NO_WRAP)
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            }.getOrNull()
+        } else fotoUri
+    }
+    if (imagen != null) {
         AsyncImage(
-            model = fotoUri,
+            model = imagen,
             contentDescription = descripcion,
             contentScale = ContentScale.Crop,
             modifier = modifierFinal

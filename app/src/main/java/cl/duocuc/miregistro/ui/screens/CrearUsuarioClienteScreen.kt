@@ -16,6 +16,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.network.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.*
 import cl.duocuc.miregistro.ui.theme.Dimens
@@ -31,7 +34,9 @@ fun CrearUsuarioClienteScreen(
     onGestionarPersonalInterno: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
 
     if (usuarioActual?.rolId != 3L) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -43,6 +48,9 @@ fun CrearUsuarioClienteScreen(
         return
     }
 
+    var credenciales by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var errorCargaPersonal by remember { mutableStateOf<String?>(null) }
+    var errorCargaClientes by remember { mutableStateOf<String?>(null) }
     var expandirPersonalInterno by remember { mutableStateOf(false) }
     var expandirClientes by remember { mutableStateOf(false) }
 
@@ -87,7 +95,7 @@ fun CrearUsuarioClienteScreen(
         Pair(3L, "Jefe Técnico")
     )
 
-    fun cargarPersonal(reset: Boolean = false) {
+    suspend fun cargarPersonal(reset: Boolean = false) {
         if (isLoadingPersonal) return
         if (reset) {
             offsetPersonal = 0
@@ -97,15 +105,24 @@ fun CrearUsuarioClienteScreen(
         if (!hasMorePersonal) return
 
         isLoadingPersonal = true
-        val nuevos = dbHelper.listarPersonalInternoPaginado(queryPersonal, limitPersonal, offsetPersonal)
-
-        personalInterno = personalInterno + nuevos
-        offsetPersonal += limitPersonal
-        hasMorePersonal = nuevos.size == limitPersonal
-        isLoadingPersonal = false
+        errorCargaPersonal = null
+        try {
+            val nuevos = if (api == null) checkNotNull(dbHelper).listarPersonalInternoPaginado(queryPersonal, limitPersonal, offsetPersonal)
+                else api.personal(queryPersonal, limitPersonal, offsetPersonal).map { it.aUsuario() }
+            personalInterno += nuevos
+            offsetPersonal += limitPersonal
+            hasMorePersonal = nuevos.size == limitPersonal
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            errorCargaPersonal = mensajeRed(error)
+        } finally {
+            isLoadingPersonal = false
+        }
     }
 
     LaunchedEffect(queryPersonal) {
+        if (api != null && queryPersonal.isNotEmpty()) delay(250)
         cargarPersonal(reset = true)
     }
 
@@ -121,7 +138,7 @@ fun CrearUsuarioClienteScreen(
     var clienteAEliminar by remember { mutableStateOf<Usuario?>(null) }
     var errorEliminar by remember { mutableStateOf<String?>(null) }
 
-    fun cargarClientes(reset: Boolean = false) {
+    suspend fun cargarClientes(reset: Boolean = false) {
         if (isLoading) return
         if (reset) {
             offset = 0
@@ -131,15 +148,24 @@ fun CrearUsuarioClienteScreen(
         if (!hasMore) return
 
         isLoading = true
-        val nuevos = dbHelper.listarClientesPaginado(query, limit, offset)
-
-        clientes = clientes + nuevos
-        offset += limit
-        hasMore = nuevos.size == limit
-        isLoading = false
+        errorCargaClientes = null
+        try {
+            val nuevos = if (api == null) checkNotNull(dbHelper).listarClientesPaginado(query, limit, offset)
+                else api.clientes(query, limit, offset).map { it.aUsuario() }
+            clientes += nuevos
+            offset += limit
+            hasMore = nuevos.size == limit
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            errorCargaClientes = mensajeRed(error)
+        } finally {
+            isLoading = false
+        }
     }
 
     LaunchedEffect(query) {
+        if (api != null && query.isNotEmpty()) delay(250)
         cargarClientes(reset = true)
     }
 
@@ -238,6 +264,7 @@ fun CrearUsuarioClienteScreen(
                                 }
                             }
 
+                            errorCargaPersonal?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                             if (isLoadingPersonal) {
                                 Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                                     CircularProgressIndicator()
@@ -310,23 +337,33 @@ fun CrearUsuarioClienteScreen(
                                         if (!cliente.activo) {
                                             Button(
                                                 onClick = {
-                                                    dbHelper.activarCliente(cliente.id, "Induztek2026")
-                                                    cargarClientes(reset = true)
+                                                    operacion.ejecutar {
+                                                        if (api == null) {
+                                                            checkNotNull(dbHelper).activarCliente(cliente.id, Validaciones.CLAVE_ACTIVACION_CLIENTE)
+                                                        } else {
+                                                            val clave = Validaciones.CLAVE_ACTIVACION_CLIENTE
+                                                            api.activarCliente(cliente.id, ActivacionSolicitud(clave))
+                                                            credenciales = cliente.correo to clave
+                                                        }
+                                                        cargarClientes(reset = true)
+                                                    }
                                                 },
                                                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                                             ) {
-                                                Text("Activar Cuenta (Clave: Induztek2026)")
+                                                Text(if (api == null) "Activar Cuenta (Clave local)" else "Activar cuenta")
                                             }
                                         }
                                     }
                                 }
                             }
 
+                            errorCargaClientes?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                             if (isLoading) {
                                 Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                                     CircularProgressIndicator()
                                 }
                             }
+                            if (operacion.error != null && clienteAEliminar == null) MensajeError(texto = operacion.error)
                             if (clientes.isEmpty() && !isLoading) {
                                 Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                                     Text("No se encontraron clientes.")
@@ -353,7 +390,7 @@ fun CrearUsuarioClienteScreen(
             title = { Text("Crear Nuevo Usuario Interno") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (errorGeneral != null) Text(errorGeneral!!, color = MaterialTheme.colorScheme.error)
+                    if (errorGeneral != null || operacion.error != null) Text(errorGeneral ?: operacion.error.orEmpty(), color = MaterialTheme.colorScheme.error)
 
                     CampoValidado(valor = nuevoNombre, onValorCambia = { nuevoNombre = it; errorNombre = null; errorGeneral = null }, etiqueta = "Nombre Completo", icono = R.drawable.ic_persona, error = errorNombre)
                     CampoValidado(valor = nuevoRut, onValorCambia = { nuevoRut = it; errorRut = null; errorGeneral = null }, etiqueta = "RUT (sin puntos ni guion)", icono = R.drawable.ic_persona, error = errorRut)
@@ -377,16 +414,24 @@ fun CrearUsuarioClienteScreen(
                             !Validaciones.esTextoValido(nuevoNombre) -> errorNombre = "Caracteres inválidos"
                             nuevoRut.isBlank() -> errorRut = "El RUT es obligatorio"
                             !Validaciones.esRutValido(nuevoRut) -> errorRut = "RUT inválido"
-                            dbHelper.existeRut(nuevoRut) -> errorRut = "El RUT ya está registrado"
+                            dbHelper?.existeRut(nuevoRut) == true -> errorRut = "El RUT ya está registrado"
                             nuevoCorreo.isBlank() -> errorCorreo = "El correo es obligatorio"
                             !Validaciones.esCorreoValido(nuevoCorreo) -> errorCorreo = "Formato de correo inválido"
-                            dbHelper.existeCorreo(nuevoCorreo) -> errorCorreo = "El correo ya está registrado"
+                            dbHelper?.existeCorreo(nuevoCorreo) == true -> errorCorreo = "El correo ya está registrado"
                             else -> {
-                                val nuevoUsuario = Usuario(nombre = nuevoNombre.trim(), rut = nuevoRut.trim(), correo = nuevoCorreo.trim(), contrasena = "Induztek2026", rolId = nuevoRolId, activo = true)
-                                dbHelper.insertarUsuario(nuevoUsuario)
-                                cargarPersonal(reset = true)
-                                mostrarDialogoCrearPersonal = false
-                                nuevoNombre = ""; nuevoRut = ""; nuevoCorreo = ""; nuevoRolId = 1L
+                                operacion.ejecutar {
+                                    if (api != null) {
+                                        val creado = api.crearPersonal(PersonalSolicitud(nuevoNombre.trim(), nuevoRut.trim(), nuevoCorreo.trim(), nuevoRolId))
+                                        credenciales = creado.usuario.correo to creado.contrasenaTemporal
+                                    } else {
+                                        val usuario = Usuario(nombre = nuevoNombre.trim(), rut = nuevoRut.trim(),
+                                            correo = nuevoCorreo.trim(), contrasena = "Induztek2026", rolId = nuevoRolId, activo = true)
+                                        checkNotNull(dbHelper).insertarUsuario(usuario)
+                                    }
+                                    cargarPersonal(reset = true)
+                                    mostrarDialogoCrearPersonal = false
+                                    nuevoNombre = ""; nuevoRut = ""; nuevoCorreo = ""; nuevoRolId = 1L
+                                }
                             }
                         }
                     }
@@ -408,7 +453,7 @@ fun CrearUsuarioClienteScreen(
             title = { Text("Editar Usuario Interno") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (editErrorGeneral != null) Text(editErrorGeneral!!, color = MaterialTheme.colorScheme.error)
+                    if (editErrorGeneral != null || operacion.error != null) Text(editErrorGeneral ?: operacion.error.orEmpty(), color = MaterialTheme.colorScheme.error)
 
                     CampoValidado(valor = editNombre, onValorCambia = { editNombre = it; editErrorNombre = null }, etiqueta = "Nombre Completo", icono = R.drawable.ic_persona, error = editErrorNombre)
                     CampoValidado(valor = editRut, onValorCambia = { editRut = it; editErrorRut = null }, etiqueta = "RUT", icono = R.drawable.ic_persona, error = editErrorRut)
@@ -432,14 +477,18 @@ fun CrearUsuarioClienteScreen(
                             !Validaciones.esTextoValido(editNombre) -> editErrorNombre = "Caracteres inválidos"
                             editRut.isBlank() -> editErrorRut = "El RUT es obligatorio"
                             !Validaciones.esRutValido(editRut) -> editErrorRut = "RUT inválido"
-                            editRut != usuarioAEditar!!.rut && dbHelper.existeRut(editRut) -> editErrorRut = "El RUT ya está en uso"
+                            editRut != usuarioAEditar!!.rut && dbHelper?.existeRut(editRut) == true -> editErrorRut = "El RUT ya está en uso"
                             editCorreo.isBlank() -> editErrorCorreo = "El correo es obligatorio"
                             !Validaciones.esCorreoValido(editCorreo) -> editErrorCorreo = "Formato de correo inválido"
-                            editCorreo != usuarioAEditar!!.correo && dbHelper.existeCorreo(editCorreo) -> editErrorCorreo = "El correo ya está en uso"
+                            editCorreo != usuarioAEditar!!.correo && dbHelper?.existeCorreo(editCorreo) == true -> editErrorCorreo = "El correo ya está en uso"
                             else -> {
-                                dbHelper.actualizarPersonalInterno(usuarioAEditar!!.id, editNombre.trim(), editRut.trim(), editCorreo.trim(), editRolId)
-                                cargarPersonal(reset = true)
-                                usuarioAEditar = null
+                                val id = checkNotNull(usuarioAEditar).id
+                                operacion.ejecutar {
+                                    if (api == null) checkNotNull(dbHelper).actualizarPersonalInterno(id, editNombre.trim(), editRut.trim(), editCorreo.trim(), editRolId)
+                                    else api.editarPersonal(id, PersonalSolicitud(editNombre.trim(), editRut.trim(), editCorreo.trim(), editRolId))
+                                    cargarPersonal(reset = true)
+                                    usuarioAEditar = null
+                                }
                             }
                         }
                     }
@@ -457,22 +506,22 @@ fun CrearUsuarioClienteScreen(
             title = { Text("¿Eliminar usuario?") },
             text = {
                 Column {
-                    if (errorEliminarPersonal == null) {
+                    if (errorEliminarPersonal == null && operacion.error == null) {
                         Text("Se eliminará a '${usuarioAEliminar?.nombre}'. Esta acción no se puede deshacer.")
                     } else {
-                        Text(errorEliminarPersonal!!, color = MaterialTheme.colorScheme.error)
+                        Text(errorEliminarPersonal ?: operacion.error.orEmpty(), color = MaterialTheme.colorScheme.error)
                     }
                 }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        try {
-                            dbHelper.eliminarUsuario(usuarioAEliminar!!.id)
+                        val id = checkNotNull(usuarioAEliminar).id
+                        operacion.ejecutar {
+                            if (api == null) checkNotNull(dbHelper).eliminarUsuario(id)
+                            else api.eliminarPersonal(id).verificar()
                             cargarPersonal(reset = true)
                             usuarioAEliminar = null
-                        } catch (e: Exception) {
-                            errorEliminarPersonal = "No se puede eliminar: tiene pruebas o registros asociados."
                         }
                     },
                     enabled = errorEliminarPersonal == null
@@ -491,22 +540,22 @@ fun CrearUsuarioClienteScreen(
             title = { Text("¿Eliminar cliente?") },
             text = {
                 Column {
-                    if (errorEliminar == null) {
+                    if (errorEliminar == null && operacion.error == null) {
                         Text("Se eliminará la empresa '${clienteAEliminar?.nombre}'. Esta acción no se puede deshacer.")
                     } else {
-                        Text(errorEliminar!!, color = MaterialTheme.colorScheme.error)
+                        Text(errorEliminar ?: operacion.error.orEmpty(), color = MaterialTheme.colorScheme.error)
                     }
                 }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        try {
-                            dbHelper.eliminarCliente(clienteAEliminar!!.id)
+                        val id = checkNotNull(clienteAEliminar).id
+                        operacion.ejecutar {
+                            if (api == null) checkNotNull(dbHelper).eliminarCliente(id)
+                            else api.eliminarCliente(id).verificar()
                             cargarClientes(reset = true)
                             clienteAEliminar = null
-                        } catch (e: Exception) {
-                            errorEliminar = e.message ?: "Error al eliminar el cliente."
                         }
                     },
                     enabled = errorEliminar == null
@@ -519,6 +568,15 @@ fun CrearUsuarioClienteScreen(
                     Text("Cancelar")
                 }
             }
+        )
+    }
+
+    credenciales?.let { (correo, clave) ->
+        AlertDialog(
+            onDismissRequest = { credenciales = null },
+            title = { Text("Contraseña temporal") },
+            text = { Text("$correo\n$clave\nLa cuenta debe cambiarla al ingresar.") },
+            confirmButton = { TextButton(onClick = { credenciales = null }) { Text("Listo") } }
         )
     }
 }

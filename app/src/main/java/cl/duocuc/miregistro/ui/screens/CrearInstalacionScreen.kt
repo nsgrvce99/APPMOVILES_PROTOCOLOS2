@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
+import cl.duocuc.miregistro.network.*
 import cl.duocuc.miregistro.ui.components.*
 import cl.duocuc.miregistro.ui.theme.Dimens
 import cl.duocuc.miregistro.utils.Validaciones
@@ -22,7 +23,9 @@ fun CrearInstalacionScreen(
     onVolver: () -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
 
     val puedeCrear = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
     if (!puedeCrear) {
@@ -32,7 +35,7 @@ fun CrearInstalacionScreen(
         return
     }
 
-    val clientes = remember { dbHelper.listarClientes() }
+    val clientes = remember(dbHelper) { dbHelper?.listarClientes().orEmpty() }
 
     var nombreInstalacion by remember { mutableStateOf("") }
     var clienteSeleccionado by remember { mutableStateOf<Usuario?>(null) }
@@ -54,7 +57,15 @@ fun CrearInstalacionScreen(
             ) {
                 Text("Nueva Planta / Instalación", style = MaterialTheme.typography.titleMedium)
 
-                if (clientes.isEmpty()) {
+                if (api != null) {
+                    SelectorDesplegablePaginado(
+                        etiqueta = "Empresa Cliente Dueña de la Planta",
+                        itemSeleccionado = clienteSeleccionado,
+                        textoDe = { "${it.nombre} (${Validaciones.formatearRut(it.rut)})" },
+                        onBuscar = { filtro, limite, offset -> api.clientes(filtro, limite, offset).map { it.aUsuario() } },
+                        onItemSeleccionado = { clienteSeleccionado = it; error = null }
+                    )
+                } else if (clientes.isEmpty()) {
                     Text(
                         "No hay empresas clientes registradas. Primero debes registrar una empresa en 'Registrar Empresa Cliente'.",
                         color = MaterialTheme.colorScheme.error
@@ -76,7 +87,7 @@ fun CrearInstalacionScreen(
                     icono = R.drawable.ic_persona
                 )
 
-                MensajeError(texto = error)
+                MensajeError(texto = error ?: operacion.error)
                 if (exito) {
                     MensajeExito(
                         titulo = "¡Instalación creada!",
@@ -85,14 +96,25 @@ fun CrearInstalacionScreen(
                 }
 
                 BotonPrincipal(
-                    texto = "Guardar Instalación",
+                    texto = if (operacion.ejecutando) "Guardando…" else "Guardar Instalación",
+                    habilitado = !operacion.ejecutando,
                     onClick = {
                         if (nombreInstalacion.isBlank()) {
                             error = "El nombre de la planta es obligatorio"
                         } else if (clienteSeleccionado == null) {
                             error = "Debes asociar la planta a una empresa cliente"
                         } else {
-                            val id = dbHelper.insertarInstalacion(nombreInstalacion, clienteSeleccionado!!.id)
+                            val clienteId = checkNotNull(clienteSeleccionado).id
+                            if (api != null) {
+                                operacion.ejecutar {
+                                    api.crearInstalacion(InstalacionSolicitud(nombreInstalacion.trim(), clienteId))
+                                    exito = true
+                                    nombreInstalacion = ""
+                                    clienteSeleccionado = null
+                                    error = null
+                                }
+                            } else {
+                            val id = checkNotNull(dbHelper).insertarInstalacion(nombreInstalacion, clienteId)
                             if (id > 0) {
                                 exito = true
                                 nombreInstalacion = ""
@@ -100,6 +122,7 @@ fun CrearInstalacionScreen(
                                 error = null
                             } else {
                                 error = "Error al crear la instalación."
+                            }
                             }
                         }
                     },

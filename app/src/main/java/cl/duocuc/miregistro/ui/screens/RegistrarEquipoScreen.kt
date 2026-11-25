@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.LocalContext
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Equipo
+import cl.duocuc.miregistro.network.*
 import cl.duocuc.miregistro.ui.components.*
 import cl.duocuc.miregistro.ui.theme.Dimens
 import cl.duocuc.miregistro.utils.Validaciones
@@ -24,7 +25,10 @@ fun RegistrarEquipoScreen(
     onEquipoRegistrado: () -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
+    var errorTipo by remember { mutableStateOf<String?>(null) }
 
     var tag by remember { mutableStateOf("") }
     var tipoEquipo by remember { mutableStateOf("") }
@@ -77,7 +81,7 @@ fun RegistrarEquipoScreen(
                     textoDe = { it.second },
                     onBuscar = { query, limit, offset ->
 
-                        dbHelper.listarInstalacionesPaginado(query, limit, offset)
+                        if (api == null) checkNotNull(dbHelper).listarInstalacionesPaginado(query, limit, offset) else api.instalaciones(query, offset / limit, limit).content.map { it.id to it.nombre }
                     },
                     onItemSeleccionado = { planta ->
                         plantaSeleccionada = planta
@@ -100,6 +104,15 @@ fun RegistrarEquipoScreen(
                     error = errorSerie
                 )
 
+                SelectorDesplegable(
+                    etiqueta = "Tipo de equipo",
+                    opciones = tiposEquipo,
+                    seleccionada = tipoEquipo.ifBlank { null },
+                    onSeleccionar = { tipoEquipo = it; errorTipo = null },
+                    textoDe = { it }
+                )
+                MensajeError(texto = errorTipo ?: operacion.error)
+
                 if (exito) {
                     MensajeExito(
                         titulo = "Equipo registrado exitosamente",
@@ -108,6 +121,7 @@ fun RegistrarEquipoScreen(
                 }
 
                 BotonPrincipal(
+                    habilitado = !operacion.ejecutando,
                     texto = if (exito) "Volver a la lista" else "Registrar Equipo",
                     onClick = {
                         if (exito) {
@@ -121,28 +135,39 @@ fun RegistrarEquipoScreen(
                             when {
                                 tag.isBlank() -> errorTag = "El TAG es obligatorio"
                                 !Validaciones.esTagValido(tag) -> errorTag = "Solo letras mayúsculas, números y guiones"
-                                dbHelper.existeTagEnInstalacion(tag, nombreInstalacion) -> errorTag = "El TAG '$tag' ya existe en esta instalación."
+                                dbHelper?.existeTagEnInstalacion(tag, plantaSeleccionada?.second.orEmpty()) == true -> errorTag = "El TAG '$tag' ya existe en esta instalación."
                                 marca.isBlank() -> errorMarca = "La marca es obligatoria"
                                 !Validaciones.esTextoValido(marca) -> errorMarca = "Caracteres inválidos"
                                 serie.isBlank() -> errorSerie = "El número de serie es obligatorio"
                                 !Validaciones.esTextoValido(serie) -> errorSerie = "Caracteres inválidos"
+                                tipoEquipo.isBlank() -> errorTipo = "Selecciona el tipo de equipo"
+                                plantaSeleccionada == null -> errorTipo = "Selecciona la instalación"
                                 else -> {
-                                    val idClienteReal = dbHelper.obtenerIdClienteDeInstalacion(nombreInstalacion)
+                                    val (plantaId, nombrePlanta) = checkNotNull(plantaSeleccionada)
+                                    if (api != null) {
+                                        operacion.ejecutar {
+                                            api.crearEquipo(EquipoSolicitud(tag.trim(), tipoEquipo, marca.trim(), serie.trim(), plantaId))
+                                            exito = true
+                                        }
+                                    } else {
+                                    val local = checkNotNull(dbHelper)
+                                    val idClienteReal = local.obtenerIdClienteDeInstalacion(nombrePlanta)
                                     val nuevoEquipo = Equipo(
                                         tag = tag.trim(),
                                         tipoEquipo = tipoEquipo,
                                         clasificacion = "Primario",
-                                        instalacion = nombreInstalacion,
+                                        instalacion = nombrePlanta,
                                         marca = marca.trim(),
                                         serie = serie.trim(),
                                         potenciaTension = "",
                                         idCliente = idClienteReal
                                     )
-                                    val idInsertado = dbHelper.insertarEquipo(nuevoEquipo)
+                                    val idInsertado = local.insertarEquipo(nuevoEquipo)
                                     if (idInsertado > 0) {
                                         exito = true
                                     } else {
                                         errorSerie = "Error al guardar. Intente nuevamente."
+                                    }
                                     }
                                 }
                             }

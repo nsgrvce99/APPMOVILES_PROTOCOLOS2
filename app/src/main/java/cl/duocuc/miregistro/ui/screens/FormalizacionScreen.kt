@@ -9,8 +9,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.network.*
 import cl.duocuc.miregistro.model.ProtocoloDetallado
 import cl.duocuc.miregistro.model.Usuario
+import cl.duocuc.miregistro.ui.components.MensajeError
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.CampoMultilinea
 import cl.duocuc.miregistro.ui.components.FondoFooter
@@ -24,9 +26,10 @@ fun FormalizacionScreen(
     onVolver: () -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
 
-    var protocolos by remember { mutableStateOf<List<ProtocoloDetallado>>(emptyList()) }
 
     var mostrarDialogoObservar by remember { mutableStateOf(false) }
     var protocoloAObservar by remember { mutableStateOf<ProtocoloDetallado?>(null) }
@@ -36,13 +39,17 @@ fun FormalizacionScreen(
     var protocoloAFormalizar by remember { mutableStateOf<ProtocoloDetallado?>(null) }
     var comentarioVariacion by remember { mutableStateOf("") }
 
-    fun recargar() {
-        protocolos = dbHelper.listarProtocolosPendientesDetallados()
+    var revision by remember { mutableIntStateOf(0) }
+    val esIngeniero = usuarioActual?.rolId in listOf(2L, 3L)
+    val carga by cargar(revision, api, esIngeniero) {
+        if (!esIngeniero) emptyList()
+        else if (api == null) checkNotNull(dbHelper).listarProtocolosPendientesDetallados()
+        else todasLasPaginas { api.pendientes(it, 20) }.mapNotNull {
+            val detalle = api.protocolo(it.id)
+            detalle.takeUnless { it.equipo?.archivado == true || it.cliente?.archivado == true }?.aTarjeta()
+        }
     }
-
-    LaunchedEffect(Unit) {
-        recargar()
-    }
+    fun recargar() { revision++ }
 
     Scaffold(
         topBar = { AppTopBar(titulo = "Formalización de Protocolos", onVolver = onVolver) }
@@ -62,7 +69,7 @@ fun FormalizacionScreen(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-            } else {
+            } else ContenidoRemoto(carga, { recargar() }) { protocolos ->
                 if (protocolos.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -76,20 +83,31 @@ fun FormalizacionScreen(
                         contentPadding = PaddingValues(Dimens.espacioMedio),
                         verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
                     ) {
+                        if (operacion.error != null && !mostrarDialogoObservar && !mostrarDialogoFormalizar) {
+                            item { MensajeError(texto = operacion.error) }
+                        }
                         items(protocolos) { proto ->
-                            val medicion = remember(proto.id) { dbHelper.obtenerMedicionDeProtocolo(proto.id) }
+                            val cargaMedicion by cargar(proto.id, api) {
+                                if (api == null) dbHelper?.obtenerMedicionDeProtocolo(proto.id)
+                                else api.protocolo(proto.id).mediciones.firstOrNull()?.aMedicion(proto.id)
+                            }
+                            val medicion = (cargaMedicion as? EstadoCarga.Lista)?.valor
                             TarjetaProtocoloDetalle(
                                 protocolo = proto,
                                 medicion = medicion,
                                 onFormalizar = {
-                                    val hayVariacion = dbHelper.tieneVariacionSignificativa(proto.id)
-                                    if (hayVariacion) {
-                                        protocoloAFormalizar = proto
-                                        comentarioVariacion = ""
-                                        mostrarDialogoFormalizar = true
-                                    } else {
-                                        dbHelper.actualizarEstadoProtocolo(proto.id, "FORMALIZADO")
-                                        recargar()
+                                    operacion.ejecutar {
+                                        val hayVariacion = if (api != null) api.variacion(proto.id).significativa
+                                            else dbHelper?.tieneVariacionSignificativa(proto.id) == true
+                                        if (hayVariacion) {
+                                            protocoloAFormalizar = proto
+                                            comentarioVariacion = ""
+                                            mostrarDialogoFormalizar = true
+                                        } else {
+                                            if (api == null) checkNotNull(dbHelper).actualizarEstadoProtocolo(proto.id, "FORMALIZADO")
+                                            else api.formalizar(proto.id, ComentarioSolicitud(null))
+                                            recargar()
+                                        }
                                     }
                                 },
                                 onObservar = {
@@ -111,6 +129,7 @@ fun FormalizacionScreen(
             title = { Text("Observar Protocolo de ${protocoloAObservar?.equipoTag}") },
             text = {
                 Column {
+                    MensajeError(texto = operacion.error)
                     Text("Indique el motivo de la observación:")
                     Spacer(Modifier.height(Dimens.espacioMedio))
                     CampoMultilinea(
@@ -124,9 +143,13 @@ fun FormalizacionScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        dbHelper.observarProtocolo(protocoloAObservar!!.id, motivoObservacion)
-                        recargar()
-                        mostrarDialogoObservar = false
+                        val id = checkNotNull(protocoloAObservar).id
+                        operacion.ejecutar {
+                            if (api == null) checkNotNull(dbHelper).observarProtocolo(id, motivoObservacion)
+                            else api.observar(id, ObservacionSolicitud(motivoObservacion))
+                            recargar()
+                            mostrarDialogoObservar = false
+                        }
                     },
                     enabled = motivoObservacion.isNotBlank()
                 ) {
@@ -160,9 +183,13 @@ fun FormalizacionScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        dbHelper.formalizarProtocoloConComentario(protocoloAFormalizar!!.id, comentarioVariacion)
-                        recargar()
-                        mostrarDialogoFormalizar = false
+                        val id = checkNotNull(protocoloAFormalizar).id
+                        operacion.ejecutar {
+                            if (api == null) checkNotNull(dbHelper).formalizarProtocoloConComentario(id, comentarioVariacion)
+                            else api.formalizar(id, ComentarioSolicitud(comentarioVariacion))
+                            recargar()
+                            mostrarDialogoFormalizar = false
+                        }
                     },
                     enabled = comentarioVariacion.isNotBlank()
                 ) { Text("Formalizar con Comentario") }

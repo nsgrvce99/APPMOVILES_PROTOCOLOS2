@@ -1,7 +1,18 @@
 package cl.duocuc.miregistro.navigation
 
+import cl.duocuc.miregistro.utils.Validaciones
+
 import androidx.activity.compose.BackHandler
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import cl.duocuc.miregistro.BuildConfig
+import cl.duocuc.miregistro.network.*
+import cl.duocuc.miregistro.viewmodel.SesionGatewayViewModel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
@@ -21,18 +32,79 @@ import cl.duocuc.miregistro.viewmodel.UsuariosViewModel
 
 @Composable
 fun AppNavegacion() {
+    if (BuildConfig.DATOS_LOCALES) {
+        NavegacionTerreno()
+        return
+    }
+    val (tieneRedLocal, solicitarRedLocal) = recordarPermisoGateway()
+    if (!tieneRedLocal) {
+        EstadoPortal("Autoriza la red local para comunicarte con el Gateway de desarrollo.", solicitarRedLocal,
+            textoAccion = "Permitir acceso a red local")
+        return
+    }
+    val sesionGateway: SesionGatewayViewModel = viewModel()
+    val api = sesionGateway.api
+    val estado by sesionGateway.estado.collectAsStateWithLifecycle()
+    if (api == null) {
+        EstadoPortal(sesionGateway.errorConfiguracion ?: "Gateway no disponible")
+        return
+    }
+    when (val actual = estado) {
+        EstadoSesion.Restaurando -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        is EstadoSesion.SinConexion -> EstadoPortal(actual.mensaje, sesionGateway::restaurar, sesionGateway::salir)
+        is EstadoSesion.Cerrada -> {
+            val login: LoginViewModel = viewModel(key = "login-gateway", factory = viewModelFactory {
+                initializer { LoginViewModel(sesionGateway::iniciar) }
+            })
+            LoginClienteScreen(login, {}, {}, {}, avisoSesion = actual.mensaje)
+        }
+        EstadoSesion.CambioObligatorio -> Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f)) {
+                CambiarContrasenaScreen(null, {}, {}, esClavePorDefecto = true, cambiarRemoto = sesionGateway::cambiar)
+            }
+            TextButton(onClick = sesionGateway::salir, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text("Cerrar sesión")
+            }
+        }
+        is EstadoSesion.Activa -> key(actual.usuario.id, actual.usuario.rolId) {
+            CompositionLocalProvider(LocalApiTerreno provides api) {
+                NavegacionTerreno(actual.usuario, sesionGateway)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EstadoPortal(mensaje: String, reintentar: (() -> Unit)? = null, salir: (() -> Unit)? = null, textoAccion: String = "Reintentar") {
+    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center) {
+        Text(mensaje)
+        reintentar?.let { TextButton(onClick = it) { Text(textoAccion) } }
+        salir?.let { TextButton(onClick = it) { Text("Cerrar sesión") } }
+    }
+}
+
+@Composable
+private fun NavegacionTerreno(
+    usuarioGateway: cl.duocuc.miregistro.model.Usuario? = null,
+    sesionGateway: SesionGatewayViewModel? = null
+) {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    val dbHelper = UsuarioDbHelper(context)
-    val sesionPrefs = SesionPreferencias(context)
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val sesionPrefs = remember(api) { if (api == null) SesionPreferencias(context) else null }
 
     val usuariosViewModel: UsuariosViewModel = viewModel()
-    val usuarioActual by usuariosViewModel.usuarioActual.collectAsStateWithLifecycle()
+    val usuarioLocal by usuariosViewModel.usuarioActual.collectAsStateWithLifecycle()
+    val usuarioActual = usuarioGateway ?: usuarioLocal
 
     LaunchedEffect(Unit) {
-        if (sesionPrefs.haySesionActiva()) {
-            val usuarioGuardado = dbHelper.buscarPorId(sesionPrefs.leer())
+        if (sesionPrefs?.haySesionActiva() == true) {
+            val usuarioGuardado = dbHelper?.buscarPorId(checkNotNull(sesionPrefs).leer())
             if (usuarioGuardado != null) {
                 usuariosViewModel.iniciarSesionComo(usuarioGuardado)
             }
@@ -40,10 +112,12 @@ fun AppNavegacion() {
     }
 
 
-    val usuarioDbInicial = if (sesionPrefs.haySesionActiva()) dbHelper.buscarPorId(sesionPrefs.leer()) else null
-    val startDestination = if (sesionPrefs.haySesionActiva()) {
+    val usuarioDbInicial = if (sesionPrefs?.haySesionActiva() == true) dbHelper?.buscarPorId(checkNotNull(sesionPrefs).leer()) else null
+    val startDestination = if (usuarioGateway != null) {
+        if (usuarioGateway.rolId == 4L) Ruta.MisEquiposCliente.ruta else Ruta.Instalaciones.ruta
+    } else if (sesionPrefs?.haySesionActiva() == true) {
 
-        if (usuarioDbInicial?.contrasena == "Induztek2026") {
+        if (usuarioDbInicial != null && Validaciones.esClaveTemporalLocal(usuarioDbInicial.contrasena)) {
             Ruta.CambiarContrasena.crear(esObligatorio = true)
         } else if (sesionPrefs.leerRol() == 4L) {
             Ruta.MisEquiposCliente.ruta
@@ -57,14 +131,14 @@ fun AppNavegacion() {
     NavHost(navController = navController, startDestination = startDestination) {
 
         // ---- LOGIN ----
-        composable(Ruta.Login.ruta) {
+        if (api == null) composable(Ruta.Login.ruta) {
             val loginViewModel: LoginViewModel = viewModel(
-                factory = LoginViewModelFactory(dbHelper, sesionPrefs)
+                factory = LoginViewModelFactory(checkNotNull(dbHelper), checkNotNull(sesionPrefs))
             )
             LoginClienteScreen(
                 viewModel = loginViewModel,
                 onLoginSuccess = { rolId ->
-                    val usuarioLogueado = dbHelper.buscarPorId(sesionPrefs.leer())
+                    val usuarioLogueado = dbHelper?.buscarPorId(checkNotNull(sesionPrefs).leer())
                     if (usuarioLogueado != null) {
                         usuariosViewModel.iniciarSesionComo(usuarioLogueado)
                     }
@@ -87,6 +161,7 @@ fun AppNavegacion() {
         composable(Ruta.Perfil.ruta) {
             PerfilScreen(
                 usuario = usuarioActual,
+                recargarRemoto = sesionGateway?.let { it::recargarPerfil },
                 onVolver = { navController.navigateUp() }
             )
         }
@@ -121,6 +196,7 @@ fun AppNavegacion() {
                         popUpTo(0) { inclusive = true }
                     }
                 },
+                cambiarRemoto = sesionGateway?.let { it::cambiar },
                 esClavePorDefecto = esObligatorio
             )
         }
@@ -129,18 +205,23 @@ fun AppNavegacion() {
         composable(Ruta.MisEquiposCliente.ruta) {
             MisEquiposClienteScreen(
                 usuarioActual = usuarioActual,
+                api = api,
                 onVolver = {
-                    sesionPrefs.borrar()
-                    usuariosViewModel.cerrarSesion()
-                    navController.navigate(Ruta.Login.ruta) { popUpTo(0) { inclusive = true } }
+                    if (sesionGateway != null) sesionGateway.salir() else {
+                        sesionPrefs?.borrar()
+                        usuariosViewModel.cerrarSesion()
+                        navController.navigate(Ruta.Login.ruta) { popUpTo(0) { inclusive = true } }
+                    }
                 },
                 onVerHistorialEquipo = { equipoId ->
                     navController.navigate(Ruta.HistorialEquipo.crear(equipoId))
                 },
                 onCerrarSesion = {
-                    sesionPrefs.borrar()
-                    usuariosViewModel.cerrarSesion()
-                    navController.navigate(Ruta.Login.ruta) { popUpTo(0) { inclusive = true } }
+                    if (sesionGateway != null) sesionGateway.salir() else {
+                        sesionPrefs?.borrar()
+                        usuariosViewModel.cerrarSesion()
+                        navController.navigate(Ruta.Login.ruta) { popUpTo(0) { inclusive = true } }
+                    }
                 },
                 onVerMiPerfil = { navController.navigate(Ruta.Perfil.ruta) },
 
@@ -157,12 +238,14 @@ fun AppNavegacion() {
                 },
                 onIrAFormalizacion = { navController.navigate(Ruta.Formalizacion.ruta) },
                 onCerrarSesion = {
-                    sesionPrefs.borrar()
-                    usuariosViewModel.cerrarSesion()
-                    navController.navigate(Ruta.Login.ruta) { popUpTo(0) { inclusive = true } }
+                    if (sesionGateway != null) sesionGateway.salir() else {
+                        sesionPrefs?.borrar()
+                        usuariosViewModel.cerrarSesion()
+                        navController.navigate(Ruta.Login.ruta) { popUpTo(0) { inclusive = true } }
+                    }
                 },
                 onVerMiPerfil = { navController.navigate(Ruta.Perfil.ruta) },
-                onVerUsuarios = { navController.navigate(Ruta.ListaEquipos.crear(1L, "Planta Lampa")) },
+
                 onIrAInstrumentos = { navController.navigate(Ruta.GestionInstrumentos.ruta) },
                 onIrACrearCliente = { navController.navigate(Ruta.CrearCliente.ruta) },
                 onIrACrearInstalacion = { navController.navigate(Ruta.CrearInstalacion.ruta) },
@@ -234,6 +317,7 @@ fun AppNavegacion() {
             arguments = listOf(navArgument("equipoId") { type = NavType.LongType })
         ) { backStackEntry ->
             val equipoId = backStackEntry.arguments?.getLong("equipoId") ?: 0L
+
             RegistroPruebaScreen(
                 equipoId = equipoId,
                 usuarioActual = usuarioActual,
@@ -255,12 +339,14 @@ fun AppNavegacion() {
             HistorialEquipoScreen(
                 equipoId = equipoId,
                 usuarioActual = usuarioActual,
+                api = api,
                 onVolver = { navController.navigateUp() }
             )
         }
 
         // ---- FORMALIZACIÓN ----
         composable(Ruta.Formalizacion.ruta) {
+
             FormalizacionScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() }
@@ -273,10 +359,12 @@ fun AppNavegacion() {
             arguments = listOf(navArgument("protocoloId") { type = NavType.LongType })
         ) { backStackEntry ->
             val protocoloId = backStackEntry.arguments?.getLong("protocoloId") ?: 0L
+
             CierreVisitaScreen(
                 protocoloId = protocoloId,
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() },
+                onEditarProtocolo = { navController.navigate(Ruta.EditarProtocolo.crear(protocoloId)) },
                 onActaEntregada = {
                     navController.popBackStack(Ruta.Instalaciones.ruta, inclusive = false)
                 }
@@ -285,6 +373,7 @@ fun AppNavegacion() {
 
         // ---- RESUMEN VISITA ----
         composable(Ruta.ResumenVisita.ruta) {
+
             ResumenVisitaScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() }
@@ -293,6 +382,7 @@ fun AppNavegacion() {
 
         // ---- MIS PROTOCOLOS ----
         composable(Ruta.MisProtocolos.ruta) {
+
             MisProtocolosScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() },
@@ -311,24 +401,28 @@ fun AppNavegacion() {
             arguments = listOf(navArgument("protocoloId") { type = NavType.LongType })
         ) { backStackEntry ->
             val protocoloId = backStackEntry.arguments?.getLong("protocoloId") ?: 0L
-            val protocolo = dbHelper.obtenerProtocoloPorId(protocoloId)
-            val equipoId = protocolo?.equipoId ?: 0L
+            var revision by remember { mutableIntStateOf(0) }
+            val detalle by cargar(protocoloId, api, revision) {
+                if (api != null) api.protocolo(protocoloId).protocolo.equipoId
+                else dbHelper?.obtenerProtocoloPorId(protocoloId)?.equipoId ?: 0L
+            }
+            ContenidoRemoto(detalle, { revision++ }) { equipoId ->
+
 
             RegistroPruebaScreen(
                 equipoId = equipoId,
                 usuarioActual = usuarioActual,
                 protocoloId = protocoloId,
                 onVolver = { navController.navigateUp() },
-                onPruebaGuardadaExitosamente = {
-                    navController.navigate(Ruta.MisProtocolos.ruta) {
-                        popUpTo(Ruta.MisProtocolos.ruta) { inclusive = true }
-                    }
-                }
+                onPruebaGuardadaExitosamente = { navController.popBackStack() }
             )
+        }
+
         }
 
         // ---- GESTIÓN INSTRUMENTOS ----
         composable(Ruta.GestionInstrumentos.ruta) {
+
             GestionInstrumentosScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() }
@@ -337,6 +431,7 @@ fun AppNavegacion() {
 
         // ---- CREAR CLIENTE ----
         composable(Ruta.CrearCliente.ruta) {
+
             CrearUsuarioClienteScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() },
@@ -352,18 +447,22 @@ fun AppNavegacion() {
             arguments = listOf(navArgument("clienteId") { type = NavType.LongType })
         ) { backStackEntry ->
             val clienteId = backStackEntry.arguments?.getLong("clienteId") ?: 0L
-            val cliente = dbHelper.buscarPorId(clienteId)
-            if (cliente != null) {
-                EditarClienteScreen(
+            var revision by remember { mutableIntStateOf(0) }
+            val carga by cargar(clienteId, revision, api) {
+                if (api != null) api.usuario(clienteId).aUsuario() else dbHelper?.buscarPorId(clienteId)
+            }
+            ContenidoRemoto(carga, { revision++ }) { cliente ->
+                if (cliente != null) EditarClienteScreen(
                     cliente = cliente,
                     onVolver = { navController.navigateUp() },
                     onGuardadoExitoso = { navController.navigateUp() }
-                )
+                ) else EstadoPortal("Cliente no disponible")
             }
         }
 
         // ---- LISTA CLIENTES ----
         composable(Ruta.ListaClientes.ruta) {
+
             ListaClientesScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() },
@@ -383,6 +482,7 @@ fun AppNavegacion() {
 
         // ---- REGISTRAR EMPRESA CLIENTE ----
         composable(Ruta.RegistrarCliente.ruta) {
+
             RegistrarClienteScreen(
                 usuarioActual = usuarioActual,
                 onVolver = { navController.navigateUp() }
@@ -395,6 +495,7 @@ fun AppNavegacion() {
             arguments = listOf(navArgument("protocoloId") { type = NavType.LongType })
         ) { backStackEntry ->
             val protocoloId = backStackEntry.arguments?.getLong("protocoloId") ?: 0L
+
             DetalleProtocoloScreen(
                 protocoloId = protocoloId,
                 onVolver = { navController.navigateUp() }

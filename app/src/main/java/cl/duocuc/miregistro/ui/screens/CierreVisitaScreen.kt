@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.network.*
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.*
 import cl.duocuc.miregistro.ui.theme.Dimens
@@ -24,21 +25,28 @@ fun CierreVisitaScreen(
     protocoloId: Long,
     usuarioActual: Usuario?,
     onVolver: () -> Unit,
+    onEditarProtocolo: () -> Unit,
     onActaEntregada: () -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
 
     val puedeFirmarActa = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L
 
-    val clienteDueno = remember(protocoloId) { dbHelper.obtenerClienteDeProtocolo(protocoloId) }
-    val equipo = remember(protocoloId) { dbHelper.obtenerEquipoDeProtocolo(protocoloId) }
-    val medicion = remember(protocoloId) { dbHelper.obtenerMedicionDeProtocolo(protocoloId) }
-    val protocolo = remember(protocoloId) { dbHelper.obtenerProtocoloPorId(protocoloId) }
-
+    var revision by remember { mutableIntStateOf(0) }
+    val carga by cargar(protocoloId, puedeFirmarActa, api, revision) {
+        if (api != null && puedeFirmarActa) {
+            val detalle = api.protocolo(protocoloId)
+            val equipo = api.equipo(detalle.protocolo.equipoId)
+            val cliente = detalle.cliente?.let { api.usuario(it.id).aUsuario() }
+            DatosActa(cliente, equipo, detalle.mediciones.firstOrNull()?.aMedicion(protocoloId), detalle.protocolo.aProtocolo(),
+                detalle.acta != null)
+        } else DatosActa(dbHelper?.obtenerClienteDeProtocolo(protocoloId), dbHelper?.obtenerEquipoDeProtocolo(protocoloId),
+            dbHelper?.obtenerMedicionDeProtocolo(protocoloId), dbHelper?.obtenerProtocoloPorId(protocoloId), false)
+    }
     var exito by remember { mutableStateOf(false) }
-
-    val puedeConfirmar = clienteDueno != null && protocolo != null && medicion != null
 
     Scaffold(
         topBar = { AppTopBar(titulo = "Acta de Terreno", onVolver = onVolver) }
@@ -56,7 +64,10 @@ fun CierreVisitaScreen(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-            } else {
+            } else ContenidoRemoto(carga, { revision++ }) { datos ->
+                val (clienteDueno, equipo, medicion, protocolo) = datos
+                val actaLista = exito || datos.entregada
+                val puedeConfirmar = clienteDueno != null && protocolo != null && medicion != null
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -142,7 +153,7 @@ fun CierreVisitaScreen(
                         color = MaterialTheme.colorScheme.secondary
                     )
 
-                    if (exito) {
+                    if (actaLista) {
                         MensajeExito(
                             titulo = "Acta entregada exitosamente",
                             detalles = listOf(
@@ -153,14 +164,31 @@ fun CierreVisitaScreen(
                         )
                     }
 
+                    if (protocolo?.tecnicoId == usuarioActual?.id &&
+                        protocolo?.estado in listOf("BORRADOR", "REGISTRADO_TERRENO", "OBSERVADO", "PRECAUCION")) {
+                        OutlinedButton(
+                            onClick = onEditarProtocolo,
+                            enabled = !operacion.ejecutando,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Editar protocolo")
+                        }
+                    }
+
+                    MensajeError(texto = operacion.error)
                     BotonPrincipal(
-                        texto = if (exito) "Volver al inicio" else "Confirmar Entrega de Acta",
+                        texto = if (actaLista) "Volver al inicio" else "Confirmar Entrega de Acta",
                         onClick = {
-                            if (exito) {
+                            if (actaLista) {
                                 onActaEntregada()
+                            } else if (puedeConfirmar && api != null) {
+                                operacion.ejecutar {
+                                    api.confirmarEntregaActa(protocoloId)
+                                    exito = true
+                                }
                             } else if (puedeConfirmar) {
                                 val fechaHora = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(Date())
-                                dbHelper.guardarRecepcionActa(
+                                checkNotNull(dbHelper).guardarRecepcionActa(
                                     protocoloId = protocoloId,
                                     nombre = clienteDueno?.nombre ?: "Cliente",
                                     rut = clienteDueno?.rut ?: "N/A",
@@ -170,7 +198,7 @@ fun CierreVisitaScreen(
                                 exito = true
                             }
                         },
-                        habilitado = puedeConfirmar || exito,
+                        habilitado = (puedeConfirmar || actaLista) && !operacion.ejecutando,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -178,3 +206,10 @@ fun CierreVisitaScreen(
         }
     }
 }
+private data class DatosActa(
+    val cliente: Usuario?,
+    val equipo: cl.duocuc.miregistro.model.Equipo?,
+    val medicion: cl.duocuc.miregistro.model.Medicion?,
+    val protocolo: cl.duocuc.miregistro.model.Protocolo?,
+    val entregada: Boolean
+)

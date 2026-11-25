@@ -14,24 +14,34 @@ import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Protocolo
 import cl.duocuc.miregistro.model.Usuario
+import cl.duocuc.miregistro.network.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withContext
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.FilaInfo
 import cl.duocuc.miregistro.ui.components.FondoFooter
 import cl.duocuc.miregistro.ui.theme.Dimens
-import kotlin.math.abs
+import cl.duocuc.miregistro.model.compararMediciones
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistorialEquipoScreen(
     equipoId: Long,
     usuarioActual: Usuario?,
-    onVolver: () -> Unit
+    onVolver: () -> Unit,
+    api: InduztekApi? = null
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
 
 
-    val equipo = remember(equipoId) { dbHelper.buscarEquipoPorId(equipoId) }
+    val equipoCarga by cargar(equipoId, api) {
+        if (api != null) api.equipo(equipoId)
+        else withContext(Dispatchers.IO) { dbHelper?.buscarEquipoPorId(equipoId) }
+    }
+    val equipo = (equipoCarga as? EstadoCarga.Lista)?.valor
 
     val esCliente = usuarioActual?.rolId == 4L
 
@@ -46,7 +56,9 @@ fun HistorialEquipoScreen(
 
 
 
-    fun cargarHistorial(reset: Boolean = false) {
+    var errorHistorial by remember { mutableStateOf<String?>(null) }
+    val alcance = rememberCoroutineScope()
+    suspend fun cargarHistorial(reset: Boolean = false) {
         if (isLoading) return
         if (reset) {
             offset = 0
@@ -56,12 +68,27 @@ fun HistorialEquipoScreen(
         if (!hasMore) return
 
         isLoading = true
-        val nuevos = dbHelper.listarProtocolosParaHistorialPaginado(equipoId, esCliente, limit, offset)
-
-        protocolos = protocolos + nuevos
-        offset += limit
-        hasMore = nuevos.size == limit
-        isLoading = false
+        errorHistorial = null
+        try {
+            if (api != null) {
+                val pagina = api.historial(equipoId, offset / limit, limit)
+                protocolos += pagina.content.map { it.aProtocolo() }
+                hasMore = pagina.page.number + 1 < pagina.page.totalPages
+            } else {
+                val nuevos = withContext(Dispatchers.IO) {
+                    checkNotNull(dbHelper).listarProtocolosParaHistorialPaginado(equipoId, esCliente, limit, offset)
+                }
+                protocolos += nuevos
+                hasMore = nuevos.size == limit
+            }
+            offset += limit
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            errorHistorial = mensajeRed(error)
+        } finally {
+            isLoading = false
+        }
     }
 
     LaunchedEffect(equipoId, esCliente) {
@@ -91,7 +118,11 @@ fun HistorialEquipoScreen(
         FondoFooter(
             modifier = Modifier.padding(innerPadding)
         ) {
-            if (protocolos.isEmpty() && !isLoading) {
+            if (errorHistorial != null && protocolos.isEmpty()) {
+                ContenidoRemoto<Unit>(EstadoCarga.Error(checkNotNull(errorHistorial)), {
+                    alcance.launch { cargarHistorial(reset = true) }
+                }) {}
+            } else if (protocolos.isEmpty() && !isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No hay historial para este equipo.")
                 }
@@ -104,14 +135,26 @@ fun HistorialEquipoScreen(
                 ) {
                     items(protocolos) { protocolo ->
 
-                        val medicion = dbHelper.obtenerMedicionDeProtocolo(protocolo.id)
-
-
                         val indiceActual = protocolos.indexOf(protocolo)
                         val protocoloAnterior = protocolos.getOrNull(indiceActual + 1)
-                        val medicionAnterior = protocoloAnterior?.let { dbHelper.obtenerMedicionDeProtocolo(it.id) }
-                        val tecnico = remember(protocolo.tecnicoId) { dbHelper.buscarPorId(protocolo.tecnicoId) }
-                        val nombreTecnico = tecnico?.nombre ?: "Desconocido"
+                        val detalleActual by cargar(protocolo.id, api) {
+                            if (api != null) {
+                                val detalle = api.protocolo(protocolo.id)
+                                detalle.mediciones.firstOrNull()?.aMedicion(protocolo.id) to detalle.tecnico?.nombre
+                            } else withContext(Dispatchers.IO) {
+                                checkNotNull(dbHelper).obtenerMedicionDeProtocolo(protocolo.id) to
+                                    dbHelper.buscarPorId(protocolo.tecnicoId)?.nombre
+                            }
+                        }
+                        val detalleAnterior by cargar(protocoloAnterior?.id, api) {
+                            protocoloAnterior?.id?.let { id ->
+                                if (api != null) api.protocolo(id).mediciones.firstOrNull()?.aMedicion(id)
+                                else withContext(Dispatchers.IO) { dbHelper?.obtenerMedicionDeProtocolo(id) }
+                            }
+                        }
+                        val medicion = (detalleActual as? EstadoCarga.Lista)?.valor?.first
+                        val medicionAnterior = (detalleAnterior as? EstadoCarga.Lista)?.valor
+                        val nombreTecnico = (detalleActual as? EstadoCarga.Lista)?.valor?.second ?: "—"
 
                         val estadoMostrado = when (protocolo.estado) {
                             "REGISTRADO_TERRENO", "OBSERVADO", "PRECAUCION" -> "Pendiente de formalización"
@@ -129,6 +172,9 @@ fun HistorialEquipoScreen(
                                 FilaInfo("Estado", estadoMostrado)
                                 FilaInfo("T° / Humedad", "${protocolo.temperatura}°C / ${protocolo.humedad}%")
 
+                                if (detalleActual is EstadoCarga.Error) {
+                                    Text("Mediciones temporalmente no disponibles", color = MaterialTheme.colorScheme.error)
+                                }
                                 if (medicion != null) {
                                     Spacer(Modifier.height(8.dp))
                                     Text("Tipo Prueba: ${medicion.tipoPrueba}", style = MaterialTheme.typography.labelLarge)
@@ -159,38 +205,19 @@ fun HistorialEquipoScreen(
                                         }
                                     }
 
-                                    var lecturaActual: Double? = null
-                                    var lecturaAnterior: Double? = null
-                                    var etiquetaComparacion = ""
-
-                                    when (medicion.tipoPrueba) {
-                                        "AISLACION", "TTR", "CONTACTOS" -> {
-                                            lecturaActual = medicion.lectura1Min.toDoubleOrNull()
-                                            lecturaAnterior = medicionAnterior?.lectura1Min?.toDoubleOrNull()
-                                            etiquetaComparacion = "Lectura 1min"
+                                    if (detalleAnterior is EstadoCarga.Lista) {
+                                        val comparacion = compararMediciones(medicion, medicionAnterior)
+                                        if (comparacion != null) {
+                                            val porcentaje = "%.1f".format(comparacion.porcentaje)
+                                            Spacer(Modifier.height(4.dp))
+                                            if (comparacion.significativa) {
+                                                Text("⚠ Variación significativa en ${comparacion.etiqueta}: $porcentaje% vs anterior.", color = Color(0xFFD32F2F))
+                                            } else {
+                                                Text("Variación en ${comparacion.etiqueta} vs anterior: $porcentaje%", color = Color(0xFF388E3C))
+                                            }
+                                        } else if (medicionAnterior?.tipoPrueba != medicion.tipoPrueba) {
+                                            Text("Sin historial previo del mismo tipo para comparar", color = Color.Gray)
                                         }
-                                        "RELE" -> {
-                                            lecturaActual = medicion.tiempoMedido.toDoubleOrNull()
-                                            lecturaAnterior = medicionAnterior?.tiempoMedido?.toDoubleOrNull()
-                                            etiquetaComparacion = "Tiempo Medido"
-                                        }
-                                        "DEVANADOS" -> {
-                                            lecturaActual = medicion.devanadoA.toDoubleOrNull()
-                                            lecturaAnterior = medicionAnterior?.devanadoA?.toDoubleOrNull()
-                                            etiquetaComparacion = "Fase A"
-                                        }
-                                    }
-
-                                    if (medicionAnterior != null && medicionAnterior.tipoPrueba == medicion.tipoPrueba && lecturaActual != null && lecturaAnterior != null && lecturaAnterior > 0) {
-                                        val variacion = ((lecturaActual - lecturaAnterior) / lecturaAnterior) * 100
-                                        Spacer(Modifier.height(4.dp))
-                                        if (abs(variacion) > 25.0) {
-                                            Text("⚠ Variación significativa en $etiquetaComparacion: ${"%.1f".format(variacion)}% vs anterior.", color = Color(0xFFD32F2F))
-                                        } else {
-                                            Text("Variación en $etiquetaComparacion vs anterior: ${"%.1f".format(variacion)}%", color = Color(0xFF388E3C))
-                                        }
-                                    } else if (medicionAnterior == null || medicionAnterior.tipoPrueba != medicion.tipoPrueba) {
-                                        Text("Sin historial previo del mismo tipo para comparar", color = Color.Gray)
                                     }
                                 }
                             }
@@ -198,6 +225,11 @@ fun HistorialEquipoScreen(
                     }
 
 
+                    if (errorHistorial != null) item {
+                        TextButton(onClick = { alcance.launch { cargarHistorial() } }) { Text("Reintentar historial") }
+                    } else if (hasMore && !isLoading) item {
+                        TextButton(onClick = { alcance.launch { cargarHistorial() } }) { Text("Cargar más pruebas") }
+                    }
                     if (isLoading) {
                         item {
                             Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {

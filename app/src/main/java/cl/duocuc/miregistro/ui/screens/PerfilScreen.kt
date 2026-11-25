@@ -31,6 +31,7 @@ import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Perfil
 import cl.duocuc.miregistro.model.Usuario
+import cl.duocuc.miregistro.network.*
 import cl.duocuc.miregistro.ui.components.AvatarCircular
 import cl.duocuc.miregistro.ui.components.FondoFooter
 import cl.duocuc.miregistro.ui.components.TarjetaSeccion
@@ -46,14 +47,17 @@ import java.util.Locale
 fun PerfilScreen(
     usuario: Usuario?,
     onVolver: () -> Unit,
-    viewModel: PerfilViewModel = viewModel()
+    viewModel: PerfilViewModel = viewModel(),
+    recargarRemoto: (suspend () -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
 
 
-    var fotoActual by remember { mutableStateOf(usuario?.fotoUri) }
+    var fotoActual by remember(usuario?.fotoUri) { mutableStateOf(usuario?.fotoUri) }
     var mostrarBottomSheet by remember { mutableStateOf(false) }
     var uriFotoTemporal by remember { mutableStateOf<Uri?>(null) }
 
@@ -73,6 +77,18 @@ fun PerfilScreen(
     }
 
 
+    fun guardarFoto(uri: Uri) {
+        if (api == null) {
+            fotoActual = uri.toString()
+            usuario?.id?.let { dbHelper?.actualizarFotoUsuario(it, uri.toString()) }
+        } else operacion.ejecutar {
+            val foto = codificarFoto(context.contentResolver, uri)
+            api.cambiarFoto(FotoSolicitud(foto))
+            fotoActual = foto
+            recargarRemoto?.invoke()
+        }
+    }
+
     val launcherGaleria = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -82,8 +98,7 @@ fun PerfilScreen(
                     it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (e: Exception) {}
-            fotoActual = it.toString()
-            usuario?.id?.let { id -> dbHelper.actualizarFotoUsuario(id, it.toString()) }
+            guardarFoto(it)
         }
     }
 
@@ -93,8 +108,7 @@ fun PerfilScreen(
         if (success) {
             val uri = uriFotoTemporal
             if (uri != null) {
-                fotoActual = uri.toString()
-                usuario?.id?.let { id -> dbHelper.actualizarFotoUsuario(id, uri.toString()) }
+                guardarFoto(uri)
             }
         }
     }
@@ -139,9 +153,10 @@ fun PerfilScreen(
 
                 EncabezadoPerfil(
                     fotoUri = fotoActual,
-                    onCambiarFotoClick = { mostrarBottomSheet = true }
+                    onCambiarFotoClick = { if (!operacion.ejecutando) mostrarBottomSheet = true }
                 )
 
+                operacion.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 Spacer(Modifier.height(Dimens.espacioChico))
 
                 Text(

@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Equipo
+import cl.duocuc.miregistro.network.*
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.FondoFooter
 import cl.duocuc.miregistro.ui.components.TarjetaEquipo
@@ -27,16 +28,17 @@ fun ListaEquiposScreen(
     onRegistrarEquipoNuevo: () -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
-
-
-    var equipos by remember { mutableStateOf(dbHelper.listarEquiposPorInstalacion(nombreInstalacion)) }
-    var equipoAEliminar by remember { mutableStateOf<Equipo?>(null) }
-    var mensajeError by remember { mutableStateOf<String?>(null) }
-
-    fun recargar() {
-        equipos = dbHelper.listarEquiposPorInstalacion(nombreInstalacion)
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
+    var revision by remember { mutableIntStateOf(0) }
+    val carga by cargar(instalacionId, revision, api) {
+        if (api == null) checkNotNull(dbHelper).listarEquiposPorInstalacion(nombreInstalacion)
+        else todasLasPaginas { api.equipos(instalacionId, it) }
     }
+
+
+    var equipoAEliminar by remember { mutableStateOf<Equipo?>(null) }
 
     Scaffold(
         topBar = {
@@ -61,10 +63,11 @@ fun ListaEquiposScreen(
                     Text("Registrar Equipo Nuevo")
                 }
 
-                if (mensajeError != null) {
-                    Text(mensajeError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 8.dp))
+                if (operacion.error != null) {
+                    Text(checkNotNull(operacion.error), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 8.dp))
                 }
 
+                ContenidoRemoto(carga, { revision++ }) { equipos ->
                 if (equipos.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -92,6 +95,7 @@ fun ListaEquiposScreen(
     }
 
 
+    }
     if (equipoAEliminar != null) {
         AlertDialog(
             onDismissRequest = { equipoAEliminar = null },
@@ -99,14 +103,13 @@ fun ListaEquiposScreen(
             text = { Text("Se eliminará el equipo ${equipoAEliminar?.tag}. Esta acción no se puede deshacer.") },
             confirmButton = {
                 TextButton(onClick = {
-                    try {
-                        dbHelper.eliminarEquipo(equipoAEliminar!!.id.toLong())
-                        recargar()
-                        mensajeError = null
-                    } catch (e: Exception) {
-                        mensajeError = e.message
-                    }
+                    val seleccionado = checkNotNull(equipoAEliminar)
                     equipoAEliminar = null
+                    operacion.ejecutar {
+                        if (api == null) checkNotNull(dbHelper).eliminarEquipo(seleccionado.id.toLong())
+                        else api.eliminarEquipo(seleccionado.id.toLong()).verificar()
+                        revision++
+                    }
                 }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {

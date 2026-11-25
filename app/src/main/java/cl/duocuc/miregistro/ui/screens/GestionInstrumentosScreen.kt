@@ -15,6 +15,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.network.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import cl.duocuc.miregistro.model.Instrumento
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.*
@@ -27,7 +30,9 @@ fun GestionInstrumentosScreen(
     onVolver: () -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
 
     if (usuarioActual?.rolId != 3L) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -78,7 +83,8 @@ fun GestionInstrumentosScreen(
     var errorEliminar by remember { mutableStateOf<String?>(null) }
 
 
-    fun cargarInstrumentos(reset: Boolean = false) {
+    var errorCarga by remember { mutableStateOf<String?>(null) }
+    suspend fun cargarInstrumentos(reset: Boolean = false) {
         if (isLoading) return
         if (reset) {
             offset = 0
@@ -88,15 +94,24 @@ fun GestionInstrumentosScreen(
         if (!hasMore) return
 
         isLoading = true
-        val nuevos = dbHelper.listarInstrumentosPaginado(query, limit, offset)
-
-        instrumentos = instrumentos + nuevos
-        offset += limit
-        hasMore = nuevos.size == limit
-        isLoading = false
+        errorCarga = null
+        try {
+            val nuevos = if (api == null) checkNotNull(dbHelper).listarInstrumentosPaginado(query, limit, offset)
+                else api.instrumentos(query, offset / limit, limit).content
+            instrumentos += nuevos
+            offset += limit
+            hasMore = nuevos.size == limit
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            errorCarga = mensajeRed(error)
+        } finally {
+            isLoading = false
+        }
     }
 
     LaunchedEffect(query) {
+        if (api != null && query.isNotEmpty()) delay(250)
         cargarInstrumentos(reset = true)
     }
 
@@ -203,15 +218,19 @@ fun GestionInstrumentosScreen(
                                         fechaVencimiento.isBlank() -> errorFecha = "La fecha es obligatoria"
                                         !validarFecha(fechaVencimiento) -> errorFecha = "Formato inválido. Use dd-MM-yyyy"
                                         else -> {
-                                            dbHelper.insertarInstrumento(nombre, marca, serie, fechaVencimiento)
-                                            cargarInstrumentos(reset = true)
-                                            nombre = ""; marca = ""; serie = ""; fechaVencimiento = ""
-                                            mensajeExito = "Instrumento guardado exitosamente"
+                                            operacion.ejecutar {
+                                                if (api == null) checkNotNull(dbHelper).insertarInstrumento(nombre, marca, serie, fechaVencimiento)
+                                                else api.crearInstrumento(InstrumentoSolicitud(nombre, marca, serie, fechaVencimiento))
+                                                cargarInstrumentos(reset = true)
+                                                nombre = ""; marca = ""; serie = ""; fechaVencimiento = ""
+                                                mensajeExito = "Instrumento guardado exitosamente"
+                                            }
                                         }
                                     }
                                 }
                             )
 
+                            MensajeError(texto = operacion.error)
                             if (mensajeExito != null) {
                                 Text(mensajeExito!!, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
                             }
@@ -221,6 +240,10 @@ fun GestionInstrumentosScreen(
 
 
                 item {
+                    errorCarga?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error)
+                        TextButton(onClick = { operacion.ejecutar { cargarInstrumentos(true) } }) { Text("Reintentar") }
+                    }
                     AcordeonSeccion(
                         titulo = "Instrumentos Registrados",
                         icono = Icons.Default.Search,
@@ -240,8 +263,8 @@ fun GestionInstrumentosScreen(
 
 
                             instrumentos.forEach { inst ->
-                                val porVencer = dbHelper.estaPorVencer(inst.fechaVencimiento)
-                                val vencido = dbHelper.estaVencido(inst.fechaVencimiento)
+                                val porVencer = if (api != null) inst.calibracion == "POR_VENCER" else dbHelper?.estaPorVencer(inst.fechaVencimiento) == true
+                                val vencido = if (api != null) inst.calibracion == "VENCIDA" else dbHelper?.estaVencido(inst.fechaVencimiento) == true
 
                                 val colorFondo = when {
                                     vencido -> Color(0xFFFFCDD2)
@@ -322,6 +345,7 @@ fun GestionInstrumentosScreen(
                     CampoValidado(valor = editNombre, onValorCambia = { editNombre = it; editErrorNombre = null }, etiqueta = "Nombre", icono = R.drawable.ic_persona, error = editErrorNombre)
                     CampoValidado(valor = editMarca, onValorCambia = { editMarca = it; editErrorMarca = null }, etiqueta = "Marca", icono = R.drawable.ic_persona, error = editErrorMarca)
                     CampoValidado(valor = editSerie, onValorCambia = { editSerie = it; editErrorSerie = null }, etiqueta = "Serie", icono = R.drawable.ic_persona, error = editErrorSerie)
+                    MensajeError(texto = operacion.error)
                     CampoValidado(valor = editVencimiento, onValorCambia = { editVencimiento = it; editErrorFecha = null }, etiqueta = "Vencimiento (dd-MM-yyyy)", icono = R.drawable.ic_persona, error = editErrorFecha)
                 }
             },
@@ -335,9 +359,13 @@ fun GestionInstrumentosScreen(
                         editVencimiento.isBlank() -> editErrorFecha = "La fecha es obligatoria"
                         !validarFecha(editVencimiento) -> editErrorFecha = "Formato inválido. Use dd-MM-yyyy"
                         else -> {
-                            dbHelper.actualizarInstrumento(instrumentoAEditar!!.id, editNombre, editMarca, editSerie, editVencimiento)
-                            cargarInstrumentos(reset = true)
-                            instrumentoAEditar = null
+                            val id = checkNotNull(instrumentoAEditar).id
+                            operacion.ejecutar {
+                                if (api == null) checkNotNull(dbHelper).actualizarInstrumento(id, editNombre, editMarca, editSerie, editVencimiento)
+                                else api.editarInstrumento(id, InstrumentoSolicitud(editNombre, editMarca, editSerie, editVencimiento))
+                                cargarInstrumentos(reset = true)
+                                instrumentoAEditar = null
+                            }
                         }
                     }
                 }) { Text("Guardar Cambios") }
@@ -352,21 +380,22 @@ fun GestionInstrumentosScreen(
             title = { Text("¿Eliminar Instrumento?") },
             text = {
                 Column {
-                    if (errorEliminar == null) {
+                    if (errorEliminar == null && operacion.error == null) {
                         Text("Se eliminará el instrumento '${instrumentoAEliminar?.nombre}'. Esta acción no se puede deshacer.")
                     } else {
-                        Text(errorEliminar!!, color = MaterialTheme.colorScheme.error)
+                        Text(errorEliminar ?: checkNotNull(operacion.error), color = MaterialTheme.colorScheme.error)
                     }
                 }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        val tieneUso = dbHelper.instrumentoTieneMediciones(instrumentoAEliminar!!.id)
-                        if (tieneUso) {
-                            errorEliminar = "No se puede eliminar: este instrumento está siendo usado en pruebas registradas."
-                        } else {
-                            dbHelper.eliminarInstrumento(instrumentoAEliminar!!.id)
+                        val id = checkNotNull(instrumentoAEliminar).id
+                        if (dbHelper?.instrumentoTieneMediciones(id) == true) {
+                            errorEliminar = "No se puede eliminar: está siendo usado en pruebas registradas."
+                        } else operacion.ejecutar {
+                            if (api == null) checkNotNull(dbHelper).eliminarInstrumento(id)
+                            else api.eliminarInstrumento(id).verificar()
                             cargarInstrumentos(reset = true)
                             instrumentoAEliminar = null
                             errorEliminar = null

@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
+import cl.duocuc.miregistro.network.*
 import cl.duocuc.miregistro.ui.components.AcordeonSeccion
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.FondoFooter
@@ -29,7 +30,6 @@ fun InstalacionesScreen(
     onIrAFormalizacion: () -> Unit,
     onCerrarSesion: () -> Unit,
     onVerMiPerfil: () -> Unit,
-    onVerUsuarios: () -> Unit,
     onIrAInstrumentos: () -> Unit,
     onIrACrearCliente: () -> Unit,
     onIrACrearInstalacion: () -> Unit,
@@ -40,13 +40,20 @@ fun InstalacionesScreen(
     onCambiarContrasena: () -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
+    var revision by remember { mutableIntStateOf(0) }
 
     var instalacionSeleccionada by remember { mutableStateOf<Pair<Long, String>?>(null) }
     var mostrarDialogoGestionPlantas by remember { mutableStateOf(false) }
     var mensajeError by remember { mutableStateOf<String?>(null) }
     var mensajeExito by remember { mutableStateOf<String?>(null) }
-    var instalacionesParaGestionar by remember { mutableStateOf(dbHelper.listarInstalaciones()) }
+    val plantas by cargar(mostrarDialogoGestionPlantas, revision, api) {
+        if (!mostrarDialogoGestionPlantas) emptyList()
+        else if (api == null) checkNotNull(dbHelper).listarInstalaciones()
+        else todasLasPaginas { api.instalaciones("", it) }.map { it.id to it.nombre }
+    }
 
     var expandirInstalaciones by remember { mutableStateOf(false) }
     var expandirGestionActivos by remember { mutableStateOf(false) }
@@ -57,7 +64,7 @@ fun InstalacionesScreen(
         usuarioActual = usuarioActual,
         onCerrarSesion = onCerrarSesion,
         onVerMiPerfil = onVerMiPerfil,
-        onVerUsuarios = onVerUsuarios,
+        onVerUsuarios = { expandirInstalaciones = true },
         onCambiarContrasena = onCambiarContrasena
     ) { onAbrirMenu, snackbarHostState ->
         Scaffold(
@@ -108,7 +115,7 @@ fun InstalacionesScreen(
                             itemSeleccionado = instalacionSeleccionada,
                             textoDe = { it.second },
                             onBuscar = { query, limit, offset ->
-                                dbHelper.listarInstalacionesPaginado(query, limit, offset)
+                                if (api == null) checkNotNull(dbHelper).listarInstalacionesPaginado(query, limit, offset) else api.instalaciones(query, offset / limit, limit).content.map { it.id to it.nombre }
                             },
                             onItemSeleccionado = { planta ->
                                 instalacionSeleccionada = planta
@@ -150,9 +157,7 @@ fun InstalacionesScreen(
                                     Spacer(Modifier.width(8.dp))
                                     Text("Editar Clientes")
                                 }
-                                Button(
-                                    onClick = {
-                                        instalacionesParaGestionar = dbHelper.listarInstalaciones()
+                                Button(onClick = {
                                         mostrarDialogoGestionPlantas = true
                                         mensajeError = null
                                         mensajeExito = null
@@ -249,6 +254,7 @@ fun InstalacionesScreen(
                         Text(mensajeError!!, color = MaterialTheme.colorScheme.error)
                         Spacer(Modifier.height(8.dp))
                     }
+                    ContenidoRemoto(plantas, { revision++ }) { instalacionesParaGestionar ->
                     if (instalacionesParaGestionar.isEmpty()) {
                         Text("No hay plantas registradas.")
                     } else {
@@ -261,17 +267,12 @@ fun InstalacionesScreen(
                                 Text(nombre, modifier = Modifier.weight(1f))
                                 TextButton(
                                     onClick = {
-                                        try {
-                                            dbHelper.eliminarInstalacion(nombre)
-                                            instalacionesParaGestionar = dbHelper.listarInstalaciones()
-                                            if (instalacionSeleccionada?.second == nombre) {
-                                                instalacionSeleccionada = null
-                                            }
-                                            mensajeError = null
+                                        operacion.ejecutar {
+                                            if (api == null) checkNotNull(dbHelper).eliminarInstalacion(nombre)
+                                            else api.eliminarInstalacion(id).verificar()
+                                            revision++
+                                            if (instalacionSeleccionada?.first == id) instalacionSeleccionada = null
                                             mensajeExito = "Planta eliminada correctamente"
-                                        } catch (e: Exception) {
-                                            mensajeError = e.message
-                                            mensajeExito = null
                                         }
                                     }
                                 ) {
@@ -285,6 +286,8 @@ fun InstalacionesScreen(
                         }
                     }
 
+                    }
+                    operacion.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     if (mensajeExito != null) {
                         Spacer(Modifier.height(8.dp))
                         Text(

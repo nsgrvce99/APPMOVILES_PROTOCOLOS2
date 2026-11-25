@@ -11,6 +11,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.ui.theme.Dimens
+import cl.duocuc.miregistro.network.mensajeRed
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -18,7 +22,7 @@ fun <T> SelectorDesplegablePaginado(
     etiqueta: String,
     itemSeleccionado: T?,
     textoDe: (T) -> String,
-    onBuscar: (String, Int, Int) -> List<T>,
+    onBuscar: suspend (String, Int, Int) -> List<T>,
     onItemSeleccionado: (T) -> Unit
 ) {
     var mostrarDialogo by remember { mutableStateOf(false) }
@@ -30,9 +34,11 @@ fun <T> SelectorDesplegablePaginado(
     var offset by remember { mutableIntStateOf(0) }
     var hasMore by remember { mutableStateOf(true) }
     val limit = 20
+    val alcance = rememberCoroutineScope()
+    var errorCarga by remember { mutableStateOf<String?>(null) }
 
 
-    fun cargarDatos(reset: Boolean = false) {
+    suspend fun cargarDatos(reset: Boolean = false) {
         if (isLoading) return
         if (reset) {
             offset = 0
@@ -42,17 +48,27 @@ fun <T> SelectorDesplegablePaginado(
         if (!hasMore) return
 
         isLoading = true
-        val nuevosItems = onBuscar(query, limit, offset)
-
-        itemsList = itemsList + nuevosItems
-        offset += limit
-        hasMore = nuevosItems.size == limit
-        isLoading = false
+        errorCarga = null
+        try {
+            val nuevosItems = onBuscar(query, limit, offset)
+            itemsList = itemsList + nuevosItems
+            offset += limit
+            hasMore = nuevosItems.size == limit
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            errorCarga = mensajeRed(error)
+        } finally {
+            isLoading = false
+        }
     }
 
 
-    LaunchedEffect(query) {
-        cargarDatos(reset = true)
+    LaunchedEffect(query, mostrarDialogo) {
+        if (mostrarDialogo) {
+            if (query.isNotEmpty()) delay(250)
+            cargarDatos(reset = true)
+        }
     }
 
 
@@ -90,16 +106,7 @@ fun <T> SelectorDesplegablePaginado(
                     val listState = rememberLazyListState()
 
 
-                    LaunchedEffect(listState) {
-                        snapshotFlow {
-                            val layoutInfo = listState.layoutInfo
-                            val totalItems = layoutInfo.totalItemsCount
-                            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                            lastVisibleItem >= totalItems - 3
-                        }.collect { shouldLoadMore ->
-                            if (shouldLoadMore) cargarDatos()
-                        }
-                    }
+
 
                     LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
                         items(itemsList) { item ->
@@ -110,6 +117,14 @@ fun <T> SelectorDesplegablePaginado(
                                     mostrarDialogo = false
                                 }
                             )
+                        }
+                        if (!isLoading && errorCarga != null) item {
+                            Text(checkNotNull(errorCarga), color = MaterialTheme.colorScheme.error)
+                            TextButton(onClick = { alcance.launch { cargarDatos() } }) { Text("Reintentar") }
+                        }
+                        if (!isLoading && errorCarga == null && itemsList.isEmpty()) item { Text("Sin resultados.") }
+                        if (!isLoading && errorCarga == null && hasMore && itemsList.isNotEmpty()) item {
+                            TextButton(onClick = { alcance.launch { cargarDatos() } }) { Text("Cargar más") }
                         }
                         if (isLoading) {
                             item {

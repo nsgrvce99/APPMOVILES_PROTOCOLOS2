@@ -156,16 +156,16 @@ class UsuarioDbHelper(context: Context) :
 
         private const val SQL_PRECARGAR_USUARIOS =
             "INSERT INTO $TABLA_USUARIOS ($USU_ROL, $USU_RUT, $USU_NOMBRE, $USU_CORREO, $USU_CONTRA, $USU_ACTIVO) VALUES " +
-                    "(1, '17.284.519-3', 'Matías Godoy Herrera', 'mgodoy@induztek.ejemplo', '1470MAT', 1), " +
-                    "(1, '19.412.087-7', 'Javiera Tapia Muñoz', 'jtapia@induztek.ejemplo', '1470JA', 1), " +
-                    "(2, '15.906.334-8', 'Andrea Contreras Silva', 'acontreras@induztek.ejemplo', '1470AN', 1), " +
-                    "(3, '13.871.905-7', 'Ricardo Espinoza Lagos', 'respinoza@induztek.ejemplo', '1470RI', 1), " +
-                    "(4, '14.226.791-8', 'Marcela Fuentes Rojas', 'mfuentes@envpacifico.ejemplo', '1470MA', 1)"
+                    "(1, '17.284.519-3', 'Matías Godoy Herrera', 'terreno@gmail.com', 'clave', 1), " +
+                    "(1, '19.412.087-7', 'Javiera Tapia Muñoz', 'terreno2@gmail.com', 'clave', 1), " +
+                    "(2, '15.906.334-8', 'Andrea Contreras Silva', 'ingeniero@gmail.com', 'clave', 1), " +
+                    "(3, '13.871.905-7', 'Ricardo Espinoza Lagos', 'jefe@gmail.com', 'clave', 1), " +
+                    "(4, '14.226.791-8', 'Marcela Fuentes Rojas', 'cliente@gmail.com', 'clave', 1)"
 
         private const val SQL_PRECARGAR_INSTRUMENTOS =
             "INSERT INTO $TABLA_INSTRUMENTOS ($INS_NOMBRE, $INS_MARCA, $INS_SERIE, $INS_VENCIMIENTO) VALUES " +
-                    "('Megóhmetro 5 kV', 'Megger MIT525', 'MIT-0045821', '15-03-2027'), " +
-                    "('Megóhmetro 10 kV', 'Megger MIT1025', 'MIT-0071233', '10-10-2026'), " +
+                    "('Megohmetro 5 kV', 'Megger MIT525', 'MIT-0045821', '15-03-2027'), " +
+                    "('Megohmetro 10 kV', 'Megger MIT1025', 'MIT-0071233', '10-10-2026'), " +
                     "('Medidor de relación (TTR)', 'Megger TTR300', 'TTR-300440', '02-06-2027'), " +
                     "('Micro-ohmímetro', 'Megger DLRO10X', 'DLR-10882', '20-08-2026'), " +
                     "('Equipo de inyección secundaria', 'Omicron CMC 356', 'CMC-HB411', '05-01-2027')"

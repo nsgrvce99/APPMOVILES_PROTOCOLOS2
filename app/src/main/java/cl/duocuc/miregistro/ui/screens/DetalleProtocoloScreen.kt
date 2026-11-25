@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.network.*
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.FilaInfo
 import cl.duocuc.miregistro.ui.components.FondoFooter
@@ -22,10 +23,16 @@ fun DetalleProtocoloScreen(
     onVolver: () -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
 
-    val protocolo = remember(protocoloId) { dbHelper.obtenerProtocoloPorId(protocoloId) }
-    val medicion = remember(protocoloId) { dbHelper.obtenerMedicionDeProtocolo(protocoloId) }
+
+    var revision by remember { mutableIntStateOf(0) }
+    val carga by cargar(protocoloId, revision, api) {
+        if (api != null) api.protocolo(protocoloId).let {
+            it.protocolo.aProtocolo() to it.mediciones.firstOrNull()?.aMedicion(protocoloId)
+        } else dbHelper?.obtenerProtocoloPorId(protocoloId) to dbHelper?.obtenerMedicionDeProtocolo(protocoloId)
+    }
 
     Scaffold(
         topBar = { AppTopBar(titulo = "Detalle del Protocolo", onVolver = onVolver) }
@@ -33,6 +40,7 @@ fun DetalleProtocoloScreen(
         FondoFooter(
             modifier = Modifier.padding(innerPadding)
         ) {
+            ContenidoRemoto(carga, { revision++ }) { (protocolo, medicion) ->
             if (protocolo == null) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -123,4 +131,5 @@ fun DetalleProtocoloScreen(
             }
         }
     }
+}
 }

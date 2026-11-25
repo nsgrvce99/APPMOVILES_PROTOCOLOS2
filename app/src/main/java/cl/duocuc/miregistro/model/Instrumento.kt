@@ -5,5 +5,6 @@ data class Instrumento(
     val nombre: String,
     val marca: String,
     val serie: String,
-    val fechaVencimiento: String
+    val fechaVencimiento: String,
+    val calibracion: String? = null
 )

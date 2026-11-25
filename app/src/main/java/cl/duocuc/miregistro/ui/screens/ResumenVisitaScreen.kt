@@ -2,7 +2,7 @@ package cl.duocuc.miregistro.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.network.*
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
 import cl.duocuc.miregistro.ui.components.FondoFooter
@@ -23,8 +24,16 @@ fun ResumenVisitaScreen(
     onVolver: () -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
-    val resumen = remember { dbHelper.obtenerResumenVisita(usuarioActual?.id ?: 0L) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+
+    var revision by remember { mutableIntStateOf(0) }
+    val carga by cargar(usuarioActual?.id, revision, api) {
+        if (api == null) checkNotNull(dbHelper).obtenerResumenVisita(usuarioActual?.id ?: 0L)
+        else api.resumen().let { cl.duocuc.miregistro.model.ResumenVisita(
+            it.total, it.aprobadas, it.precaucion, it.rechazadas, it.borradores, it.pendientes, it.formalizadas
+        ) }
+    }
 
     Scaffold(
         topBar = { AppTopBar(titulo = "Resumen de Visita", onVolver = onVolver) }
@@ -32,6 +41,7 @@ fun ResumenVisitaScreen(
         FondoFooter(
             modifier = Modifier.padding(innerPadding)
         ) {
+            ContenidoRemoto(carga, { revision++ }) { resumen ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -48,7 +58,7 @@ fun ResumenVisitaScreen(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
-                    Column(
+            Column(
                         modifier = Modifier.fillMaxWidth().padding(Dimens.espacioMedio),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -77,6 +87,8 @@ fun ResumenVisitaScreen(
             }
         }
     }
+}
+
 }
 
 @Composable

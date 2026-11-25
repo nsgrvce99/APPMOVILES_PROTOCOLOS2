@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.network.*
+import kotlinx.coroutines.CancellationException
 import cl.duocuc.miregistro.model.ProtocoloDetallado
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.AppTopBar
@@ -27,7 +29,9 @@ fun MisProtocolosScreen(
     onVerDetalleProtocolo: (Long) -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
 
 
     var misProtocolos by remember { mutableStateOf<List<ProtocoloDetallado>>(emptyList()) }
@@ -42,7 +46,8 @@ fun MisProtocolosScreen(
     var errorEliminar by remember { mutableStateOf<String?>(null) }
 
 
-    fun cargarProtocolos(reset: Boolean = false) {
+    var errorCarga by remember { mutableStateOf<String?>(null) }
+    suspend fun cargarProtocolos(reset: Boolean = false) {
         if (isLoading) return
         if (reset) {
             offset = 0
@@ -52,12 +57,21 @@ fun MisProtocolosScreen(
         if (!hasMore) return
 
         isLoading = true
-        val nuevos = dbHelper.listarProtocolosPorTecnicoDetalladosPaginado(usuarioActual?.id ?: 0L, limit, offset)
-
-        misProtocolos = misProtocolos + nuevos
-        offset += limit
-        hasMore = nuevos.size == limit
-        isLoading = false
+        errorCarga = null
+        try {
+            val nuevos = if (api == null) checkNotNull(dbHelper)
+                .listarProtocolosPorTecnicoDetalladosPaginado(usuarioActual?.id ?: 0L, limit, offset)
+            else api.misProtocolos(offset / limit, limit).content.map { api.protocolo(it.id).aTarjeta() }
+            misProtocolos += nuevos
+            offset += limit
+            hasMore = nuevos.size == limit
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            errorCarga = mensajeRed(error)
+        } finally {
+            isLoading = false
+        }
     }
 
 
@@ -99,16 +113,27 @@ fun MisProtocolosScreen(
                     items(misProtocolos) { proto ->
                         TarjetaMisProtocolos(
                             protocolo = proto,
+                            enServidor = api != null,
                             onEditar = { onEditarProtocolo(proto.id) },
                             onEliminar = { protocoloAEliminar = proto; errorEliminar = null },
                             onVerDetalle = { onVerDetalleProtocolo(proto.id) },
                             onCerrarBorrador = {
-                                dbHelper.cerrarBorrador(proto.id)
-                                cargarProtocolos(reset = true)
+                                operacion.ejecutar {
+                                    if (api == null) checkNotNull(dbHelper).cerrarBorrador(proto.id)
+                                    else api.cerrarProtocolo(proto.id)
+                                    cargarProtocolos(reset = true)
+                                }
                             }
                         )
                     }
 
+
+                    if (errorCarga != null || (operacion.error != null && protocoloAEliminar == null)) {
+                        item {
+                            Text(errorCarga ?: operacion.error.orEmpty(), color = MaterialTheme.colorScheme.error)
+                            TextButton(onClick = { operacion.ejecutar { cargarProtocolos(reset = true) } }) { Text("Reintentar") }
+                        }
+                    }
 
                     if (isLoading) {
                         item {
@@ -123,6 +148,7 @@ fun MisProtocolosScreen(
     }
 
 
+    val anula = api != null && protocoloAEliminar?.estado != "BORRADOR"
     if (protocoloAEliminar != null) {
         AlertDialog(
             onDismissRequest = {
@@ -132,27 +158,28 @@ fun MisProtocolosScreen(
             title = { Text("¿Eliminar protocolo?") },
             text = {
                 Column {
-                    if (errorEliminar == null) {
+                    if (errorEliminar == null && operacion.error == null) {
                         Text("Esta acción borrará la prueba del equipo ${protocoloAEliminar?.equipoTag}. No se puede deshacer.")
                     } else {
-                        Text(errorEliminar!!, color = MaterialTheme.colorScheme.error)
+                        Text(errorEliminar ?: checkNotNull(operacion.error), color = MaterialTheme.colorScheme.error)
                     }
                 }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        try {
-                            dbHelper.eliminarProtocolo(protocoloAEliminar!!.id)
+                        val seleccionado = checkNotNull(protocoloAEliminar)
+                        operacion.ejecutar {
+                            if (api == null) checkNotNull(dbHelper).eliminarProtocolo(seleccionado.id)
+                            else if (seleccionado.estado == "BORRADOR") api.eliminarProtocolo(seleccionado.id).verificar()
+                            else api.anularProtocolo(seleccionado.id)
                             protocoloAEliminar = null
                             errorEliminar = null
                             cargarProtocolos(reset = true)
-                        } catch (e: Exception) {
-                            errorEliminar = e.message ?: "Error al eliminar el protocolo."
                         }
                     },
                     enabled = errorEliminar == null
-                ) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+                ) { Text(if (anula) "Anular" else "Eliminar", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 TextButton(onClick = {

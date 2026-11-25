@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
+import cl.duocuc.miregistro.network.*
 import cl.duocuc.miregistro.model.Usuario
 import cl.duocuc.miregistro.ui.components.*
 import cl.duocuc.miregistro.ui.theme.Dimens
@@ -23,7 +24,9 @@ fun RegistrarClienteScreen(
     onVolver: () -> Unit
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val api = LocalApiTerreno.current
+    val dbHelper = remember(api) { if (api == null) UsuarioDbHelper(context) else null }
+    val operacion = recordarOperacion()
 
     val puedeRegistrar = usuarioActual?.rolId == 1L || usuarioActual?.rolId == 2L || usuarioActual?.rolId == 3L
     if (!puedeRegistrar) {
@@ -101,7 +104,9 @@ fun RegistrarClienteScreen(
                     MensajeExito(titulo = "Cliente Registrado", detalles = listOf("Pendiente de activación por el Jefe Técnico."))
                 }
 
+                MensajeError(texto = operacion.error)
                 BotonPrincipal(
+                    habilitado = !operacion.ejecutando,
                     texto = "Registrar Cliente",
                     onClick = {
 
@@ -116,9 +121,17 @@ fun RegistrarClienteScreen(
                             !Validaciones.esRutValido(rut) -> errorRut = "RUT inválido "
                             correo.isBlank() -> errorCorreo = "El correo es obligatorio"
                             !Validaciones.esCorreoValido(correo) -> errorCorreo = "Correo inválido"
-                            dbHelper.existeRut(rut) -> errorRut = "Este RUT ya está registrado"
-                            dbHelper.existeCorreo(correo) -> errorCorreo = "Este correo ya está registrado"
+                            dbHelper?.existeRut(rut) == true -> errorRut = "Este RUT ya está registrado"
+                            dbHelper?.existeCorreo(correo) == true -> errorCorreo = "Este correo ya está registrado"
                             else -> {
+                                if (api != null) {
+                                    operacion.ejecutar {
+                                        api.crearCliente(ClienteSolicitud(razonSocial.trim(), rut, correo.trim(), giro.trim()))
+                                        exito = true
+                                        razonSocial = ""; rut = ""; giro = ""; correo = ""
+                                    }
+                                    return@BotonPrincipal
+                                }
                                 val nuevoCliente = Usuario(
                                     rut = rut,
                                     nombre = razonSocial,
@@ -128,7 +141,7 @@ fun RegistrarClienteScreen(
                                     activo = false,
                                     giro = giro
                                 )
-                                val id = dbHelper.insertarUsuario(nuevoCliente)
+                                val id = checkNotNull(dbHelper).insertarUsuario(nuevoCliente)
                                 if (id > 0) {
                                     exito = true
                                     razonSocial = ""; rut = ""; giro = ""; correo = ""

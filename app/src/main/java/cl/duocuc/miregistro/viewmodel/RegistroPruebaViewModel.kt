@@ -1,6 +1,10 @@
 package cl.duocuc.miregistro.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import cl.duocuc.miregistro.network.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +15,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel() {
+class RegistroPruebaViewModel(
+    private val dbHelper: UsuarioDbHelper?,
+    private val api: InduztekApi? = null
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProtocoloUiState())
     val uiState: StateFlow<ProtocoloUiState> = _uiState.asStateFlow()
@@ -24,39 +31,66 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
 
     private var protocoloIdEditando: Long? = null
 
-    init {
-        _instrumentos.value = dbHelper.listarInstrumentos()
+    init { cargarInstrumentos() }
+
+    fun cargarInstrumentos() {
+        viewModelScope.launch {
+            try {
+                _instrumentos.value = if (api == null) checkNotNull(dbHelper).listarInstrumentos()
+                    else todasLasPaginas { api.instrumentos("", it) }
+                _uiState.update { it.copy(errorCarga = null) }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _uiState.update { it.copy(errorCarga = mensajeRed(error)) }
+            }
+        }
     }
 
-    fun cargarProtocoloParaEditar(protocoloId: Long) {
-        val protocolo = dbHelper.obtenerProtocoloPorId(protocoloId) ?: return
-        protocoloIdEditando = protocoloId
+    suspend fun cargarProtocoloParaEditar(protocoloId: Long) {
+        _uiState.update { it.copy(cargandoEdicion = true) }
+        try {
+            val detalle = api?.protocolo(protocoloId)
+            val protocolo = detalle?.protocolo?.aProtocolo()
+                ?: dbHelper?.obtenerProtocoloPorId(protocoloId) ?: return
+            val medicion = detalle?.mediciones?.firstOrNull()?.aMedicion(protocoloId)
+                ?: dbHelper?.obtenerMedicionDeProtocolo(protocoloId)
+            val instrumentoPrevio = medicion?.let { med ->
+                if (api == null) _instrumentos.value.find { it.id == med.instrumentoId }
+                else api.instrumento(med.instrumentoId)
+            }
+            fun formato(campo: String, valor: String): String =
+                if (detalle == null) valor
+                else detalle.textoIngresado?.get(campo) ?: valor.toBigDecimalOrNull()?.stripTrailingZeros()?.toPlainString().orEmpty()
 
-        val medicion = dbHelper.obtenerMedicionDeProtocolo(protocoloId)
-
-        val instrumentoPrevio = medicion?.let { med ->
-            _instrumentos.value.find { it.id == med.instrumentoId }
-        }
-        _instrumentoSeleccionado.value = instrumentoPrevio
+            protocoloIdEditando = protocoloId
+            _instrumentoSeleccionado.value = instrumentoPrevio
 
         _uiState.update {
             it.copy(
-                temperaturaAmbiente = protocolo.temperatura,
-                humedadRelativa = protocolo.humedad,
+                temperaturaAmbiente = formato("temperatura", protocolo.temperatura),
+                humedadRelativa = formato("humedad", protocolo.humedad),
                 tipoPrueba = medicion?.tipoPrueba ?: "AISLACION",
-                lectura1Min = medicion?.lectura1Min ?: "",
-                lectura10Min = medicion?.lectura10Min ?: "",
-                corrienteAjuste = medicion?.corrienteAjuste ?: "",
-                corrienteOperacion = medicion?.corrienteOperacion ?: "",
-                tiempoEsperado = medicion?.tiempoEsperado ?: "",
-                tiempoMedido = medicion?.tiempoMedido ?: "",
-                lecturaDevanadoA = medicion?.devanadoA ?: "",
-                lecturaDevanadoB = medicion?.devanadoB ?: "",
-                lecturaDevanadoC = medicion?.devanadoC ?: "",
+                lectura1Min = formato("lectura1Min", medicion?.lectura1Min ?: ""),
+                lectura10Min = formato("lectura10Min", medicion?.lectura10Min ?: ""),
+                corrienteAjuste = formato("corrienteAjuste", medicion?.corrienteAjuste ?: ""),
+                corrienteOperacion = formato("corrienteOperacion", medicion?.corrienteOperacion ?: ""),
+                tiempoEsperado = formato("tiempoEsperado", medicion?.tiempoEsperado ?: ""),
+                tiempoMedido = formato("tiempoMedido", medicion?.tiempoMedido ?: ""),
+                lecturaDevanadoA = formato("lecturaDevanadoA", medicion?.devanadoA ?: ""),
+                lecturaDevanadoB = formato("lecturaDevanadoB", medicion?.devanadoB ?: ""),
+                lecturaDevanadoC = formato("lecturaDevanadoC", medicion?.devanadoC ?: ""),
                 resultadoPrueba = protocolo.resultadoGlobal,
                 motivoObservacion = protocolo.motivoObservacion,
-                guardadoExitoso = false
+                guardadoExitoso = false, errorMedicion = null
             )
+        }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            _uiState.update { it.copy(errorMedicion = mensajeRed(error)) }
+        } finally {
+            _uiState.update { it.copy(cargandoEdicion = false) }
         }
     }
 
@@ -190,6 +224,7 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
 
     fun guardarProtocolo(equipoId: Long, tecnicoId: Long, esEdicion: Boolean = false) {
         val state = _uiState.value
+        if (state.guardando || state.cargandoEdicion) return
         val instrumento = _instrumentoSeleccionado.value
 
         if (state.temperaturaAmbiente.isBlank() || state.humedadRelativa.isBlank()) {
@@ -202,6 +237,11 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
             return
         }
 
+        if (api != null) {
+            guardarRemoto(api, equipoId, instrumento, state, esEdicion)
+            return
+        }
+        val local = checkNotNull(dbHelper)
         try {
             val sdf = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
             val fechaVencimiento = sdf.parse(instrumento.fechaVencimiento)
@@ -215,8 +255,8 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
 
         if (esEdicion && protocoloIdEditando != null) {
 
-            dbHelper.actualizarProtocolo(protocoloIdEditando!!, state.temperaturaAmbiente, state.humedadRelativa, state.resultadoPrueba)
-            dbHelper.actualizarMedicion(
+            local.actualizarProtocolo(protocoloIdEditando!!, state.temperaturaAmbiente, state.humedadRelativa, state.resultadoPrueba)
+            local.actualizarMedicion(
                 protocoloId = protocoloIdEditando!!,
                 tipoPrueba = state.tipoPrueba,
                 lectura1 = state.lectura1Min,
@@ -243,9 +283,9 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
                 resultadoGlobal = state.resultadoPrueba,
                 estado = "BORRADOR"
             )
-            val nuevoId = dbHelper.guardarProtocolo(protocolo)
+            val nuevoId = local.guardarProtocolo(protocolo)
             if (nuevoId > 0) {
-                dbHelper.guardarMedicion(
+                local.guardarMedicion(
                     protocoloId = nuevoId,
                     tipoPrueba = state.tipoPrueba,
                     lectura1 = state.lectura1Min,
@@ -262,6 +302,57 @@ class RegistroPruebaViewModel(private val dbHelper: UsuarioDbHelper) : ViewModel
                 )
             }
             _uiState.update { it.copy(guardadoExitoso = true, protocoloGuardadoId = nuevoId) }
+        }
+    }
+
+    private fun guardarRemoto(api: InduztekApi, equipoId: Long, instrumento: Instrumento,
+                              state: ProtocoloUiState, esEdicion: Boolean) {
+        val temperatura = state.temperaturaAmbiente.toBigDecimalOrNull()
+        val humedad = state.humedadRelativa.toBigDecimalOrNull()
+        if (temperatura == null || humedad == null || humedad.signum() < 0 || humedad > 100.toBigDecimal()) {
+            _uiState.update { it.copy(errorTemperatura = "Ingresa una temperatura válida y humedad entre 0 y 100%") }
+            return
+        }
+        val idEdicion = protocoloIdEditando
+        if (esEdicion && idEdicion == null) {
+            _uiState.update { it.copy(errorMedicion = "No se pudo cargar el protocolo para editarlo") }
+            return
+        }
+        val valores = LecturasRemotas(
+            lectura1Min = state.lectura1Min.toBigDecimalOrNull(),
+            lectura10Min = state.lectura10Min.toBigDecimalOrNull(),
+            corrienteAjuste = state.corrienteAjuste.toBigDecimalOrNull(),
+            corrienteOperacion = state.corrienteOperacion.toBigDecimalOrNull(),
+            tiempoEsperado = state.tiempoEsperado.toBigDecimalOrNull(),
+            tiempoMedido = state.tiempoMedido.toBigDecimalOrNull(),
+            lecturaDevanadoA = state.lecturaDevanadoA.toBigDecimalOrNull(),
+            lecturaDevanadoB = state.lecturaDevanadoB.toBigDecimalOrNull(),
+            lecturaDevanadoC = state.lecturaDevanadoC.toBigDecimalOrNull()
+        )
+        val textoIngresado = mapOf(
+            "temperatura" to state.temperaturaAmbiente, "humedad" to state.humedadRelativa,
+            "lectura1Min" to state.lectura1Min, "lectura10Min" to state.lectura10Min,
+            "corrienteAjuste" to state.corrienteAjuste, "corrienteOperacion" to state.corrienteOperacion,
+            "tiempoEsperado" to state.tiempoEsperado, "tiempoMedido" to state.tiempoMedido,
+            "lecturaDevanadoA" to state.lecturaDevanadoA, "lecturaDevanadoB" to state.lecturaDevanadoB,
+            "lecturaDevanadoC" to state.lecturaDevanadoC
+        ).filterValues { it.toBigDecimalOrNull() != null }
+        val solicitud = ProtocoloSolicitud(
+            equipoId, instrumento.id, temperatura, humedad, state.tipoPrueba, valores, textoIngresado
+        )
+        _uiState.update { it.copy(guardando = true, errorMedicion = null) }
+        viewModelScope.launch {
+            try {
+                val guardado = if (esEdicion) api.editarProtocolo(checkNotNull(idEdicion), solicitud)
+                    else api.crearProtocolo(solicitud)
+                _uiState.update { it.copy(guardadoExitoso = true, protocoloGuardadoId = guardado.id) }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _uiState.update { it.copy(errorMedicion = mensajeRed(error)) }
+            } finally {
+                _uiState.update { it.copy(guardando = false) }
+            }
         }
     }
 }

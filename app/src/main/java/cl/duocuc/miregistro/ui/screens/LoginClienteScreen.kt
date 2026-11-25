@@ -23,7 +23,8 @@ fun LoginClienteScreen(
     viewModel: LoginViewModel,
     onLoginSuccess: (Long) -> Unit,
     onRequiereCambio: () -> Unit,
-    onRegistroClick: () -> Unit
+    onRegistroClick: () -> Unit,
+    avisoSesion: String? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -86,6 +87,7 @@ fun LoginClienteScreen(
                 )
 
 
+                avisoSesion?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                 if (uiState.errorMensaje != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -113,7 +115,7 @@ fun LoginClienteScreen(
                         .height(52.dp),
                     enabled = !uiState.cargando
                 ) {
-                    Text(text = "Iniciar Sesión")
+                    Text(text = if (uiState.cargando) "Iniciando sesión…" else "Iniciar Sesión")
                 }
             }
         }

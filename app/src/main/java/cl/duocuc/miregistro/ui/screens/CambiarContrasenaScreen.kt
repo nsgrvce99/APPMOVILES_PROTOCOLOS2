@@ -1,5 +1,7 @@
 package cl.duocuc.miregistro.ui.screens
 
+import cl.duocuc.miregistro.utils.Validaciones
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -9,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
+import cl.duocuc.miregistro.network.CambioContrasena
+import cl.duocuc.miregistro.network.recordarOperacion
 import cl.duocuc.miregistro.ui.components.*
 import cl.duocuc.miregistro.ui.theme.Dimens
 
@@ -18,12 +22,13 @@ fun CambiarContrasenaScreen(
     usuarioActual: Usuario?,
     onVolver: () -> Unit,
     onContrasenaCambiada: () -> Unit,
-    esClavePorDefecto: Boolean = false
+    esClavePorDefecto: Boolean = false,
+    cambiarRemoto: (suspend (CambioContrasena) -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
+    val dbHelper = remember(cambiarRemoto == null) { if (cambiarRemoto == null) UsuarioDbHelper(context) else null }
 
-    val usuarioDb = remember { dbHelper.buscarPorId(usuarioActual?.id ?: 0L) }
+    val usuarioDb = remember { dbHelper?.buscarPorId(usuarioActual?.id ?: 0L) }
     val contrasenaReal = usuarioDb?.contrasena ?: ""
 
     var actual by remember { mutableStateOf("") }
@@ -37,12 +42,13 @@ fun CambiarContrasenaScreen(
     var errorActual by remember { mutableStateOf<String?>(null) }
     var errorNueva by remember { mutableStateOf<String?>(null) }
     var errorConfirmar by remember { mutableStateOf<String?>(null) }
+    val operacion = recordarOperacion()
     var exito by remember { mutableStateOf(false) }
 
     fun esContrasenaSegura(contrasena: String): Boolean {
-        val tieneMinimo = contrasena.length >= 6
+        val tieneMinimo = contrasena.length in 6..18
         val tieneMayuscula = contrasena.any { it.isUpperCase() }
-        val tieneEspecial = contrasena.any { !it.isLetterOrDigit() }
+        val tieneEspecial = contrasena.any { !it.isLetterOrDigit() && !it.isWhitespace() }
         return tieneMinimo && tieneMayuscula && tieneEspecial
     }
 
@@ -74,7 +80,7 @@ fun CambiarContrasenaScreen(
                     style = MaterialTheme.typography.bodySmall
                 )
 
-                if (!esClavePorDefecto) {
+                if (!esClavePorDefecto || cambiarRemoto != null) {
                     CampoContrasena(
                         valor = actual,
                         onValorCambia = { actual = it; errorActual = null },
@@ -113,8 +119,10 @@ fun CambiarContrasenaScreen(
                     )
                 }
 
+                MensajeError(texto = operacion.error)
                 BotonPrincipal(
-                    texto = if (exito) "Continuar" else "Cambiar Contraseña",
+                    habilitado = !operacion.ejecutando,
+                    texto = if (operacion.ejecutando) "Guardando…" else if (exito) "Continuar" else "Cambiar Contraseña",
                     onClick = {
                         if (exito) {
                             onContrasenaCambiada()
@@ -124,20 +132,24 @@ fun CambiarContrasenaScreen(
                             errorConfirmar = null
 
                             when {
-                                !esClavePorDefecto && actual.isBlank() -> errorActual = "La contraseña actual es obligatoria"
-                                !esClavePorDefecto && actual.trim() != contrasenaReal.trim() -> errorActual = "La contraseña actual es incorrecta"
+                                (!esClavePorDefecto || cambiarRemoto != null) && actual.isBlank() -> errorActual = "La contraseña actual es obligatoria"
+                                cambiarRemoto == null && !esClavePorDefecto && actual.trim() != contrasenaReal.trim() -> errorActual = "La contraseña actual es incorrecta"
 
                                 nueva.isBlank() -> errorNueva = "La nueva contraseña es obligatoria"
                                 !esContrasenaSegura(nueva) -> errorNueva = "Debe tener mínimo 6 caracteres, una mayúscula y un carácter especial"
-                                nueva == "Induztek2026" -> errorNueva = "No puede usar la contraseña por defecto"
-                                !esClavePorDefecto && nueva == actual -> errorNueva = "La nueva contraseña no puede ser igual a la actual"
+                                Validaciones.esClaveTemporalLocal(nueva) -> errorNueva = "No puede usar la contraseña por defecto"
+                                (!esClavePorDefecto || cambiarRemoto != null) && nueva == actual -> errorNueva = "La nueva contraseña no puede ser igual a la actual"
 
                                 confirmar.isBlank() -> errorConfirmar = "Debe confirmar la contraseña"
                                 nueva != confirmar -> errorConfirmar = "Las contraseñas no coinciden"
 
                                 else -> {
-                                    dbHelper.cambiarContrasena(usuarioActual!!.id, nueva)
-                                    exito = true
+                                    if (cambiarRemoto != null) {
+                                        operacion.ejecutar { cambiarRemoto(CambioContrasena(actual, nueva, confirmar)) }
+                                    } else {
+                                        dbHelper?.cambiarContrasena(checkNotNull(usuarioActual).id, nueva)
+                                        exito = true
+                                    }
                                 }
                             }
                         }

@@ -14,6 +14,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duocuc.miregistro.R
 import cl.duocuc.miregistro.data.UsuarioDbHelper
 import cl.duocuc.miregistro.model.Usuario
+import cl.duocuc.miregistro.network.*
 import cl.duocuc.miregistro.ui.components.*
 import cl.duocuc.miregistro.ui.theme.Dimens
 import cl.duocuc.miregistro.utils.Validaciones
@@ -26,15 +27,17 @@ fun RegistroPruebaScreen(
     usuarioActual: Usuario?,
     protocoloId: Long? = null,
     onVolver: () -> Unit,
-    onPruebaGuardadaExitosamente: (Long) -> Unit,
-    dbHelper: UsuarioDbHelper = UsuarioDbHelper(LocalContext.current)
+    onPruebaGuardadaExitosamente: (Long) -> Unit
 ) {
+    val api = LocalApiTerreno.current
+    val contexto = LocalContext.current
+    val dbHelper = remember(api, contexto) { if (api == null) UsuarioDbHelper(contexto) else null }
     val viewModel: RegistroPruebaViewModel = viewModel(
-        key = "reg_$equipoId",
+        key = "reg_${equipoId}_$protocoloId",
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
-                return RegistroPruebaViewModel(dbHelper) as T
+                return RegistroPruebaViewModel(dbHelper, api) as T
             }
         }
     )
@@ -42,7 +45,11 @@ fun RegistroPruebaScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val instrumentos by viewModel.instrumentos.collectAsStateWithLifecycle()
     val instrumentoSeleccionado by viewModel.instrumentoSeleccionado.collectAsStateWithLifecycle()
-    val equipo = remember(equipoId) { dbHelper.buscarEquipoPorId(equipoId) }
+    var intentoCargaEquipo by remember(equipoId) { mutableIntStateOf(0) }
+    val cargaEquipo by cargar(equipoId, api, intentoCargaEquipo) {
+        if (api != null) api.equipo(equipoId) else dbHelper?.buscarEquipoPorId(equipoId)
+    }
+    val equipo = (cargaEquipo as? EstadoCarga.Lista)?.valor
     LaunchedEffect(uiState.protocoloGuardadoId) {
         uiState.protocoloGuardadoId?.let { id ->
             onPruebaGuardadaExitosamente(id)
@@ -74,10 +81,17 @@ fun RegistroPruebaScreen(
             ) {
                 Text("Técnico: ${usuarioActual?.nombre ?: "N/A"}", style = MaterialTheme.typography.titleMedium)
 
+                if (equipo == null) {
+                    ContenidoRemoto(cargaEquipo, { intentoCargaEquipo++ }) {
+                        Text("El equipo no está disponible.")
+                    }
+                }
+
                 if (uiState.motivoObservacion != null && uiState.motivoObservacion!!.isNotBlank()) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                        modifier = Modifier.fillMaxWidth()
+
+                    modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(Modifier.padding(Dimens.espacioMedio)) {
                             Text("⚠️ Observación del Ingeniero / Jefe Técnico:", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -151,13 +165,19 @@ fun RegistroPruebaScreen(
                 if (uiState.resultadoPrueba != "Pendiente") {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                        modifier = Modifier.fillMaxWidth()
+
+                    modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Resultado: ${uiState.resultadoPrueba}", modifier = Modifier.padding(Dimens.espacioMedio), style = MaterialTheme.typography.titleMedium)
                     }
                 }
 
+                MensajeError(texto = uiState.errorTemperatura)
                 MensajeError(texto = uiState.errorMedicion)
+                uiState.errorCarga?.let {
+                    MensajeError(texto = it)
+                    TextButton(onClick = viewModel::cargarInstrumentos) { Text("Reintentar instrumentos") }
+                }
 
                 Button(
                     onClick = {
@@ -167,6 +187,8 @@ fun RegistroPruebaScreen(
                             esEdicion = protocoloId != null
                         )
                     },
+
+                    enabled = !uiState.guardando && !uiState.cargandoEdicion && equipo != null,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(if (protocoloId != null) "Actualizar Protocolo" else "Guardar Protocolo")
